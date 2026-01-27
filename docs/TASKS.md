@@ -4,6 +4,7 @@
 ## Phase 0 — Project bootstrap
 - [ ] Create Wails v2 React project
 - [ ] Set window 420×820, non-resizable
+- [ ] Install + configure Tailwind CSS (React UI)
 - [ ] Create MainScreen + SettingsScreen navigation
 
 

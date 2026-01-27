@@ -17,9 +17,10 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "open-camera-mouse",
-		Width:  1024,
-		Height: 768,
+		Title:         "open-camera-mouse",
+		Width:         420,
+		Height:        820,
+		DisableResize: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
