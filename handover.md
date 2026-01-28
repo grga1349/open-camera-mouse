@@ -6,6 +6,10 @@
 - Set window size to 420×820 with resizing disabled in `main.go`.
 - Documented Tailwind requirement inside `docs/TASKS.md`.
 - Simplified styling to pure Tailwind palette classes (zinc neutrals + emerald CTA) with a shared `Button` component for consistent shape/hover.
+- Added `frontend/src/types/params.ts` and `frontend/src/types/telemetry.ts` to define AllParams + Telemetry contracts for upcoming state work.
+- Implemented `useAppStore` context with default params/telemetry + actions, wrapping `<AppProvider>` around the UI in `App.tsx`.
+- Added `useSettingsDraft` hook that snapshots params, exposes draft/dirty/save/reset helpers for the Settings screen.
+- Bootstrapped backend skeleton: `internal/config` (AllParams structs + JSON manager), and empty packages for `app`, `camera`, `tracking`, `mouse`, `overlay`, `stream` compiled via `go build ./...`.
 - Added working Settings tab state + a compact 2-column layout so active tabs stay legible within the 420px window.
 - Camera preview placeholder now uses a fixed 4:3 aspect ratio box that's wider than it is tall.
 
