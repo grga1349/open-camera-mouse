@@ -19,6 +19,10 @@
 - Camera preview placeholder now uses a fixed 4:3 aspect ratio box that's wider than it is tall.
 - React frontend now subscribes to `preview:frame`/`telemetry:state`, updates the shared store, wires MainScreen controls (start/pause, recenter, dwell/right-click toggles, preview pick) and Settings draft save/cancel flows to Wails bindings.
 
+- Backend now moves the OS cursor: tracking deltas feed the new mouse.Mapper (sensitivity/deadzone/smoothing), RobotGo controller moves the cursor, and dwell/pick maths are mirrored to match the flipped preview.
+- Pointer mapping now inverts horizontal deltas to match the mirrored preview, so moving your head right moves the cursor right; default pointer sensitivity bumped to 65 for snappier response.
+- Settings screen now renders real Tracking/Pointer/Clicking tabs (sliders, toggles, selects) wired to the draft hook; Hotkeys tab shows planned shortcuts.
+
 
 ## Next Up
 - Flesh out MainScreen UI (preview, controls) + Settings tab contents per `docs/SCREENS.md` once backend data is available.
@@ -29,3 +33,10 @@
 - `frontend/src/style.css` only hosts Tailwind directives + base font/background layer (antialiased system stack).
 - Run `cd frontend && npm run dev` for live reload or `npm run build` for production assets (verified once).
 - All colors now come directly from Tailwind utility classes (e.g., `bg-zinc-900`, `bg-emerald-500`).
+
+- MainScreen dwell toggle now shows a tooltip so the hover state communicates its purpose (enable/disable dwell clicking).
+- Right-click dwell toggle now auto-disarms after the next click; backend emits `params:update` events so the UI stays in sync.
+- Recenter button pauses tracking and shows a 5-second countdown before invoking Recenter and resuming tracking.
+- Pointer mapping uses the new Mapper (sensitivity up to 120) so head movements mirror cursor movement; defaults bumped accordingly.
+- Settings screen replaced placeholders with actual controls (tracking template sizes 20/30/40/50, pointer sliders to 120, stylish checkboxes/sliders, clicking tab note).
+

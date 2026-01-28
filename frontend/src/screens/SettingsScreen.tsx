@@ -1,4 +1,4 @@
-import {useState, type FC, type ReactNode} from 'react';
+import {useState, type FC} from 'react';
 import {Button} from '../components/Button';
 import {useSettingsDraft} from '../state/useSettingsDraft';
 import type {AllParams} from '../types/params';
@@ -14,7 +14,7 @@ type SettingsScreenProps = {
 
 export const SettingsScreen: FC<SettingsScreenProps> = ({onSave, onCancel}) => {
     const [activeTab, setActiveTab] = useState<typeof tabs[number]>('Tracking');
-    const {draft, dirty, resetDraft} = useSettingsDraft();
+    const {draft, dirty, resetDraft, updateDraft} = useSettingsDraft();
 
     const handleCancel = () => {
         resetDraft();
@@ -55,8 +55,8 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({onSave, onCancel}) => {
                         );
                     })}
                 </nav>
-                <section className="flex-1 overflow-auto px-4 py-4 text-sm text-zinc-400">
-                    {renderPlaceholder(activeTab, draft)}
+                <section className="flex-1 overflow-auto px-4 py-4 text-sm text-zinc-300">
+                    {renderTab(activeTab, draft, updateDraft)}
                 </section>
             </main>
 
@@ -70,13 +70,323 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({onSave, onCancel}) => {
     );
 };
 
-function renderPlaceholder(tab: typeof tabs[number], draft: AllParams): ReactNode {
+type TabProps = {
+    draft: AllParams;
+    updateDraft: (updater: (current: AllParams) => AllParams) => void;
+};
+
+const TrackingTab: FC<TabProps> = ({draft, updateDraft}) => {
+    const tracking = draft.tracking;
+    const updateTracking = (changes: Partial<typeof tracking>) => {
+        updateDraft(current => ({
+            ...current,
+            tracking: {
+                ...current.tracking,
+                ...changes,
+            },
+        }));
+    };
+
+    const templateSizes = [20, 30, 40, 50];
+
     return (
-        <div className="space-y-3 rounded-2xl border border-zinc-900 bg-zinc-950 p-4 text-zinc-100">
-            <p className="text-sm font-semibold">{tab} tab</p>
-            <pre className="overflow-auto rounded bg-zinc-900 p-3 text-xs text-zinc-400">
-                {tab === 'Hotkeys' ? 'Hotkey settings coming soon' : JSON.stringify((draft as any)[tab.toLowerCase()], null, 2)}
-            </pre>
+        <div className="space-y-4">
+            <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Template size</p>
+                <div className="flex gap-2">
+                    {templateSizes.map(size => (
+                        <button
+                            key={size}
+                            className={`flex-1 rounded-full border px-3 py-2 text-sm ${
+                                tracking.templateSizePx === size
+                                    ? 'border-emerald-400 bg-emerald-500/20'
+                                    : 'border-zinc-800 hover:bg-zinc-900'
+                            }`}
+                            onClick={() => updateTracking({templateSizePx: size})}
+                        >
+                            {size}px
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <SliderField
+                label="Search margin"
+                min={10}
+                max={120}
+                step={5}
+                value={tracking.searchMarginPx}
+                onChange={value => updateTracking({searchMarginPx: value})}
+            />
+
+            <SliderField
+                label={`Score threshold (${tracking.scoreThreshold.toFixed(2)})`}
+                min={30}
+                max={95}
+                step={1}
+                value={Math.round(tracking.scoreThreshold * 100)}
+                onChange={value => updateTracking({scoreThreshold: value / 100})}
+            />
+
+            <label className="flex items-center gap-3 text-sm">
+                <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500"
+                    checked={tracking.adaptiveTemplate}
+                    onChange={event => updateTracking({adaptiveTemplate: event.target.checked})}
+                />
+                Adaptive template
+            </label>
+
+            <SliderField
+                label={`Template alpha (${tracking.templateUpdateAlpha.toFixed(2)})`}
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(tracking.templateUpdateAlpha * 100)}
+                disabled={!tracking.adaptiveTemplate}
+                onChange={value => updateTracking({templateUpdateAlpha: value / 100})}
+            />
+
+            <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Marker shape</p>
+                <div className="flex gap-2">
+                    {['circle', 'square'].map(shape => (
+                        <button
+                            key={shape}
+                            className={`flex-1 rounded-full border px-3 py-2 text-sm capitalize ${
+                                tracking.markerShape === shape
+                                    ? 'border-emerald-400 bg-emerald-500/20'
+                                    : 'border-zinc-800 hover:bg-zinc-900'
+                            }`}
+                            onClick={() => updateTracking({markerShape: shape as any})}
+                        >
+                            {shape}
+                        </button>
+                    ))}
+                </div>
+            </div>
         </div>
     );
-}
+};
+
+const PointerTab: FC<TabProps> = ({draft, updateDraft}) => {
+    const pointer = draft.pointer;
+    const updatePointer = (changes: Partial<typeof pointer>) => {
+        updateDraft(current => ({
+            ...current,
+            pointer: {
+                ...current.pointer,
+                ...changes,
+            },
+        }));
+    };
+
+    const updateAdvanced = (changes: {gainX?: number; gainY?: number; smoothing?: number} | null) => {
+        updatePointer({advanced: changes ? {...(pointer.advanced ?? {gainX: pointer.sensitivity / 20, gainY: pointer.sensitivity / 20, smoothing: 0.2}), ...changes} : null});
+    };
+
+    const advanced = pointer.advanced;
+
+    return (
+        <div className="space-y-4">
+            <SliderField
+                label={`Sensitivity (${pointer.sensitivity})`}
+                min={10}
+                max={120}
+                step={1}
+                value={pointer.sensitivity}
+                onChange={value => updatePointer({sensitivity: value})}
+            />
+
+            <SliderField
+                label={`Deadzone (${pointer.deadzonePx}px)`}
+                min={0}
+                max={20}
+                step={1}
+                value={pointer.deadzonePx}
+                onChange={value => updatePointer({deadzonePx: value})}
+            />
+
+            <SliderField
+                label={`Max speed (${pointer.maxSpeedPx}px)`}
+                min={10}
+                max={60}
+                step={1}
+                value={pointer.maxSpeedPx}
+                onChange={value => updatePointer({maxSpeedPx: value})}
+            />
+
+            <div className="rounded-2xl border border-zinc-800 p-3">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                    <p className="font-semibold text-zinc-200">Advanced gain</p>
+                    <Button variant="ghost" onClick={() => updateAdvanced(advanced ? null : {gainX: pointer.sensitivity / 20, gainY: pointer.sensitivity / 20, smoothing: 0.2})}>
+                        {advanced ? 'Disable' : 'Enable'}
+                    </Button>
+                </div>
+                {advanced ? (
+                    <div className="space-y-3 text-sm">
+                        <NumberField
+                            label="Gain X"
+                            value={advanced.gainX}
+                            min={0.5}
+                            max={6}
+                            step={0.1}
+                            onChange={value => updateAdvanced({gainX: value})}
+                        />
+                        <NumberField
+                            label="Gain Y"
+                            value={advanced.gainY}
+                            min={0.5}
+                            max={6}
+                            step={0.1}
+                            onChange={value => updateAdvanced({gainY: value})}
+                        />
+                        <NumberField
+                            label="Smoothing"
+                            value={advanced.smoothing}
+                            min={0.05}
+                            max={0.9}
+                            step={0.05}
+                            onChange={value => updateAdvanced({smoothing: value})}
+                        />
+                    </div>
+                ) : (
+                    <p className="text-xs text-zinc-400">Enable to override automatically mapped gain + smoothing.</p>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const ClickingTab: FC<TabProps> = ({draft, updateDraft}) => {
+    const clicking = draft.clicking;
+    const updateClicking = (changes: Partial<typeof clicking>) => {
+        updateDraft(current => ({
+            ...current,
+            clicking: {
+                ...current.clicking,
+                ...changes,
+            },
+        }));
+    };
+
+    return (
+        <div className="space-y-4">
+            <label className="flex items-center gap-3 text-sm">
+                <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500"
+                    checked={clicking.dwellEnabled}
+                    onChange={event => updateClicking({dwellEnabled: event.target.checked})}
+                />
+                Enable dwell clicking
+            </label>
+
+            <SliderField
+                label={`Dwell time (${clicking.dwellTimeMs} ms)`}
+                min={200}
+                max={1500}
+                step={50}
+                value={clicking.dwellTimeMs}
+                onChange={value => updateClicking({dwellTimeMs: value})}
+            />
+
+            <SliderField
+                label={`Dwell radius (${clicking.dwellRadiusPx}px)`}
+                min={5}
+                max={80}
+                step={5}
+                value={clicking.dwellRadiusPx}
+                onChange={value => updateClicking({dwellRadiusPx: value})}
+            />
+
+            <div className="rounded-2xl border border-zinc-800 p-3 text-xs text-zinc-400">
+                Right-click type is controlled from the main screen toggle.
+            </div>
+
+            <label className="flex items-center gap-3 text-sm">
+                <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500"
+                    checked={clicking.rightClickToggle}
+                    onChange={event => updateClicking({rightClickToggle: event.target.checked})}
+                />
+                Right-click toggle
+            </label>
+        </div>
+    );
+};
+
+const HotkeysTab: FC = () => (
+    <div className="space-y-3 text-sm text-zinc-400">
+        <p className="font-semibold text-zinc-200">Hotkeys (app must be focused)</p>
+        <ul className="list-disc space-y-1 pl-5">
+            <li><span className="font-semibold text-zinc-200">Space</span> – Start/Pause tracking</li>
+            <li><span className="font-semibold text-zinc-200">R</span> – Recenter tracker</li>
+        </ul>
+    </div>
+);
+
+const renderTab = (
+    tab: typeof tabs[number],
+    draft: AllParams,
+    updateDraft: (updater: (current: AllParams) => AllParams) => void
+) => {
+    switch (tab) {
+        case 'Tracking':
+            return <TrackingTab draft={draft} updateDraft={updateDraft}/>;
+        case 'Pointer':
+            return <PointerTab draft={draft} updateDraft={updateDraft}/>;
+        case 'Clicking':
+            return <ClickingTab draft={draft} updateDraft={updateDraft}/>;
+        default:
+            return <HotkeysTab/>;
+    }
+};
+
+const SliderField: FC<{
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    disabled?: boolean;
+    onChange: (value: number) => void;
+}> = ({label, value, min, max, step, disabled, onChange}) => (
+    <label className="block text-sm">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</span>
+        <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            disabled={disabled}
+            onChange={event => onChange(parseFloat(event.target.value))}
+            className="w-full"
+        />
+    </label>
+);
+
+const NumberField: FC<{
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    onChange: (value: number) => void;
+}> = ({label, value, min, max, step, onChange}) => (
+    <label className="block text-sm">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</span>
+        <input
+            type="number"
+            value={value}
+            min={min}
+            max={max}
+            step={step}
+            onChange={event => onChange(parseFloat(event.target.value))}
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+        />
+    </label>
+);

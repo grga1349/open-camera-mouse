@@ -15,6 +15,7 @@ type DwellParams struct {
 type DwellState struct {
 	params     DwellParams
 	controller Controller
+	afterClick func()
 
 	refX       int
 	refY       int
@@ -22,8 +23,8 @@ type DwellState struct {
 	dwellStart time.Time
 }
 
-func NewDwellState(controller Controller, params DwellParams) *DwellState {
-	return &DwellState{controller: controller, params: params}
+func NewDwellState(controller Controller, params DwellParams, afterClick func()) *DwellState {
+	return &DwellState{controller: controller, params: params, afterClick: afterClick}
 }
 
 func (d *DwellState) SetParams(params DwellParams) {
@@ -55,6 +56,9 @@ func (d *DwellState) Update(cursorX, cursorY int, trackingLost bool) {
 
 	if time.Since(d.dwellStart) >= d.params.DwellTime {
 		_ = d.controller.Click(d.params.ClickButton)
+		if d.afterClick != nil {
+			d.afterClick()
+		}
 		d.dwellStart = time.Now()
 	}
 }

@@ -18,6 +18,7 @@ function App() {
     useEffect(() => {
         let offPreview: (() => void) | undefined;
         let offTelemetry: (() => void) | undefined;
+        let offParams: (() => void) | undefined;
 
         GetParams()
             .then(res => setParams(normalizeParams(res)))
@@ -51,9 +52,17 @@ function App() {
             });
         });
 
+        offParams = EventsOn('params:update', payload => {
+            if (!payload) {
+                return;
+            }
+            setParams(normalizeParams(payload));
+        });
+
         return () => {
             offPreview?.();
             offTelemetry?.();
+            offParams?.();
         };
     }, [setParams, setPreview, setTelemetry]);
 

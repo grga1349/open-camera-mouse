@@ -22,6 +22,17 @@ func NewMapper(params MappingParams) *Mapper {
 	return &Mapper{params: params}
 }
 
+func (m *Mapper) SetParams(params MappingParams) {
+	m.params = params
+	m.Reset()
+}
+
+func (m *Mapper) Reset() {
+	m.prevX = 0
+	m.prevY = 0
+	m.init = false
+}
+
 func (m *Mapper) Update(dx, dy float64) (float64, float64) {
 	p := m.params
 

@@ -23,12 +23,14 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	svc, err := appsvc.NewService(cfg)
+	app := &App{}
+	svc, err := appsvc.NewService(cfg, app.emitParams)
 	if err != nil {
 		return nil, err
 	}
+	app.service = svc
 
-	return &App{service: svc}, nil
+	return app, nil
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -73,4 +75,11 @@ func (a *App) Recenter() error {
 
 func (a *App) ToggleTracking(enabled bool) {
 	a.service.ToggleTracking(enabled)
+}
+
+func (a *App) emitParams(params config.AllParams) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "params:update", params)
 }

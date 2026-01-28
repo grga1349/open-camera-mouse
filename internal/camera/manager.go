@@ -48,7 +48,7 @@ func (m *Manager) Start(ctx context.Context, handler FrameHandler) error {
 		return ErrAlreadyRunning
 	}
 
-    cap, err := gocv.VideoCaptureDevice(m.deviceID)
+	cap, err := gocv.VideoCaptureDevice(m.deviceID)
 	if err != nil {
 		m.mu.Unlock()
 		return err

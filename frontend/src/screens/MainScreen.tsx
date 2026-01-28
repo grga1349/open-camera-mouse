@@ -1,4 +1,4 @@
-import type {FC, MouseEvent} from 'react';
+import {useEffect, useRef, useState, type FC, type MouseEvent} from 'react';
 import {Button} from '../components/Button';
 import {useAppStore} from '../state/useAppStore';
 import type {AllParams} from '../types/params';
@@ -15,6 +15,16 @@ type MainScreenProps = {
 
 export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop}) => {
     const {params, telemetry, preview, isRunning, setParams} = useAppStore();
+    const [recenterCountdown, setRecenterCountdown] = useState(0);
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (countdownRef.current) {
+                clearInterval(countdownRef.current);
+            }
+        };
+    }, []);
 
     const handleStartStop = async () => {
         try {
@@ -29,8 +39,36 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
     };
 
     const handleRecenter = async () => {
+        if (recenterCountdown > 0) {
+            return;
+        }
         try {
-            await Recenter();
+            const wasRunning = isRunning;
+            if (wasRunning) {
+                await onStop();
+            }
+            let remaining = 5;
+            setRecenterCountdown(remaining);
+            countdownRef.current = window.setInterval(async () => {
+                remaining -= 1;
+                if (remaining > 0) {
+                    setRecenterCountdown(remaining);
+                    return;
+                }
+                if (countdownRef.current) {
+                    clearInterval(countdownRef.current);
+                    countdownRef.current = null;
+                }
+                setRecenterCountdown(0);
+                try {
+                    await Recenter();
+                    if (wasRunning) {
+                        await onStart();
+                    }
+                } catch (err) {
+                    console.error('recenter failed', err);
+                }
+            }, 1000);
         } catch (err) {
             console.error('recenter failed', err);
         }
@@ -108,9 +146,11 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
                     <Button variant="action" fullWidth onClick={handleStartStop}>
                         {isRunning ? 'Pause' : 'Start'}
                     </Button>
-                    <Button fullWidth onClick={handleRecenter}>Recenter</Button>
+                    <Button fullWidth onClick={handleRecenter} disabled={recenterCountdown > 0}>
+                        {recenterCountdown > 0 ? `Recenter (${recenterCountdown})` : 'Recenter'}
+                    </Button>
                     <div className="grid grid-cols-2 gap-3">
-                        <Button fullWidth onClick={toggleDwell}>
+                        <Button fullWidth onClick={toggleDwell} title="Enable dwell clicking">
                             Dwell {params.clicking.dwellEnabled ? 'On' : 'Off'}
                         </Button>
                         <Button fullWidth onClick={toggleRightClick}>

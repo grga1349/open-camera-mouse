@@ -12,7 +12,7 @@ const defaultParams: AllParams = {
         markerShape: 'circle',
     },
     pointer: {
-        sensitivity: 50,
+        sensitivity: 65,
         deadzonePx: 1,
         maxSpeedPx: 25,
         advanced: null,
