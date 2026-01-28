@@ -1,10 +1,10 @@
-import {createContext, useContext, useMemo, useState, type FC, type ReactNode, useCallback} from 'react';
+import {createContext, useCallback, useContext, useMemo, useState, type FC, type ReactNode} from 'react';
 import type {AllParams} from '../types/params';
 import type {Telemetry} from '../types/telemetry';
 
 const defaultParams: AllParams = {
     tracking: {
-        templateSizePx: 20,
+        templateSizePx: 30,
         searchMarginPx: 30,
         scoreThreshold: 0.6,
         adaptiveTemplate: true,
@@ -36,15 +36,26 @@ const defaultTelemetry: Telemetry = {
     posY: null,
 };
 
+export type PreviewFrame = {
+    data: string;
+    width: number;
+    height: number;
+    timestamp: string;
+};
+
 export type StoreActions = {
     updateParams: (updater: (current: AllParams) => AllParams) => void;
     setTelemetry: (next: Telemetry) => void;
     setParams: (next: AllParams) => void;
+    setPreview: (frame: PreviewFrame | null) => void;
+    setRunning: (running: boolean) => void;
 };
 
 export type AppState = {
     params: AllParams;
     telemetry: Telemetry;
+    preview: PreviewFrame | null;
+    isRunning: boolean;
 } & StoreActions;
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -52,6 +63,8 @@ const AppContext = createContext<AppState | undefined>(undefined);
 export const AppProvider: FC<{children: ReactNode}> = ({children}) => {
     const [params, setParams] = useState<AllParams>(defaultParams);
     const [telemetry, setTelemetry] = useState<Telemetry>(defaultTelemetry);
+    const [preview, setPreviewState] = useState<PreviewFrame | null>(null);
+    const [isRunning, setIsRunning] = useState(false);
 
     const updateParams = useCallback((updater: (current: AllParams) => AllParams) => {
         setParams(prev => updater(prev));
@@ -61,15 +74,27 @@ export const AppProvider: FC<{children: ReactNode}> = ({children}) => {
         setParams(next);
     }, []);
 
+    const setPreview = useCallback((frame: PreviewFrame | null) => {
+        setPreviewState(frame);
+    }, []);
+
+    const setRunning = useCallback((running: boolean) => {
+        setIsRunning(running);
+    }, []);
+
     const value = useMemo<AppState>(
         () => ({
             params,
             telemetry,
+            preview,
+            isRunning,
             updateParams,
             setTelemetry,
             setParams: setAllParams,
+            setPreview,
+            setRunning,
         }),
-        [params, telemetry, updateParams, setAllParams]
+        [params, telemetry, preview, isRunning, updateParams, setAllParams, setPreview, setRunning]
     );
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

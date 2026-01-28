@@ -54,7 +54,7 @@ type AllParams struct {
 func DefaultParams() AllParams {
 	return AllParams{
 		Tracking: TrackingParams{
-			TemplateSizePx:      20,
+			TemplateSizePx:      30,
 			SearchMarginPx:      30,
 			ScoreThreshold:      0.60,
 			AdaptiveTemplate:    true,
