@@ -1,42 +1,17 @@
-# Handover — Tailwind Bootstrap
+# Handover — Current Snapshot
 
 ## Completed
-- Configured Tailwind CSS (postcss config, theme tokens, npm deps) and removed legacy App.css styling.
-- Added placeholder MainScreen + SettingsScreen components using Tailwind utility classes and navigation shell in `App.tsx`.
-- Set window size to 420×820 with resizing disabled in `main.go`.
-- Documented Tailwind requirement inside `docs/TASKS.md`.
-- Simplified styling to pure Tailwind palette classes (zinc neutrals + emerald CTA) with a shared `Button` component for consistent shape/hover.
-- Added `frontend/src/types/params.ts` and `frontend/src/types/telemetry.ts` to define AllParams + Telemetry contracts for upcoming state work.
-- Implemented `useAppStore` context with default params/telemetry + actions, wrapping `<AppProvider>` around the UI in `App.tsx`.
-- Added `useSettingsDraft` hook that snapshots params, exposes draft/dirty/save/reset helpers for the Settings screen.
-- Bootstrapped backend skeleton: `internal/config` (AllParams structs + JSON manager), and empty packages for `app`, `camera`, `tracking`, `mouse`, `overlay`, `stream` compiled via `go build ./...`. Added `internal/camera/manager.go` using GoCV to read device 0 frames with FPS measurement.
-- Implemented `internal/tracking/tracker.go`: template extraction (SetPickPoint), MatchTemplate-based Update with score gating, adaptive template updates, and LOST state tracking.
-- Mouse subsystem now has: `controller.go` interface, `robotgo.go` implementation using RobotGo (v0.110.3), and `mapping.go` for sensitivity/deadzone/gain/smoothing math.
-- Added dwell clicking state machine (`internal/mouse/dwell.go`) that tracks cursor dwell radius/time and fires controller clicks when enabled + not LOST.
-- Overlay + stream scaffolding added: `overlay/overlay.go` draws marker/score/LOST, while `stream/preview.go` encodes JPEG→base64 with throttling and `stream/broker.go` dispatches preview/telemetry events (with `stream/telemetry.go` struct definitions).
-- Wired backend into Wails: `internal/app/service.go` orchestrates config, camera, tracker, overlay, stream broker, and bindings now expose Start/Stop/Params/Pick/Recenter/Toggle via `app.go` with events emitted as `preview:frame` + `telemetry:state`.
-- Added working Settings tab state + a compact 2-column layout so active tabs stay legible within the 420px window.
-- Camera preview placeholder now uses a fixed 4:3 aspect ratio box that's wider than it is tall.
-- React frontend now subscribes to `preview:frame`/`telemetry:state`, updates the shared store, wires MainScreen controls (start/pause, recenter, dwell/right-click toggles, preview pick) and Settings draft save/cancel flows to Wails bindings.
-
-- Backend now moves the OS cursor: tracking deltas feed the new mouse.Mapper (sensitivity/deadzone/smoothing), RobotGo controller moves the cursor, and dwell/pick maths are mirrored to match the flipped preview.
-- Pointer mapping now inverts horizontal deltas to match the mirrored preview, so moving your head right moves the cursor right; default pointer sensitivity bumped to 65 for snappier response.
-- Settings screen now renders real Tracking/Pointer/Clicking tabs (sliders, toggles, selects) wired to the draft hook; Hotkeys tab shows planned shortcuts.
-
+- **Backend pipeline**: `internal/app.Service` now orchestrates config loading, camera capture, template tracking, pointer mapping, dwell clicks, overlay rendering, preview encoding, telemetry emission, and RobotGo cursor control. Runtime params can be hot-reloaded and pushed to the UI via `params:update`.
+- **Camera + tracking**: GoCV capture on device 0 feeds the template-matching tracker with adaptive template updates, mirrored marker rendering, and LOST gating so cursor motion pauses when no target is found.
+- **Pointer & clicking**: Pointer sensitivity maps to gain/smoothing with optional advanced overrides, deltas are inverted horizontally to match the mirrored preview, and dwell clicking fires through the controller while auto-clearing the temporary right-click toggle.
+- **Config + persistence**: `config.Manager` reads/writes JSON in the user config dir; defaults align with current tuning (template 30px, sensitivity 65, etc.). Save/Update calls from the UI immediately apply and persist parameters.
+- **Wails bindings + events**: Start/Stop/Recenter/SetPickPoint/ToggleTracking/Get+Update+Save params are exposed, with preview/telemetry emissions wired to Wails events in `app.go`.
+- **React app**: Tailwind-only styling, shared `useAppStore` context, preview + telemetry subscriptions, settings draft hook, reusable Button, and two screens sized for 420×820. MainScreen implements preview click-to-pick, start/pause, recenter with countdown pause, dwell/right-click toggles, and settings navigation.
+- **Settings UI**: Settings tabs edit all Tracking/Pointer/Clicking options with sliders/toggles, showing hotkey documentation and sticky Save/Cancel actions that call `SaveParams` then return to Main.
 
 ## Next Up
-- Flesh out MainScreen UI (preview, controls) + Settings tab contents per `docs/SCREENS.md` once backend data is available.
-- Implement actual navigation/state handling for settings tabs + sticky actions.
-- Continue Phase 1 tasks (types + state) before wiring real controls.
-
-## Notes
-- `frontend/src/style.css` only hosts Tailwind directives + base font/background layer (antialiased system stack).
-- Run `cd frontend && npm run dev` for live reload or `npm run build` for production assets (verified once).
-- All colors now come directly from Tailwind utility classes (e.g., `bg-zinc-900`, `bg-emerald-500`).
-
-- MainScreen dwell toggle now shows a tooltip so the hover state communicates its purpose (enable/disable dwell clicking).
-- Right-click dwell toggle now auto-disarms after the next click; backend emits `params:update` events so the UI stays in sync.
-- Recenter button pauses tracking and shows a 5-second countdown before invoking Recenter and resuming tracking.
-- Pointer mapping uses the new Mapper (sensitivity up to 120) so head movements mirror cursor movement; defaults bumped accordingly.
-- Settings screen replaced placeholders with actual controls (tracking template sizes 20/30/40/50, pointer sliders to 120, stylish checkboxes/sliders, clicking tab note).
-
+- Run extended (30+ min) stability soak tests while verifying CPU usage + FPS; capture issues.
+- Decide whether Start/Stop should differentiate from tracker enabled state or if ToggleTracking needs UI exposure.
+- Expand preview UX (e.g., overlay telemetry text) once real frames confirm sizing, and consider instructions for pick flow.
+- Phase 10 verification items: document/automate config-path testing across OSes, confirm dwell + right-click behavior across edge cases, and tighten defaults after real-world usage.
+- Phase 11 release prep: README rewrite (build/run instructions, requirements), demo assets, and contributing guidelines.
