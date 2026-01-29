@@ -384,8 +384,8 @@ func mapClick(click config.ClickType, rightToggle bool) mouse.ClickButton {
 }
 
 func pointerMapping(p config.PointerParams) mouse.MappingParams {
-	gain := mapRange(float64(p.Sensitivity), 0, 120, 1.2, 5.0)
-	smoothing := mapRange(float64(p.Sensitivity), 0, 120, 0.35, 0.15)
+	gain := mapRange(float64(p.Sensitivity), 1, 100, 1.2, 5.0) * 4
+	smoothing := mapRange(float64(p.Sensitivity), 1, 100, 0.35, 0.15)
 	gainX := gain
 	gainY := gain
 	if adv := p.Advanced; adv != nil {

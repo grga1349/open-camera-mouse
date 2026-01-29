@@ -11,8 +11,8 @@ const defaultParams: AllParams = {
         templateUpdateAlpha: 0.2,
         markerShape: 'circle',
     },
-    pointer: {
-        sensitivity: 65,
+	pointer: {
+		sensitivity: 30,
         deadzonePx: 1,
         maxSpeedPx: 25,
         advanced: null,

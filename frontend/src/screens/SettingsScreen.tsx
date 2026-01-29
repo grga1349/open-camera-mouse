@@ -74,6 +74,19 @@ type TabProps = {
     updateDraft: (updater: (current: AllParams) => AllParams) => void;
 };
 
+const clampSensitivity = (value: number) => Math.min(100, Math.max(1, value));
+const gainFromSensitivity = (value: number) => {
+    const clamped = clampSensitivity(value);
+    const normalized = (clamped - 1) / 99;
+    const baseGain = 1.2 + normalized * (5 - 1.2);
+    return baseGain * 3;
+};
+const smoothingFromSensitivity = (value: number) => {
+    const clamped = clampSensitivity(value);
+    const normalized = (clamped - 1) / 99;
+    return 0.35 + normalized * (0.15 - 0.35);
+};
+
 const TrackingTab: FC<TabProps> = ({draft, updateDraft}) => {
     const tracking = draft.tracking;
     const updateTracking = (changes: Partial<typeof tracking>) => {
@@ -173,8 +186,12 @@ const PointerTab: FC<TabProps> = ({draft, updateDraft}) => {
         }));
     };
 
+    const autoGain = gainFromSensitivity(pointer.sensitivity);
+    const autoSmoothing = smoothingFromSensitivity(pointer.sensitivity);
+    const autoAdvancedDefaults = {gainX: autoGain, gainY: autoGain, smoothing: autoSmoothing};
+
     const updateAdvanced = (changes: {gainX?: number; gainY?: number; smoothing?: number} | null) => {
-        updatePointer({advanced: changes ? {...(pointer.advanced ?? {gainX: pointer.sensitivity / 20, gainY: pointer.sensitivity / 20, smoothing: 0.2}), ...changes} : null});
+        updatePointer({advanced: changes ? {...(pointer.advanced ?? autoAdvancedDefaults), ...changes} : null});
     };
 
     const advanced = pointer.advanced;
@@ -183,8 +200,8 @@ const PointerTab: FC<TabProps> = ({draft, updateDraft}) => {
         <div className="space-y-4">
             <SliderField
                 label={`Sensitivity (${pointer.sensitivity})`}
-                min={10}
-                max={120}
+                min={1}
+                max={100}
                 step={1}
                 value={pointer.sensitivity}
                 onChange={value => updatePointer({sensitivity: value})}
@@ -211,7 +228,7 @@ const PointerTab: FC<TabProps> = ({draft, updateDraft}) => {
             <div className="rounded-2xl border border-zinc-800 p-3">
                 <div className="mb-2 flex items-center justify-between text-sm">
                     <p className="font-semibold text-zinc-200">Advanced gain</p>
-                    <Button variant="ghost" onClick={() => updateAdvanced(advanced ? null : {gainX: pointer.sensitivity / 20, gainY: pointer.sensitivity / 20, smoothing: 0.2})}>
+                    <Button variant="ghost" onClick={() => updateAdvanced(advanced ? null : autoAdvancedDefaults)}>
                         {advanced ? 'Disable' : 'Enable'}
                     </Button>
                 </div>
@@ -221,7 +238,7 @@ const PointerTab: FC<TabProps> = ({draft, updateDraft}) => {
                             label="Gain X"
                             value={advanced.gainX}
                             min={0.5}
-                            max={6}
+                            max={18}
                             step={0.1}
                             onChange={value => updateAdvanced({gainX: value})}
                         />
@@ -229,7 +246,7 @@ const PointerTab: FC<TabProps> = ({draft, updateDraft}) => {
                             label="Gain Y"
                             value={advanced.gainY}
                             min={0.5}
-                            max={6}
+                            max={18}
                             step={0.1}
                             onChange={value => updateAdvanced({gainY: value})}
                         />

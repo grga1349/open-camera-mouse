@@ -73,7 +73,7 @@ func DefaultParams() AllParams {
 			MarkerShape:         MarkerShapeCircle,
 		},
 		Pointer: PointerParams{
-			Sensitivity: 65,
+			Sensitivity: 30,
 			DeadzonePx:  1,
 			MaxSpeedPx:  25,
 			Advanced:    nil,

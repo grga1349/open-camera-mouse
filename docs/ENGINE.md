@@ -6,8 +6,8 @@
 
 ## Pointer mapping
 ### Sensitivity → gain/smoothing (MVP mapping)
-- gain = map sensitivity 0..100 → [1.2 .. 4.0]
-- smoothing = map sensitivity 0..100 → [0.35 .. 0.18]
+- gain = map sensitivity 1..100 → [1.2 .. 5.0] then multiply by 4 for the final cursor gain
+- smoothing = map sensitivity 1..100 → [0.35 .. 0.15]
 - gainX=gainY=gain unless advanced enabled
 
 
@@ -61,7 +61,7 @@ Emit encoded preview at 15–25 Hz:
 - searchMarginPx=30
 - scoreThreshold=0.60
 - adaptiveTemplate=true, templateUpdateAlpha=0.20
-- sensitivity=50
+- sensitivity=30
 - deadzonePx=1
 - maxSpeedPx=25
 - dwellEnabled=false
