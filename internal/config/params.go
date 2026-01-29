@@ -45,10 +45,21 @@ type ClickingParams struct {
 	RightClickToggle bool      `json:"rightClickToggle"`
 }
 
+type HotkeysParams struct {
+	StartPause string `json:"startPause"`
+	Recenter   string `json:"recenter"`
+}
+
+type GeneralParams struct {
+	AutoStart bool `json:"autoStart"`
+}
+
 type AllParams struct {
 	Tracking TrackingParams `json:"tracking"`
 	Pointer  PointerParams  `json:"pointer"`
 	Clicking ClickingParams `json:"clicking"`
+	Hotkeys  HotkeysParams  `json:"hotkeys"`
+	General  GeneralParams  `json:"general"`
 }
 
 func DefaultParams() AllParams {
@@ -74,5 +85,23 @@ func DefaultParams() AllParams {
 			ClickType:        ClickTypeLeft,
 			RightClickToggle: false,
 		},
+		Hotkeys: HotkeysParams{
+			StartPause: "F11",
+			Recenter:   "F12",
+		},
+		General: GeneralParams{
+			AutoStart: false,
+		},
 	}
+}
+
+func (p *AllParams) ensureDefaults() {
+	if p.Hotkeys.StartPause == "" {
+		p.Hotkeys.StartPause = "F11"
+	}
+	if p.Hotkeys.Recenter == "" {
+		p.Hotkeys.Recenter = "F12"
+	}
+	// ensure zero value general struct exists
+	p.General.AutoStart = p.General.AutoStart
 }

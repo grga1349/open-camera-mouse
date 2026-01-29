@@ -158,6 +158,12 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+func (s *Service) IsRunning() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.running
+}
+
 func (s *Service) handleFrame(frame camera.Frame) {
 	defer frame.Mat.Close()
 

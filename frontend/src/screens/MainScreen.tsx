@@ -3,7 +3,7 @@ import {Button} from '../components/Button';
 import {useAppStore} from '../state/useAppStore';
 import type {AllParams} from '../types/params';
 import {config as backendConfig} from '../../wailsjs/go/models';
-import {Recenter, SetPickPoint, UpdateParams} from '../../wailsjs/go/main/App';
+import {Recenter, SetPickPoint, ToggleTracking, UpdateParams} from '../../wailsjs/go/main/App';
 
 const statusColor = (lost: boolean) => (lost ? 'text-red-400' : 'text-emerald-400');
 
@@ -42,36 +42,40 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
         if (recenterCountdown > 0) {
             return;
         }
+
+        const trackingWasEnabled = telemetry.trackingOn;
         try {
-            const wasRunning = isRunning;
-            if (wasRunning) {
-                await onStop();
+            if (trackingWasEnabled) {
+                await ToggleTracking(false);
             }
-            let remaining = 5;
-            setRecenterCountdown(remaining);
-            countdownRef.current = window.setInterval(async () => {
-                remaining -= 1;
-                if (remaining > 0) {
-                    setRecenterCountdown(remaining);
-                    return;
-                }
-                if (countdownRef.current) {
-                    clearInterval(countdownRef.current);
-                    countdownRef.current = null;
-                }
-                setRecenterCountdown(0);
-                try {
-                    await Recenter();
-                    if (wasRunning) {
-                        await onStart();
-                    }
-                } catch (err) {
-                    console.error('recenter failed', err);
-                }
-            }, 1000);
         } catch (err) {
-            console.error('recenter failed', err);
+            console.error('failed to pause tracking before recenter', err);
         }
+
+        let remaining = 5;
+        setRecenterCountdown(remaining);
+        countdownRef.current = window.setInterval(async () => {
+            remaining -= 1;
+            if (remaining > 0) {
+                setRecenterCountdown(remaining);
+                return;
+            }
+
+            if (countdownRef.current) {
+                clearInterval(countdownRef.current);
+                countdownRef.current = null;
+            }
+            setRecenterCountdown(0);
+
+            try {
+                await Recenter();
+                if (trackingWasEnabled) {
+                    await ToggleTracking(true);
+                }
+            } catch (err) {
+                console.error('recenter failed', err);
+            }
+        }, 1000);
     };
 
     const handlePreviewClick = async (event: MouseEvent<HTMLDivElement>) => {
@@ -109,10 +113,14 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
     };
 
     const toggleDwell = () => updateClicking({dwellEnabled: !params.clicking.dwellEnabled});
+    const handleDwellHover = () => {
+        if (!params.clicking.dwellEnabled) {
+            void updateClicking({dwellEnabled: true});
+        }
+    };
     const toggleRightClick = () => updateClicking({rightClickToggle: !params.clicking.rightClickToggle});
 
     const previewSrc = preview ? `data:image/jpeg;base64,${preview.data}` : null;
-
     return (
         <div className="mx-auto flex h-screen max-w-sm flex-col gap-4 bg-zinc-950 px-5 py-4 text-zinc-100">
             <header className="flex items-center justify-between rounded-2xl border border-zinc-900 bg-zinc-900 px-4 py-3">
@@ -147,10 +155,15 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
                         {isRunning ? 'Pause' : 'Start'}
                     </Button>
                     <Button fullWidth onClick={handleRecenter} disabled={recenterCountdown > 0}>
-                        {recenterCountdown > 0 ? `Recenter (${recenterCountdown})` : 'Recenter'}
+                        {recenterCountdown > 0 ? `Recenter in ${recenterCountdown}` : 'Recenter'}
                     </Button>
                     <div className="grid grid-cols-2 gap-3">
-                        <Button fullWidth onClick={toggleDwell} title="Enable dwell clicking">
+                        <Button
+                            fullWidth
+                            onClick={toggleDwell}
+                            onMouseEnter={handleDwellHover}
+                            title="Enable dwell clicking"
+                        >
                             Dwell {params.clicking.dwellEnabled ? 'On' : 'Off'}
                         </Button>
                         <Button fullWidth onClick={toggleRightClick}>

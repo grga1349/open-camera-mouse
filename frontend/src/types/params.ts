@@ -31,8 +31,19 @@ export type ClickingParams = {
     rightClickToggle: boolean;
 };
 
+export type HotkeysParams = {
+    startPause: string;
+    recenter: string;
+};
+
+export type GeneralParams = {
+    autoStart: boolean;
+};
+
 export type AllParams = {
     tracking: TrackingParams;
     pointer: PointerParams;
     clicking: ClickingParams;
+    hotkeys: HotkeysParams;
+    general: GeneralParams;
 };

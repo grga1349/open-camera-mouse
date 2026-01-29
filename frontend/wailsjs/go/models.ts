@@ -1,5 +1,31 @@
 export namespace config {
 	
+	export class GeneralParams {
+	    autoStart: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new GeneralParams(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.autoStart = source["autoStart"];
+	    }
+	}
+	export class HotkeysParams {
+	    startPause: string;
+	    recenter: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HotkeysParams(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.startPause = source["startPause"];
+	        this.recenter = source["recenter"];
+	    }
+	}
 	export class ClickingParams {
 	    dwellEnabled: boolean;
 	    dwellTimeMs: number;
@@ -98,6 +124,8 @@ export namespace config {
 	    tracking: TrackingParams;
 	    pointer: PointerParams;
 	    clicking: ClickingParams;
+	    hotkeys: HotkeysParams;
+	    general: GeneralParams;
 	
 	    static createFrom(source: any = {}) {
 	        return new AllParams(source);
@@ -108,6 +136,8 @@ export namespace config {
 	        this.tracking = this.convertValues(source["tracking"], TrackingParams);
 	        this.pointer = this.convertValues(source["pointer"], PointerParams);
 	        this.clicking = this.convertValues(source["clicking"], ClickingParams);
+	        this.hotkeys = this.convertValues(source["hotkeys"], HotkeysParams);
+	        this.general = this.convertValues(source["general"], GeneralParams);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -128,6 +158,8 @@ export namespace config {
 		    return a;
 		}
 	}
+	
+	
 	
 	
 	

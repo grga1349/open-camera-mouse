@@ -24,6 +24,13 @@ const defaultParams: AllParams = {
         clickType: 'left',
         rightClickToggle: false,
     },
+    hotkeys: {
+        startPause: 'F11',
+        recenter: 'F12',
+    },
+    general: {
+        autoStart: false,
+    },
 };
 
 const defaultTelemetry: Telemetry = {

@@ -1,11 +1,9 @@
-import {useState, type FC} from 'react';
+import {useState, type FC, type ReactNode} from 'react';
 import {Button} from '../components/Button';
 import {useSettingsDraft} from '../state/useSettingsDraft';
 import type {AllParams} from '../types/params';
 
-const tabs = ['Tracking', 'Pointer', 'Clicking', 'Hotkeys'] as const;
-
-const tabButtonBase = 'w-full rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-center transition';
+const tabs = ['Tracking', 'Pointer', 'Clicking', 'General'] as const;
 
 type SettingsScreenProps = {
     onSave: (params: AllParams) => void | Promise<void>;
@@ -40,18 +38,19 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({onSave, onCancel}) => {
                 <nav className="grid grid-cols-2 gap-2 border-b border-zinc-900 px-4 py-3">
                     {tabs.map(tab => {
                         const isActive = activeTab === tab;
-                        const tabClass = isActive
-                            ? `${tabButtonBase} bg-emerald-500 text-white`
-                            : `${tabButtonBase} border border-zinc-900 text-zinc-400 hover:bg-zinc-900`;
                         return (
-                            <button
+                            <Button
                                 key={tab}
-                                className={tabClass}
+                                fullWidth
+                                variant={isActive ? 'action' : 'highlight'}
+                                className={`text-xs font-semibold uppercase tracking-wide ${
+                                    isActive ? '' : 'border-zinc-900 bg-zinc-950 text-zinc-400 hover:bg-zinc-900'
+                                }`}
                                 onClick={() => setActiveTab(tab)}
                                 aria-current={isActive ? 'page' : undefined}
                             >
                                 {tab}
-                            </button>
+                            </Button>
                         );
                     })}
                 </nav>
@@ -87,7 +86,7 @@ const TrackingTab: FC<TabProps> = ({draft, updateDraft}) => {
         }));
     };
 
-    const templateSizes = [20, 30, 40, 50];
+    const templateSizes = [30, 40, 50];
 
     return (
         <div className="space-y-4">
@@ -95,17 +94,13 @@ const TrackingTab: FC<TabProps> = ({draft, updateDraft}) => {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Template size</p>
                 <div className="flex gap-2">
                     {templateSizes.map(size => (
-                        <button
+                        <ChoiceButton
                             key={size}
-                            className={`flex-1 rounded-full border px-3 py-2 text-sm ${
-                                tracking.templateSizePx === size
-                                    ? 'border-emerald-400 bg-emerald-500/20'
-                                    : 'border-zinc-800 hover:bg-zinc-900'
-                            }`}
+                            selected={tracking.templateSizePx === size}
                             onClick={() => updateTracking({templateSizePx: size})}
                         >
                             {size}px
-                        </button>
+                        </ChoiceButton>
                     ))}
                 </div>
             </div>
@@ -128,10 +123,10 @@ const TrackingTab: FC<TabProps> = ({draft, updateDraft}) => {
                 onChange={value => updateTracking({scoreThreshold: value / 100})}
             />
 
-            <label className="flex items-center gap-3 text-sm">
+            <label className="flex items-center gap-3 text-sm uppercase tracking-wide">
                 <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500"
+                    className="h-4 w-4 rounded border border-zinc-700 bg-zinc-900 text-emerald-400 accent-emerald-400 focus:ring-emerald-400"
                     checked={tracking.adaptiveTemplate}
                     onChange={event => updateTracking({adaptiveTemplate: event.target.checked})}
                 />
@@ -152,17 +147,13 @@ const TrackingTab: FC<TabProps> = ({draft, updateDraft}) => {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Marker shape</p>
                 <div className="flex gap-2">
                     {['circle', 'square'].map(shape => (
-                        <button
+                        <ChoiceButton
                             key={shape}
-                            className={`flex-1 rounded-full border px-3 py-2 text-sm capitalize ${
-                                tracking.markerShape === shape
-                                    ? 'border-emerald-400 bg-emerald-500/20'
-                                    : 'border-zinc-800 hover:bg-zinc-900'
-                            }`}
+                            selected={tracking.markerShape === shape}
                             onClick={() => updateTracking({markerShape: shape as any})}
                         >
-                            {shape}
-                        </button>
+                            {shape.toUpperCase()}
+                        </ChoiceButton>
                     ))}
                 </div>
             </div>
@@ -273,16 +264,6 @@ const ClickingTab: FC<TabProps> = ({draft, updateDraft}) => {
 
     return (
         <div className="space-y-4">
-            <label className="flex items-center gap-3 text-sm">
-                <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500"
-                    checked={clicking.dwellEnabled}
-                    onChange={event => updateClicking({dwellEnabled: event.target.checked})}
-                />
-                Enable dwell clicking
-            </label>
-
             <SliderField
                 label={`Dwell time (${clicking.dwellTimeMs} ms)`}
                 min={200}
@@ -301,32 +282,63 @@ const ClickingTab: FC<TabProps> = ({draft, updateDraft}) => {
                 onChange={value => updateClicking({dwellRadiusPx: value})}
             />
 
-            <div className="rounded-2xl border border-zinc-800 p-3 text-xs text-zinc-400">
-                Right-click type is controlled from the main screen toggle.
-            </div>
-
-            <label className="flex items-center gap-3 text-sm">
-                <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500"
-                    checked={clicking.rightClickToggle}
-                    onChange={event => updateClicking({rightClickToggle: event.target.checked})}
-                />
-                Right-click toggle
-            </label>
         </div>
     );
 };
 
-const HotkeysTab: FC = () => (
-    <div className="space-y-3 text-sm text-zinc-400">
-        <p className="font-semibold text-zinc-200">Hotkeys (app must be focused)</p>
-        <ul className="list-disc space-y-1 pl-5">
-            <li><span className="font-semibold text-zinc-200">Space</span> – Start/Pause tracking</li>
-            <li><span className="font-semibold text-zinc-200">R</span> – Recenter tracker</li>
-        </ul>
-    </div>
-);
+const GeneralTab: FC<TabProps> = ({draft, updateDraft}) => {
+    const hotkeys = draft.hotkeys;
+    const general = draft.general ?? {autoStart: false};
+    const updateHotkeys = (changes: Partial<typeof hotkeys>) => {
+        updateDraft(current => ({
+            ...current,
+            hotkeys: {
+                ...current.hotkeys,
+                ...changes,
+            },
+        }));
+    };
+
+    const updateGeneral = (changes: Partial<typeof general>) => {
+        updateDraft(current => ({
+            ...current,
+            general: {
+                ...(current.general ?? {autoStart: false}),
+                ...changes,
+            },
+        }));
+    };
+
+    return (
+        <div className="space-y-4 text-sm text-zinc-300">
+            <HotkeyField
+                label="Start / Pause hotkey"
+                description="Runs even when the app is in the background"
+                value={hotkeys.startPause}
+                onChange={value => updateHotkeys({startPause: value})}
+            />
+            <HotkeyField
+                label="Recenter hotkey"
+                description="Recenters the tracker without pausing the camera"
+                value={hotkeys.recenter}
+                onChange={value => updateHotkeys({recenter: value})}
+            />
+
+            <label className="block text-sm text-zinc-300">
+                <div className="flex items-center gap-3 uppercase tracking-wide">
+                    <input
+                        type="checkbox"
+                        className="h-5 w-5 rounded border border-zinc-700 bg-zinc-900 text-emerald-400 accent-emerald-400 focus:ring-emerald-400"
+                        checked={general.autoStart}
+                        onChange={event => updateGeneral({autoStart: event.target.checked})}
+                    />
+                    Autostart camera
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">Begin capturing automatically when the app launches.</p>
+            </label>
+        </div>
+    );
+};
 
 const renderTab = (
     tab: typeof tabs[number],
@@ -341,9 +353,20 @@ const renderTab = (
         case 'Clicking':
             return <ClickingTab draft={draft} updateDraft={updateDraft}/>;
         default:
-            return <HotkeysTab/>;
+            return <GeneralTab draft={draft} updateDraft={updateDraft}/>;
     }
 };
+
+const ChoiceButton: FC<{selected: boolean; onClick: () => void; children: ReactNode}> = ({selected, onClick, children}) => (
+    <Button
+        type="button"
+        variant={selected ? 'action' : 'highlight'}
+        className={`flex-1 text-sm ${selected ? '' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900'}`}
+        onClick={onClick}
+    >
+        {children}
+    </Button>
+);
 
 const SliderField: FC<{
     label: string;
@@ -364,7 +387,7 @@ const SliderField: FC<{
             value={value}
             disabled={disabled}
             onChange={event => onChange(parseFloat(event.target.value))}
-            className="w-full"
+            className={`slider-input ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
         />
     </label>
 );
@@ -390,3 +413,23 @@ const NumberField: FC<{
         />
     </label>
 );
+
+const HotkeyField: FC<{label: string; description: string; value: string; onChange: (value: string) => void}> = ({
+    label,
+    description,
+    value,
+    onChange,
+}) => (
+    <label className="block text-sm">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</span>
+        <input
+            type="text"
+            value={(value ?? '').toUpperCase()}
+            onChange={event => onChange(formatHotkeyInput(event.target.value))}
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 uppercase"
+        />
+        <p className="mt-1 text-xs text-zinc-500">{description}</p>
+    </label>
+);
+
+const formatHotkeyInput = (value: string): string => value.replace(/\s+/g, '').toUpperCase();

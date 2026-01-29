@@ -47,6 +47,7 @@ func (m *Manager) Load() (AllParams, error) {
 	if err := json.Unmarshal(data, &params); err != nil {
 		return DefaultParams(), err
 	}
+	params.ensureDefaults()
 
 	return params, nil
 }

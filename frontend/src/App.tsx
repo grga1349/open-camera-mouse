@@ -19,6 +19,7 @@ function App() {
         let offPreview: (() => void) | undefined;
         let offTelemetry: (() => void) | undefined;
         let offParams: (() => void) | undefined;
+        let offRunning: (() => void) | undefined;
 
         GetParams()
             .then(res => setParams(normalizeParams(res)))
@@ -59,12 +60,17 @@ function App() {
             setParams(normalizeParams(payload));
         });
 
+        offRunning = EventsOn('service:running', payload => {
+            setRunning(Boolean(payload));
+        });
+
         return () => {
             offPreview?.();
             offTelemetry?.();
             offParams?.();
+            offRunning?.();
         };
-    }, [setParams, setPreview, setTelemetry]);
+    }, [setParams, setPreview, setTelemetry, setRunning]);
 
     const openSettings = () => setScreen('settings');
     const closeSettings = () => setScreen('main');
