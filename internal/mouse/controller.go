@@ -4,6 +4,7 @@ type Controller interface {
 	Move(x, y int) error
 	Click(button ClickButton) error
 	CurrentPosition() (int, int, error)
+	ScreenSize() (int, int, error)
 }
 
 type ClickButton string

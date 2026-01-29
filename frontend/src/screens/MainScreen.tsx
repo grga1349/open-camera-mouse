@@ -1,7 +1,6 @@
 import {useEffect, useRef, useState, type FC, type MouseEvent} from 'react';
 import {Button} from '../components/Button';
 import {useAppStore} from '../state/useAppStore';
-import type {AllParams} from '../types/params';
 import {config as backendConfig} from '../../wailsjs/go/models';
 import {Recenter, SetPickPoint, ToggleTracking, UpdateParams} from '../../wailsjs/go/main/App';
 
@@ -17,11 +16,15 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
     const {params, telemetry, preview, isRunning, setParams} = useAppStore();
     const [recenterCountdown, setRecenterCountdown] = useState(0);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const dwellHoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         return () => {
             if (countdownRef.current) {
                 clearInterval(countdownRef.current);
+            }
+            if (dwellHoverRef.current) {
+                clearTimeout(dwellHoverRef.current);
             }
         };
     }, []);
@@ -52,6 +55,12 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
             console.error('failed to pause tracking before recenter', err);
         }
 
+        try {
+            await Recenter();
+        } catch (err) {
+            console.error('recenter failed', err);
+        }
+
         let remaining = 5;
         setRecenterCountdown(remaining);
         countdownRef.current = window.setInterval(async () => {
@@ -68,12 +77,11 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
             setRecenterCountdown(0);
 
             try {
-                await Recenter();
                 if (trackingWasEnabled) {
                     await ToggleTracking(true);
                 }
             } catch (err) {
-                console.error('recenter failed', err);
+                console.error('failed to resume tracking after recenter', err);
             }
         }, 1000);
     };
@@ -112,10 +120,30 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
         }
     };
 
-    const toggleDwell = () => updateClicking({dwellEnabled: !params.clicking.dwellEnabled});
-    const handleDwellHover = () => {
-        if (!params.clicking.dwellEnabled) {
-            void updateClicking({dwellEnabled: true});
+    const toggleDwell = () => {
+        if (dwellHoverRef.current) {
+            clearTimeout(dwellHoverRef.current);
+            dwellHoverRef.current = null;
+        }
+        void updateClicking({dwellEnabled: !params.clicking.dwellEnabled});
+    };
+
+    const handleDwellHoverStart = () => {
+        if (params.clicking.dwellEnabled || dwellHoverRef.current) {
+            return;
+        }
+        dwellHoverRef.current = window.setTimeout(() => {
+            dwellHoverRef.current = null;
+            if (!params.clicking.dwellEnabled) {
+                void updateClicking({dwellEnabled: true});
+            }
+        }, 500);
+    };
+
+    const handleDwellHoverEnd = () => {
+        if (dwellHoverRef.current) {
+            clearTimeout(dwellHoverRef.current);
+            dwellHoverRef.current = null;
         }
     };
     const toggleRightClick = () => updateClicking({rightClickToggle: !params.clicking.rightClickToggle});
@@ -161,7 +189,8 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
                         <Button
                             fullWidth
                             onClick={toggleDwell}
-                            onMouseEnter={handleDwellHover}
+                            onMouseEnter={handleDwellHoverStart}
+                            onMouseLeave={handleDwellHoverEnd}
                             title="Enable dwell clicking"
                         >
                             Dwell {params.clicking.dwellEnabled ? 'On' : 'Off'}

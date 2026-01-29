@@ -1,9 +1,12 @@
 import {useState, type FC, type ReactNode} from 'react';
 import {Button} from '../components/Button';
+import {defaultParams} from '../state/useAppStore';
 import {useSettingsDraft} from '../state/useSettingsDraft';
 import type {AllParams} from '../types/params';
 
 const tabs = ['Tracking', 'Pointer', 'Clicking', 'General'] as const;
+
+const cloneDefaults = (): AllParams => JSON.parse(JSON.stringify(defaultParams));
 
 type SettingsScreenProps = {
     onSave: (params: AllParams) => void | Promise<void>;
@@ -22,6 +25,10 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({onSave, onCancel}) => {
     const handleSave = async () => {
         await onSave(draft);
         resetDraft();
+    };
+
+    const handleResetDefaults = () => {
+        updateDraft(() => cloneDefaults());
     };
 
     return (
@@ -60,6 +67,7 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({onSave, onCancel}) => {
             </main>
 
             <footer className="flex items-center justify-end gap-3 rounded-2xl border border-zinc-900 bg-zinc-900 px-4 py-3">
+                <Button onClick={handleResetDefaults}>Reset</Button>
                 <Button onClick={handleCancel}>Cancel</Button>
                 <Button variant="action" disabled={!dirty} onClick={handleSave}>
                     Save

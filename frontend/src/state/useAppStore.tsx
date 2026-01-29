@@ -2,7 +2,7 @@ import {createContext, useCallback, useContext, useMemo, useState, type FC, type
 import type {AllParams} from '../types/params';
 import type {Telemetry} from '../types/telemetry';
 
-const defaultParams: AllParams = {
+export const defaultParams: AllParams = {
     tracking: {
         templateSizePx: 30,
         searchMarginPx: 30,

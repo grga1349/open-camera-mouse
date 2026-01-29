@@ -36,13 +36,15 @@ type Service struct {
 	mu     sync.RWMutex
 	params config.AllParams
 
-	camera     *camera.Manager
-	tracker    *tracking.Tracker
-	controller mouse.Controller
-	dwell      *mouse.DwellState
-	mapper     *mouse.Mapper
-	lastPoint  image.Point
-	pointSet   bool
+	camera      *camera.Manager
+	tracker     *tracking.Tracker
+	controller  mouse.Controller
+	dwell       *mouse.DwellState
+	mapper      *mouse.Mapper
+	lastPoint   image.Point
+	pointSet    bool
+	markerPoint image.Point
+	markerValid bool
 
 	preview *stream.PreviewEncoder
 	broker  *stream.Broker
@@ -178,7 +180,13 @@ func (s *Service) handleFrame(frame camera.Frame) {
 	var score float32
 	var lost bool
 
-	if s.trackingEnabled {
+	s.mu.RLock()
+	trackingEnabled := s.trackingEnabled
+	savedMarker := s.markerPoint
+	hasMarker := s.markerValid
+	s.mu.RUnlock()
+
+	if trackingEnabled {
 		trackingFrame := tracking.Frame{Mat: frame.Mat, Timestamp: frame.Timestamp}
 		if res, err := s.tracker.Update(trackingFrame); err == nil {
 			result = res
@@ -191,6 +199,15 @@ func (s *Service) handleFrame(frame camera.Frame) {
 		}
 	} else {
 		lost = true
+	}
+
+	if !lost {
+		s.mu.Lock()
+		s.markerPoint = result.Point
+		s.markerValid = true
+		s.mu.Unlock()
+	} else if hasMarker {
+		result.Point = savedMarker
 	}
 
 	if s.mapper != nil {
@@ -213,12 +230,16 @@ func (s *Service) handleFrame(frame camera.Frame) {
 				s.mapper.Reset()
 				s.pointSet = true
 			}
-			s.lastPoint = result.Point
+			if !lost {
+				s.lastPoint = result.Point
+			}
 		}
 	}
 
 	markerColor := color.RGBA{0, 255, 0, 0}
-	if lost {
+	if !trackingEnabled {
+		markerColor = color.RGBA{255, 255, 255, 0}
+	} else if lost {
 		markerColor = color.RGBA{255, 0, 0, 0}
 	}
 
@@ -247,7 +268,7 @@ func (s *Service) handleFrame(frame camera.Frame) {
 		FPS:      frame.FPS,
 		Score:    score,
 		Lost:     lost,
-		Tracking: s.trackingEnabled,
+		Tracking: trackingEnabled,
 		PosX:     result.Point.X,
 		PosY:     result.Point.Y,
 	}
@@ -280,6 +301,8 @@ func (s *Service) SetPickPoint(point image.Point) error {
 		s.mu.Lock()
 		s.pointSet = false
 		s.mapper.Reset()
+		s.markerPoint = point
+		s.markerValid = true
 		s.mu.Unlock()
 	}
 
@@ -312,10 +335,22 @@ func (s *Service) Recenter() error {
 		s.mu.Lock()
 		s.pointSet = false
 		s.mapper.Reset()
+		s.markerPoint = point
+		s.markerValid = true
 		s.mu.Unlock()
+		s.centerCursor()
 	}
 
 	return err
+}
+
+func (s *Service) centerCursor() {
+	if s.controller == nil {
+		return
+	}
+	if width, height, err := s.controller.ScreenSize(); err == nil {
+		_ = s.controller.Move(width/2, height/2)
+	}
 }
 
 func (s *Service) GetParams() config.AllParams {

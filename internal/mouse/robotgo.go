@@ -35,3 +35,8 @@ func (r *RobotController) CurrentPosition() (int, int, error) {
 	x, y := robotgo.GetMousePos()
 	return x, y, nil
 }
+
+func (r *RobotController) ScreenSize() (int, int, error) {
+	w, h := robotgo.GetScreenSize()
+	return w, h, nil
+}
