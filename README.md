@@ -55,5 +55,11 @@ pointer with smooth gain control, and trigger clicks through dwell timing—no a
   may require additional permissions.
 - Logs are printed to the console when running via `wails dev`; check them for camera or hotkey errors.
 
+## Releasing
+1. Update `VERSION` with the new semantic version (e.g., `0.2.0`).
+2. Commit the change and create a matching tag prefixed with `v` (for `0.2.0`, tag `v0.2.0`).
+3. Push the tag. GitHub Actions will build notarized bundles for macOS and Windows, attach them to the
+   GitHub release, and keep Linux users building from source.
+
 ## License
 This project is licensed under the MIT License. See `LICENSE` for details.
