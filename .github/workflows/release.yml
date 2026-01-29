@@ -52,12 +52,42 @@ jobs:
       - name: Install OpenCV (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          OPENCV_VERSION: '4.13.0'
+          GOCV_RELEASE: 'v0.43.0'
         run: |
-          choco install opencv --version=4.10.0 -y
-          $opencvDir = 'C:\tools\opencv\build'
-          Add-Content $env:GITHUB_ENV "CGO_CPPFLAGS=-I$opencvDir\include"
-          Add-Content $env:GITHUB_ENV "CGO_LDFLAGS=-L$opencvDir\x64\vc16\lib -lopencv_world4100"
-          Add-Content $env:GITHUB_PATH "$opencvDir\x64\vc16\bin"
+          $ErrorActionPreference = 'Stop'
+          $zipPath = Join-Path $env:RUNNER_TEMP 'opencv.zip'
+          $downloadUrl = "https://github.com/hybridgroup/gocv/releases/download/$env:GOCV_RELEASE/opencv-$env:OPENCV_VERSION-windows-amd64.zip"
+          Write-Host "Downloading OpenCV from $downloadUrl"
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
+
+          $installDir = 'C:\opencv'
+          if (Test-Path $installDir) {
+            Remove-Item $installDir -Recurse -Force
+          }
+
+          $extractDir = Join-Path $env:RUNNER_TEMP 'opencv-extract'
+          if (Test-Path $extractDir) {
+            Remove-Item $extractDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $extractDir | Out-Null
+          Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+          $payload = Get-ChildItem $extractDir | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+          if (-not $payload) {
+            throw "Unable to locate extracted OpenCV directory"
+          }
+          Move-Item -Path $payload.FullName -Destination $installDir
+
+          Remove-Item $zipPath -Force
+          Remove-Item $extractDir -Recurse -Force
+
+          if (-not (Test-Path "$installDir\\build\\install\\x64\\mingw\\lib")) {
+            throw "OpenCV archive did not contain the expected mingw build output"
+          }
+
+          Add-Content $env:GITHUB_PATH "$installDir\\build\\install\\x64\\mingw\\bin"
 
       - name: Install frontend deps
         run: npm ci
