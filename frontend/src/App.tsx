@@ -2,8 +2,8 @@ import {useEffect, useState} from 'react';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 import {GetParams, SaveParams, Start, Stop} from '../wailsjs/go/main/App';
 import {config as backendConfig} from '../wailsjs/go/models';
-import {MainScreen} from './screens/MainScreen';
-import {SettingsScreen} from './screens/SettingsScreen';
+import {MainScreen} from './screens/main/MainScreen';
+import {SettingsScreen} from './screens/settings/SettingsScreen';
 import {useAppStore} from './state/useAppStore';
 import type {AllParams} from './types/params';
 
