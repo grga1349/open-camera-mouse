@@ -163,4 +163,3 @@ export const MainScreen: FC<MainScreenProps> = ({onOpenSettings, onStart, onStop
         </ScreenShell>
     );
 };
-

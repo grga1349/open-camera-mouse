@@ -63,6 +63,8 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 	if err != nil {
 		return nil, err
 	}
+	// Always begin with dwell disabled; users re-enable via UI per session
+	params.Clicking.DwellEnabled = false
 
 	trackerParams := tracking.Params{
 		TemplateSize:     params.Tracking.TemplateSizePx,

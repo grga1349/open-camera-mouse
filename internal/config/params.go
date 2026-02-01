@@ -102,6 +102,19 @@ func (p *AllParams) ensureDefaults() {
 	if p.Hotkeys.Recenter == "" {
 		p.Hotkeys.Recenter = "F12"
 	}
+	noClickingConfig := p.Clicking.DwellTimeMs == 0 && p.Clicking.DwellRadiusPx == 0 && p.Clicking.ClickType == "" && !p.Clicking.RightClickToggle
+	if noClickingConfig {
+		p.Clicking.DwellEnabled = false
+	}
+	if p.Clicking.DwellTimeMs == 0 {
+		p.Clicking.DwellTimeMs = 500
+	}
+	if p.Clicking.DwellRadiusPx == 0 {
+		p.Clicking.DwellRadiusPx = 30
+	}
+	if p.Clicking.ClickType == "" {
+		p.Clicking.ClickType = ClickTypeLeft
+	}
 	// ensure zero value general struct exists
 	p.General.AutoStart = p.General.AutoStart
 }
