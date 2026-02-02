@@ -1,65 +1,130 @@
 # Open Camera Mouse
 
-Open Camera Mouse turns your webcam into a hands-free mouse controller. Track a marker on your face or body, move the
-pointer with smooth gain control, and trigger clicks through dwell timing—no additional hardware required.
+Control your computer cursor with head movements using just a webcam. No special hardware needed.
 
-## Highlights
-- **Webcam tracking**: Template-matching tracker keeps a marker (circle or square) locked onto the selected spot.
-- **Pointer control**: Sensitivity slider maps directly to cursor gain with advanced per-axis overrides.
-- **Hands-free clicking**: Optional dwell clicking fires left/right clicks when you hover for a configurable duration.
-- **Quick recentering**: Pause tracking, recenter the marker + cursor, then resume after a short countdown or via F12.
-- **Global hotkeys**: F11 toggles camera start/stop and F12 recenters, even when the window is in the background (macOS).
-- **Simple settings**: Tidy tabs cover Tracking, Pointer, Clicking, Hotkeys, and General options with immediate previews.
+![Screenshot](docs/screenshot.png)
 
-## Requirements
-- macOS, Windows, or Linux with a webcam supported by GoCV (macOS tested most thoroughly).
-- Go 1.21+ and Node.js 18+ (or newer) for building from source.
-- [Wails CLI](https://wails.io/) installed globally: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`.
+## Download
 
-## Getting Started
-1. **Install dependencies**
-   ```bash
-   npm install --prefix frontend
-   wails deps
-   ```
-2. **Run in dev mode** (hot-reload frontend + backend):
-   ```bash
-   wails dev
-   ```
-3. **Build a desktop app bundle**:
-   ```bash
-   wails build
-   ```
-   Output binaries live under `build/bin`.
+Get the latest release for your platform:
 
-## Using the App
-1. Launch the desktop app (either from `wails dev` or the built binary).
-2. Hit **Start** (or press `F11`) to enable the camera and tracker preview.
-3. Click the live preview to select the feature you want to track. The marker turns green when locked, red when lost.
-4. Use the **Dwell** button to enable auto-clicking. Hover over the button for 0.5s to turn it on without clicking, or
-   click the button to toggle manually. Configure dwell time/radius inside Settings → Clicking.
-5. Need to reset the tracking point? Click **Recenter** (or press `F12`). The marker + cursor jump to screen center,
-   the button counts down for a few seconds, then tracking resumes.
-6. Open **Settings** for full control:
-   - **Tracking**: Template size, search margin, score threshold, adaptive template updates, marker shape.
-   - **Pointer**: Sensitivity (gain), deadzone, max speed, advanced Gain X/Y + smoothing overrides.
-   - **Clicking**: Dwell enable, time, radius, click type, and temporary right-click toggle.
-   - **General**: Start/Pause + Recenter hotkeys, auto-start camera, reset parameters to defaults.
-7. Save changes to persist them between launches. Use the Reset button to restore factory tuning before saving.
+- **[macOS](https://github.com/ivangrga/open-camera-mouse/releases/latest)** (Apple Silicon)
+- **[Windows](https://github.com/ivangrga/open-camera-mouse/releases/latest)** (64-bit)
 
-## Tips & Troubleshooting
-- Lighting matters: ensure your tracker target has good contrast against the background.
-- If the marker flashes red (LOST), try a larger template size or reduce sensitivity to slow cursor motion.
-- When Recenering, the marker stays visible and turns white while the countdown runs; the cursor recenters as well.
-- Global hotkeys currently rely on the native OS APIs provided by the Wails hotkey module; some Linux window managers
-  may require additional permissions.
-- Logs are printed to the console when running via `wails dev`; check them for camera or hotkey errors.
+## Features
 
-## Releasing
-1. Update `VERSION` with the new semantic version (e.g., `0.2.0`).
-2. Commit the change and create a matching tag prefixed with `v` (for `0.2.0`, tag `v0.2.0`).
-3. Push the tag. GitHub Actions will build notarized bundles for macOS and Windows, attach them to the
-   GitHub release, and keep Linux users building from source.
+- **Head tracking** — Move your cursor by moving your head
+- **Dwell clicking** — Hover to click, no physical input needed
+- **Adjustable sensitivity** — Fine-tune cursor speed and smoothing
+- **Global hotkeys** — F11 to start/stop, F12 to recenter
+- **Works in background** — Hotkeys work even when app is minimized
+
+## Quick Start
+
+1. **Launch** the app and click **Start** (or press F11)
+2. **Click** on your face in the preview to set the tracking point
+3. **Move** your head to control the cursor
+4. **Enable Dwell** to click by hovering (optional)
+
+## Settings
+
+| Tab | Options |
+|-----|---------|
+| **Tracking** | Template size, search margin, score threshold, marker shape |
+| **Pointer** | Sensitivity, deadzone, max speed, advanced gain controls |
+| **Clicking** | Dwell time, radius, click type (left/right) |
+| **General** | Hotkey bindings, auto-start, dwell on startup |
+
+## Tips
+
+- **Good lighting** helps tracking accuracy
+- **Marker turns red** when tracking is lost — try a larger template size
+- **Press F12** to recenter both the tracker and cursor
+- **Increase sensitivity** for less head movement, decrease for more precision
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Cursor jumps around | Increase template size, improve lighting |
+| Tracking lost frequently | Lower score threshold, use higher contrast point |
+| Cursor too fast/slow | Adjust sensitivity in Pointer settings |
+| Hotkeys don't work | macOS: Grant accessibility permissions |
+
+## Platforms
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| macOS | ✅ | Requires accessibility permissions |
+| Windows | ✅ | Tested on Windows 10/11 |
+| Linux | ⚠️ | X11 only, requires libx11-dev |
+
+---
+
+## Contributing
+
+### Requirements
+
+- Go 1.21+
+- Node.js 18+
+- OpenCV 4.x
+- [Wails CLI](https://wails.io/)
+
+### Setup
+
+```bash
+# Install Wails
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+
+# Run in development mode
+wails dev
+
+# Build for production
+wails build
+```
+
+### Platform-specific Dependencies
+
+**macOS:**
+```bash
+brew install opencv pkg-config
+```
+
+**Windows (MSYS2):**
+```bash
+pacman -S mingw-w64-x86_64-opencv mingw-w64-x86_64-pkg-config
+```
+
+**Linux:**
+```bash
+sudo apt-get install libopencv-dev libx11-dev pkg-config
+```
+
+### Project Structure
+
+```
+├── main.go              # Entry point
+├── app.go               # Wails bindings
+├── frontend/            # React UI
+└── internal/
+    ├── app/             # Core logic
+    ├── camera/          # Webcam capture
+    ├── tracking/        # Template matching
+    ├── mouse/           # Cursor control
+    ├── config/          # Settings persistence
+    ├── stream/          # Preview streaming
+    └── hotkeys/         # Global shortcuts
+```
+
+### Releasing
+
+1. Update `VERSION` file
+2. Create and push tag: `git tag v0.x.x && git push --tags`
+3. GitHub Actions builds and publishes releases
 
 ## License
-This project is licensed under the MIT License. See `LICENSE` for details.
+
+MIT License. See [LICENSE](LICENSE) for details.

@@ -20,11 +20,8 @@ var (
 	ErrNoFrame        = errors.New("app: no frame available")
 )
 
-const (
-	previewInterval = 66 * time.Millisecond // ~15 fps
-)
+const previewInterval = 66 * time.Millisecond
 
-// Service coordinates the camera, frame processor, and cursor mover.
 type Service struct {
 	cfgManager   *config.Manager
 	notifyParams func(config.AllParams)
@@ -41,14 +38,12 @@ type Service struct {
 	running bool
 }
 
-// NewService creates a new application service.
 func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, error) {
 	params, err := cfg.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply dwell on startup preference
 	if !params.General.DwellOnStartup {
 		params.Clicking.DwellEnabled = false
 	}
@@ -63,7 +58,6 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 		camera:       camera.NewManager(0),
 	}
 
-	// Create frame processor
 	svc.frameProcessor = NewFrameProcessor(
 		buildTrackerParams(params.Tracking),
 		buildProcessorParams(params.Tracking),
@@ -71,7 +65,6 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 		broker,
 	)
 
-	// Create cursor mover with dwell callback
 	svc.cursorMover = NewCursorMover(
 		controller,
 		buildMappingParams(params.Pointer),
@@ -82,12 +75,10 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 	return svc, nil
 }
 
-// Broker returns the stream broker for subscribing to events.
 func (s *Service) Broker() *stream.Broker {
 	return s.frameProcessor.Broker()
 }
 
-// Start begins camera capture and processing.
 func (s *Service) Start(ctx context.Context) error {
 	s.mu.Lock()
 	if s.running {
@@ -112,7 +103,6 @@ func (s *Service) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops camera capture and processing.
 func (s *Service) Stop() error {
 	s.mu.Lock()
 	if !s.running {
@@ -132,26 +122,18 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// IsRunning returns whether the service is currently running.
 func (s *Service) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
 }
 
-// handleFrame is called for each camera frame.
 func (s *Service) handleFrame(frame camera.Frame) {
-	// Process frame (tracking, overlay, preview)
 	result := s.frameProcessor.Process(frame)
-
-	// Update cursor position
 	s.cursorMover.Update(result.Point, result.Lost)
-
-	// Update dwell click state
 	s.cursorMover.UpdateDwell(result.Lost)
 }
 
-// handleDwellClick is called when a dwell click occurs.
 func (s *Service) handleDwellClick() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -163,7 +145,6 @@ func (s *Service) handleDwellClick() {
 	}
 }
 
-// SetPickPoint sets a new tracking template at the given point.
 func (s *Service) SetPickPoint(point image.Point) error {
 	err := s.frameProcessor.SetPickPoint(point)
 	if err == nil {
@@ -172,7 +153,6 @@ func (s *Service) SetPickPoint(point image.Point) error {
 	return err
 }
 
-// Recenter resets tracking to the center of the frame and centers the cursor.
 func (s *Service) Recenter() error {
 	err := s.frameProcessor.Recenter()
 	if err == nil {
@@ -182,7 +162,6 @@ func (s *Service) Recenter() error {
 	return err
 }
 
-// ToggleTracking enables or disables tracking.
 func (s *Service) ToggleTracking(enabled bool) {
 	s.frameProcessor.SetTrackingEnabled(enabled)
 	if !enabled {
@@ -190,14 +169,12 @@ func (s *Service) ToggleTracking(enabled bool) {
 	}
 }
 
-// GetParams returns the current parameters.
 func (s *Service) GetParams() config.AllParams {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.params
 }
 
-// UpdateParams updates the runtime parameters.
 func (s *Service) UpdateParams(next config.AllParams) {
 	s.mu.Lock()
 	s.params = next
@@ -206,7 +183,6 @@ func (s *Service) UpdateParams(next config.AllParams) {
 	s.mu.Unlock()
 }
 
-// SaveParams saves parameters to disk.
 func (s *Service) SaveParams(next config.AllParams) error {
 	s.UpdateParams(next)
 	return s.cfgManager.Save(next)
@@ -221,16 +197,11 @@ func (s *Service) emitParamsLocked() {
 }
 
 func (s *Service) applyRuntimeParamsLocked() {
-	// Update tracker params
 	s.frameProcessor.SetTrackerParams(buildTrackerParams(s.params.Tracking))
 	s.frameProcessor.SetProcessorParams(buildProcessorParams(s.params.Tracking))
-
-	// Update cursor mover params
 	s.cursorMover.SetMappingParams(buildMappingParams(s.params.Pointer))
 	s.cursorMover.SetDwellParams(buildDwellParams(s.params.Clicking))
 }
-
-// Helper functions to build component params from config
 
 func buildTrackerParams(t config.TrackingParams) tracking.Params {
 	return tracking.Params{
@@ -294,7 +265,7 @@ func mapClickButton(click config.ClickType, rightToggle bool) mouse.ClickButton 
 	case config.ClickTypeRight:
 		return mouse.ClickRight
 	case config.ClickTypeDouble:
-		return mouse.ClickLeft // TODO: implement double click
+		return mouse.ClickLeft
 	default:
 		return mouse.ClickLeft
 	}
