@@ -18,7 +18,12 @@ type CursorMover struct {
 	pointSet  bool
 }
 
-func NewCursorMover(controller mouse.Controller, mappingParams mouse.MappingParams, dwellParams mouse.DwellParams, onDwellClick func()) *CursorMover {
+func NewCursorMover(
+	controller mouse.Controller,
+	mappingParams mouse.MappingParams,
+	dwellParams mouse.DwellParams,
+	onDwellClick func(),
+) *CursorMover {
 	cm := &CursorMover{
 		controller: controller,
 		mapper:     mouse.NewMapper(mappingParams),

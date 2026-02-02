@@ -104,7 +104,8 @@ func (p *AllParams) ensureDefaults() {
 	if p.Hotkeys.Recenter == "" {
 		p.Hotkeys.Recenter = "F12"
 	}
-	noClickingConfig := p.Clicking.DwellTimeMs == 0 && p.Clicking.DwellRadiusPx == 0 && p.Clicking.ClickType == "" && !p.Clicking.RightClickToggle
+	noClickingConfig := p.Clicking.DwellTimeMs == 0 && p.Clicking.DwellRadiusPx == 0 && p.Clicking.ClickType == "" &&
+		!p.Clicking.RightClickToggle
 	if noClickingConfig {
 		p.Clicking.DwellEnabled = false
 	}

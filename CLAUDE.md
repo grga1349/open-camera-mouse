@@ -82,31 +82,27 @@ Camera → FrameProcessor → CursorMover → Mouse
 
 ## Build Commands
 
+Install the Wails CLI and golines locally:
+
 ```bash
-# Development
-wails dev
-
-# Build
-wails build -clean
-
-# Run tests
-go test ./...
-
-# Format
-go fmt ./...
-gofmt -w .
-
-# Vet
-go vet ./...
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+go install github.com/segmentio/golines@latest
 ```
 
-## Frontend Commands
+Use the Makefile for repeatable workflows:
 
 ```bash
-cd frontend
-npm install
-npm run dev      # Dev server
-npm run build    # Production build
+make wails-dev       # wails dev
+make wails-build     # wails build -clean
+make format          # golines (Go) + Prettier (frontend)
+make format-go       # golines only
+make format-frontend # Prettier only
+make frontend-install
+make frontend-build
+make frontend-dev
+
+go test ./...        # Run backend tests
+go vet ./...         # Vet backend
 ```
 
 ## Configuration

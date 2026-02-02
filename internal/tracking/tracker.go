@@ -156,7 +156,12 @@ func (t *Tracker) updateTemplate(searchMat gocv.Mat, localTopLeft image.Point) {
 		return
 	}
 
-	roiRect := image.Rect(localTopLeft.X, localTopLeft.Y, localTopLeft.X+t.template.Cols(), localTopLeft.Y+t.template.Rows())
+	roiRect := image.Rect(
+		localTopLeft.X,
+		localTopLeft.Y,
+		localTopLeft.X+t.template.Cols(),
+		localTopLeft.Y+t.template.Rows(),
+	)
 	if roiRect.Max.X > searchMat.Cols() || roiRect.Max.Y > searchMat.Rows() {
 		return
 	}

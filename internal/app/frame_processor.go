@@ -106,7 +106,12 @@ func (fp *FrameProcessor) Process(frame camera.Frame) TrackingResult {
 	return result
 }
 
-func (fp *FrameProcessor) renderAndEmit(frame camera.Frame, result TrackingResult, trackingEnabled bool, params FrameProcessorParams) {
+func (fp *FrameProcessor) renderAndEmit(
+	frame camera.Frame,
+	result TrackingResult,
+	trackingEnabled bool,
+	params FrameProcessorParams,
+) {
 	markerColor := color.RGBA{G: 255}
 	if !trackingEnabled {
 		markerColor = color.RGBA{R: 255, G: 255, B: 255}

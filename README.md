@@ -76,6 +76,9 @@ Get the latest release for your platform:
 # Install Wails
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+# Install golines for Go formatting
+go install github.com/segmentio/golines@latest
+
 # Install frontend dependencies
 cd frontend && npm install && cd ..
 
@@ -85,6 +88,19 @@ wails dev
 # Build for production
 wails build
 ```
+
+### Makefile Commands
+
+The repo includes a `Makefile` to keep common tasks consistent:
+
+| Command | Description |
+|---------|-------------|
+| `make format` | Runs golines on Go code and Prettier on the frontend (120 char width) |
+| `make frontend-install` | Installs frontend dependencies |
+| `make frontend-build` | Builds the React frontend (`npm run build`) |
+| `make frontend-dev` | Starts the frontend dev server |
+| `make wails-dev` | Starts the Wails dev environment |
+| `make wails-build` | Builds the desktop app with `wails build -clean` |
 
 ### Platform-specific Dependencies
 
