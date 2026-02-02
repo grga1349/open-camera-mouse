@@ -118,6 +118,8 @@ Config stored at:
 
 ## Coding Standards
 
+- Do not emit comments in generated code unless explicitly requested
+
 ### Go
 - Follow standard Go idioms (accept interfaces, return structs)
 - Use `context.Context` for cancellation
