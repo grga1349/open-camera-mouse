@@ -5,23 +5,18 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            asset_suffix: macOS.zip
-          - os: windows-latest
-            asset_suffix: Windows.zip
-    runs-on: ${{ matrix.os }}
+  build-macos:
+    runs-on: macos-latest
     env:
-      ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_${{ matrix.asset_suffix }}
+      ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_macOS.zip
     steps:
       - uses: actions/checkout@v4
 
       - name: Verify tag matches VERSION
-        shell: bash
         run: |
           VERSION=$(cat VERSION)
           TAG=${GITHUB_REF_NAME#v}
@@ -33,93 +28,152 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
 
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Download Go modules
-        run: go mod download
-
-      - name: Install OpenCV (macOS)
-        if: runner.os == 'macOS'
+      - name: Install OpenCV
         run: |
-          brew update
           brew install opencv pkg-config
-          echo "CGO_CPPFLAGS=$(pkg-config --cflags opencv4)" >> $GITHUB_ENV
-          echo "CGO_LDFLAGS=$(pkg-config --libs opencv4)" >> $GITHUB_ENV
-
-      - name: Install OpenCV (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $installDir = 'C:\opencv'
-          if (Test-Path $installDir) {
-            Remove-Item $installDir -Recurse -Force
-          }
-
-          $gocvModuleDir = go list -m -f '{{.Dir}}' gocv.io/x/gocv
-
-          Write-Host 'Downloading OpenCV sources'
-          cmd.exe /c "`"$gocvModuleDir\win_download_opencv.cmd`" `"$installDir`""
-
-          Write-Host 'Building OpenCV (this may take several minutes)'
-          cmd.exe /c "`"$gocvModuleDir\win_build_opencv.cmd`" `"$installDir`""
-
-          $libDir = "$installDir\build\install\x64\mingw\lib"
-          if (-not (Test-Path $libDir)) {
-            throw 'OpenCV build did not produce mingw libraries'
-          }
-
-          Add-Content $env:GITHUB_PATH "$installDir\build\install\x64\mingw\bin"
-          Add-Content $env:GITHUB_ENV "CGO_CPPFLAGS=-I$installDir\build\install\include"
-          $ldflags = "-L$libDir -lopencv_core4130 -lopencv_face4130 -lopencv_videoio4130 -lopencv_imgproc4130 -lopencv_highgui4130 -lopencv_imgcodecs4130 -lopencv_objdetect4130 -lopencv_features2d4130 -lopencv_video4130 -lopencv_dnn4130 -lopencv_xfeatures2d4130 -lopencv_plot4130 -lopencv_tracking4130 -lopencv_img_hash4130 -lopencv_calib3d4130 -lopencv_bgsegm4130 -lopencv_photo4130 -lopencv_aruco4130 -lopencv_wechat_qrcode4130 -lopencv_ximgproc4130 -lopencv_mcc4130"
-          Add-Content $env:GITHUB_ENV "CGO_LDFLAGS=$ldflags"
+          echo "PKG_CONFIG_PATH=$(brew --prefix opencv)/lib/pkgconfig" >> $GITHUB_ENV
 
       - name: Install frontend deps
         run: npm ci
         working-directory: frontend
 
       - name: Build app
-        run: |
-          wails build -clean
+        run: wails build -clean
 
-      - name: Package artifact (macOS)
-        if: runner.os == 'macOS'
+      - name: Package artifact
         run: |
           cd build/bin
           zip -r "../$ASSET_NAME" open-camera-mouse.app
 
-      - name: Package artifact (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-bundle
+          path: build/${{ env.ASSET_NAME }}
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_Windows.zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-opencv
+            zip
+
+      - name: Verify tag matches VERSION
         run: |
-          Compress-Archive -Path build/bin/open-camera-mouse.exe -DestinationPath "build/$env:ASSET_NAME" -Force
+          VERSION=$(cat VERSION)
+          TAG=${GITHUB_REF_NAME#v}
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "VERSION ($VERSION) does not match tag ($TAG)" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend deps
+        shell: pwsh
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build app
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          export CGO_CPPFLAGS="$(pkg-config --cflags opencv4)"
+          export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
+          wails build -clean -skipbindings
+
+      - name: Collect DLLs and package
+        run: |
+          cd build/bin
+
+          # Copy required MinGW runtime and OpenCV DLLs
+          for dll in \
+            libopencv_core*.dll \
+            libopencv_imgproc*.dll \
+            libopencv_imgcodecs*.dll \
+            libopencv_videoio*.dll \
+            libopencv_highgui*.dll \
+            libopencv_objdetect*.dll \
+            libopencv_features2d*.dll \
+            libopencv_video*.dll \
+            libopencv_calib3d*.dll \
+            libopencv_flann*.dll \
+            libgcc_s_seh-1.dll \
+            libstdc++-6.dll \
+            libwinpthread-1.dll \
+            libpng*.dll \
+            libjpeg*.dll \
+            zlib1.dll \
+            libtiff*.dll \
+            libwebp*.dll \
+            libopenjp2*.dll \
+            libavcodec*.dll \
+            libavformat*.dll \
+            libavutil*.dll \
+            libswscale*.dll
+          do
+            cp /mingw64/bin/$dll . 2>/dev/null || true
+          done
+
+          zip -r "../$ASSET_NAME" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-bundle
+          name: windows-bundle
           path: build/${{ env.ASSET_NAME }}
 
   release:
-    needs: build
+    needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: dist
+          merge-multiple: true
 
       - name: Display downloaded files
-        run: ls -R dist
+        run: ls -la dist/
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/**
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: dist/*
+          generate_release_notes: true
