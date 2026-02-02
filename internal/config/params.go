@@ -51,7 +51,8 @@ type HotkeysParams struct {
 }
 
 type GeneralParams struct {
-	AutoStart bool `json:"autoStart"`
+	AutoStart      bool `json:"autoStart"`
+	DwellOnStartup bool `json:"dwellOnStartup"`
 }
 
 type AllParams struct {
@@ -90,7 +91,8 @@ func DefaultParams() AllParams {
 			Recenter:   "F12",
 		},
 		General: GeneralParams{
-			AutoStart: false,
+			AutoStart:      false,
+			DwellOnStartup: false,
 		},
 	}
 }
@@ -115,6 +117,4 @@ func (p *AllParams) ensureDefaults() {
 	if p.Clicking.ClickType == "" {
 		p.Clicking.ClickType = ClickTypeLeft
 	}
-	// ensure zero value general struct exists
-	p.General.AutoStart = p.General.AutoStart
 }

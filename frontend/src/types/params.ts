@@ -38,6 +38,7 @@ export type HotkeysParams = {
 
 export type GeneralParams = {
     autoStart: boolean;
+    dwellOnStartup: boolean;
 };
 
 export type AllParams = {

@@ -131,9 +131,7 @@ func (a *App) applyHotkeys(binding config.HotkeysParams) {
 	}
 	actions := map[string]hotkeys.Action{}
 	if binding.StartPause != "" {
-		actions[binding.StartPause] = func() {
-			a.toggleStartStop()
-		}
+		actions[binding.StartPause] = a.toggleStartStop
 	}
 	if binding.Recenter != "" {
 		actions[binding.Recenter] = func() {

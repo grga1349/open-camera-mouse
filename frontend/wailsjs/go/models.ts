@@ -2,6 +2,7 @@ export namespace config {
 	
 	export class GeneralParams {
 	    autoStart: boolean;
+	    dwellOnStartup: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new GeneralParams(source);
@@ -10,6 +11,7 @@ export namespace config {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.autoStart = source["autoStart"];
+	        this.dwellOnStartup = source["dwellOnStartup"];
 	    }
 	}
 	export class HotkeysParams {

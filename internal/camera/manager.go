@@ -127,11 +127,7 @@ func (m *Manager) readFrame(mat *gocv.Mat) bool {
 		return false
 	}
 
-	if ok := cap.Read(mat); !ok || mat.Empty() {
-		return false
-	}
-
-	return true
+	return cap.Read(mat) && !mat.Empty()
 }
 
 func (m *Manager) updateFPS(delta time.Duration) float64 {

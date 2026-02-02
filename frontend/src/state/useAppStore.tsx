@@ -30,6 +30,7 @@ export const defaultParams: AllParams = {
     },
     general: {
         autoStart: false,
+        dwellOnStartup: false,
     },
 };
 

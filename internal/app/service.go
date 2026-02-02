@@ -63,8 +63,10 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 	if err != nil {
 		return nil, err
 	}
-	// Always begin with dwell disabled; users re-enable via UI per session
-	params.Clicking.DwellEnabled = false
+	// Apply dwell on startup preference
+	if !params.General.DwellOnStartup {
+		params.Clicking.DwellEnabled = false
+	}
 
 	trackerParams := tracking.Params{
 		TemplateSize:     params.Tracking.TemplateSizePx,
@@ -194,8 +196,6 @@ func (s *Service) handleFrame(frame camera.Frame) {
 			result = res
 			score = res.Score
 			lost = false
-		} else if errors.Is(err, tracking.ErrNoTemplate) {
-			lost = true
 		} else {
 			lost = true
 		}
@@ -232,9 +232,7 @@ func (s *Service) handleFrame(frame camera.Frame) {
 				s.mapper.Reset()
 				s.pointSet = true
 			}
-			if !lost {
-				s.lastPoint = result.Point
-			}
+			s.lastPoint = result.Point
 		}
 	}
 
