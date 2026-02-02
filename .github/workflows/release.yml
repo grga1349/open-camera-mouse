@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-13
     env:
       ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_macOS.zip
     steps:
@@ -63,26 +63,14 @@ jobs:
           path: build/${{ env.ASSET_NAME }}
 
   build-windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
+    runs-on: windows-2022
     env:
       ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_Windows.zip
     steps:
       - uses: actions/checkout@v4
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-opencv
-            zip
-
       - name: Verify tag matches VERSION
+        shell: bash
         run: |
           VERSION=$(cat VERSION)
           TAG=${GITHUB_REF_NAME#v}
@@ -90,6 +78,16 @@ jobs:
             echo "VERSION ($VERSION) does not match tag ($TAG)" >&2
             exit 1
           fi
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-opencv
+            zip
 
       - uses: actions/setup-go@v5
         with:
@@ -103,54 +101,96 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Wails CLI
-        shell: pwsh
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Install frontend deps
-        shell: pwsh
         run: npm ci
         working-directory: frontend
 
-      - name: Build app
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Build Go binary with Wails
+        shell: msys2 {0}
         run: |
           export PATH="/mingw64/bin:$PATH"
           export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
           export CGO_CPPFLAGS="$(pkg-config --cflags opencv4)"
           export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
+          export CGO_ENABLED=1
+          export CC=/mingw64/bin/gcc
+          export CXX=/mingw64/bin/g++
+
+          # Find the Go binary path
+          GO_PATH=$(ls -d /c/hostedtoolcache/windows/go/*/x64/bin | head -1)
+          export PATH="$GO_PATH:$PATH"
+
+          # Find wails in Go bin
+          GOPATH=$(go env GOPATH)
+          export PATH="$GOPATH/bin:$PATH"
+
           wails build -clean -skipbindings
 
       - name: Collect DLLs and package
+        shell: msys2 {0}
         run: |
           cd build/bin
 
-          # Copy required MinGW runtime and OpenCV DLLs
-          for dll in \
-            libopencv_core*.dll \
-            libopencv_imgproc*.dll \
-            libopencv_imgcodecs*.dll \
-            libopencv_videoio*.dll \
-            libopencv_highgui*.dll \
-            libopencv_objdetect*.dll \
-            libopencv_features2d*.dll \
-            libopencv_video*.dll \
-            libopencv_calib3d*.dll \
-            libopencv_flann*.dll \
-            libgcc_s_seh-1.dll \
-            libstdc++-6.dll \
-            libwinpthread-1.dll \
-            libpng*.dll \
-            libjpeg*.dll \
-            zlib1.dll \
-            libtiff*.dll \
-            libwebp*.dll \
-            libopenjp2*.dll \
-            libavcodec*.dll \
-            libavformat*.dll \
-            libavutil*.dll \
-            libswscale*.dll
-          do
-            cp /mingw64/bin/$dll . 2>/dev/null || true
-          done
+          # List what we built
+          ls -la
+
+          # Copy OpenCV DLLs
+          cp /mingw64/bin/libopencv_core*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_imgproc*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_imgcodecs*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_videoio*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_highgui*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_objdetect*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_features2d*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_video*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_calib3d*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libopencv_flann*.dll . 2>/dev/null || true
+
+          # MinGW runtime
+          cp /mingw64/bin/libgcc_s_seh-1.dll . 2>/dev/null || true
+          cp /mingw64/bin/libstdc++-6.dll . 2>/dev/null || true
+          cp /mingw64/bin/libwinpthread-1.dll . 2>/dev/null || true
+
+          # Image format libs
+          cp /mingw64/bin/libpng*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libjpeg*.dll . 2>/dev/null || true
+          cp /mingw64/bin/zlib1.dll . 2>/dev/null || true
+          cp /mingw64/bin/libtiff*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libwebp*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libsharpyuv*.dll . 2>/dev/null || true
+          cp /mingw64/bin/liblzma*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libzstd*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libdeflate*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libjbig*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libLerc*.dll . 2>/dev/null || true
+
+          # FFmpeg for video capture
+          cp /mingw64/bin/libavcodec*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libavformat*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libavutil*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libswscale*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libswresample*.dll . 2>/dev/null || true
+
+          # Other common dependencies
+          cp /mingw64/bin/libopenjp2*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libglib*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libintl*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libiconv*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libpcre2*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libharfbuzz*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libfreetype*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libbz2*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libbrotli*.dll . 2>/dev/null || true
+          cp /mingw64/bin/libgraphite2*.dll . 2>/dev/null || true
+
+          echo "Final package contents:"
+          ls -la
 
           zip -r "../$ASSET_NAME" .
 
