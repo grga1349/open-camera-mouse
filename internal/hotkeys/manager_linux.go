@@ -149,14 +149,12 @@ func (m *manager) Update(bindings map[string]Action) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Ungrab previous keys
 	for keycode := range m.keycodes {
 		C.ungrabKey(m.display, m.root, C.uint(keycode))
 	}
 	m.keycodes = make(map[uint]bool)
 	m.bindings = make(map[uint]Action)
 
-	// Grab new keys
 	for combo, action := range bindings {
 		combo = strings.TrimSpace(combo)
 		if combo == "" || action == nil {
@@ -224,7 +222,6 @@ func lookupLinuxKeysym(input string) (uint, error) {
 	return keysym, nil
 }
 
-// X11 keysyms for function keys (from X11/keysymdef.h)
 var linuxFunctionKeys = map[string]uint{
 	"F1":  0xFFBE,
 	"F2":  0xFFBF,

@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, FC } from "react";
+import { cn } from "../lib/cn";
 
 const baseClasses =
   "inline-flex items-center justify-center rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
@@ -16,14 +17,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   fullWidth?: boolean;
 };
 
-export const Button: FC<ButtonProps> = ({ variant = "highlight", fullWidth, className = "", ...props }) => {
-  const widthClass = fullWidth ? "w-full" : "";
-  const variantClass = variantClasses[variant];
-  const merged = [baseClasses, variantClass, widthClass, className]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return <button className={merged} {...props} />;
-};
+export const Button: FC<ButtonProps> = ({ variant = "highlight", fullWidth, className, ...props }) => (
+  <button
+    className={cn(baseClasses, variantClasses[variant], fullWidth && "w-full", className)}
+    {...props}
+  />
+);

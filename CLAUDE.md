@@ -128,6 +128,7 @@ Config stored at:
 - Functional components with hooks
 - Types in `types/` directory
 - State management via custom hooks in `state/`
+- Use the shared `cn` helper for conditional class names (`frontend/src/lib/cn.ts`)
 
 ## Testing
 

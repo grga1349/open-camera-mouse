@@ -70,6 +70,11 @@ Get the latest release for your platform:
 - OpenCV 4.x
 - [Wails CLI](https://wails.io/)
 
+### Frontend Class Names
+
+- Use the shared `cn` helper for conditional class names.
+- Import from `frontend/src/lib/cn.ts`.
+
 ### Setup
 
 ```bash

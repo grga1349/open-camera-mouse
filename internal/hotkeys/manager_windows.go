@@ -194,7 +194,6 @@ func lookupWindowsKey(input string) (uint16, error) {
 	return code, nil
 }
 
-// Windows virtual key codes for function keys
 var windowsFunctionKeys = map[string]uint16{
 	"F1":  0x70,
 	"F2":  0x71,

@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { cn } from "../../lib/cn";
 
 type SliderFieldProps = {
   label: string;
@@ -21,7 +22,7 @@ export const SliderField: FC<SliderFieldProps> = ({ label, value, min, max, step
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(parseFloat(event.target.value))}
-      className={`slider-input ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+      className={cn("slider-input", disabled && "cursor-not-allowed opacity-50")}
     />
   </label>
 );

@@ -14,7 +14,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App bridges Wails bindings to the backend service.
 type App struct {
 	ctx     context.Context
 	service *appsvc.Service

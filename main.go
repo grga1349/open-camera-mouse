@@ -18,7 +18,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create application with options
 	err = wails.Run(&options.App{
 		Title:         "open-camera-mouse",
 		Width:         420,

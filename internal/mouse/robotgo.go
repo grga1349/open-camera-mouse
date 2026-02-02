@@ -32,7 +32,7 @@ func (r *RobotController) Click(button ClickButton) error {
 }
 
 func (r *RobotController) CurrentPosition() (int, int, error) {
-	x, y := robotgo.GetMousePos()
+	x, y := robotgo.Location()
 	return x, y, nil
 }
 
