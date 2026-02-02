@@ -2,7 +2,7 @@
 
 Control your computer cursor with head movements using just a webcam. No special hardware needed.
 
-![Screenshot](docs/screenshot.png)
+<img src="docs/screenshot.png" alt="Screenshot" width="288" />
 
 ## Download
 
