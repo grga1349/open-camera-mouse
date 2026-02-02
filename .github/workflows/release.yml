@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     env:
       ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_macOS.zip
     steps:
