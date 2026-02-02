@@ -49,7 +49,6 @@ type manager struct {
 	hook     uintptr
 	threadID uint32
 	started  bool
-	stopCh   chan struct{}
 }
 
 var (
@@ -57,10 +56,14 @@ var (
 	dispatchManager *manager
 )
 
+var (
+	kernel32        = syscall.NewLazyDLL("kernel32.dll")
+	procGetThreadID = kernel32.NewProc("GetCurrentThreadId")
+)
+
 func newManager() (Manager, error) {
 	mgr := &manager{
 		bindings: make(map[uint16]Action),
-		stopCh:   make(chan struct{}),
 	}
 	if err := mgr.start(); err != nil {
 		return nil, err
@@ -175,9 +178,7 @@ func (m *manager) dispatch(code uint16) {
 }
 
 func getThreadID() uint32 {
-	kernel32 := syscall.NewLazyDLL("kernel32.dll")
-	proc := kernel32.NewProc("GetCurrentThreadId")
-	id, _, _ := proc.Call()
+	id, _, _ := procGetThreadID.Call()
 	return uint32(id)
 }
 

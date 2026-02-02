@@ -158,6 +158,9 @@ func (a *App) toggleStartStop() {
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	if a.service.IsRunning() {
+		_ = a.service.Stop()
+	}
 	if a.hotkeys != nil {
 		a.hotkeys.Close()
 	}

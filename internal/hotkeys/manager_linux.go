@@ -62,17 +62,17 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 type manager struct {
-	mu       sync.RWMutex
-	bindings map[uint]Action
-	keycodes map[uint]bool
-	display  *C.Display
-	root     C.Window
-	started  bool
-	stopCh   chan struct{}
+	mu        sync.RWMutex
+	bindings  map[uint]Action
+	keycodes  map[uint]bool
+	display   *C.Display
+	root      C.Window
+	started   bool
+	stopCh    chan struct{}
+	closeOnce sync.Once
 }
 
 var (
@@ -183,7 +183,9 @@ func (m *manager) Close() {
 		return
 	}
 
-	close(m.stopCh)
+	m.closeOnce.Do(func() {
+		close(m.stopCh)
+	})
 
 	m.mu.Lock()
 	if m.display != nil {
