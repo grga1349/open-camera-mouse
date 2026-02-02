@@ -1,4 +1,4 @@
-# Open Camera Mouse
+# Open Camera Mouse <img src="build/appicon.png" alt="Open Camera Mouse icon" width="40" height="40" />
 
 Control your computer cursor with head movements using just a webcam. No special hardware needed.
 
