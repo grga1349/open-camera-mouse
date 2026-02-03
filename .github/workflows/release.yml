@@ -127,7 +127,7 @@ jobs:
           export PATH="$GO_PATH:$PATH"
 
           # Find the Node.js binary path and add to PATH
-          NODE_PATH=$(ls -d /c/hostedtoolcache/windows/node/*/x64/bin | head -1)
+          NODE_PATH=$(ls -d /c/hostedtoolcache/windows/node/*/x64 | head -1)
           export PATH="$NODE_PATH:$PATH"
 
           # Convert Windows GOPATH to POSIX format and add wails to PATH
