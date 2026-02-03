@@ -126,9 +126,14 @@ jobs:
           GO_PATH=$(ls -d /c/hostedtoolcache/windows/go/*/x64/bin | head -1)
           export PATH="$GO_PATH:$PATH"
 
-          # Find wails in Go bin
-          GOPATH=$(go env GOPATH)
-          export PATH="$GOPATH/bin:$PATH"
+          # Convert Windows GOPATH to POSIX format and add wails to PATH
+          GOPATH_UNIX=$(cygpath -u "$(go env GOPATH)")
+          export PATH="$GOPATH_UNIX/bin:$PATH"
+
+          # Debug: verify wails is accessible
+          echo "GOPATH (Windows): $(go env GOPATH)"
+          echo "GOPATH (POSIX): $GOPATH_UNIX"
+          which wails || echo "wails not in PATH!"
 
           wails build -clean -skipbindings
 
