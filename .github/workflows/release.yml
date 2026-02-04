@@ -44,12 +44,71 @@ jobs:
           brew install opencv pkg-config
           echo "PKG_CONFIG_PATH=$(brew --prefix opencv)/lib/pkgconfig" >> $GITHUB_ENV
 
+      - name: Verify build environment
+        run: |
+          echo "=== Go Version ==="
+          go version
+
+          echo ""
+          echo "=== Wails Version ==="
+          wails version
+
+          echo ""
+          echo "=== OpenCV Configuration ==="
+          pkg-config --modversion opencv4 || echo "ERROR: OpenCV not found!"
+          pkg-config --cflags opencv4
+          pkg-config --libs opencv4
+
+          echo ""
+          echo "=== CGo Environment ==="
+          go env CGO_ENABLED
+          go env CC
+
       - name: Install frontend deps
         run: npm ci
         working-directory: frontend
 
       - name: Build app
-        run: wails build -clean
+        run: |
+          set -e
+          wails build -clean -v
+
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Wails build failed!"
+            exit 1
+          fi
+
+      - name: Verify build output
+        run: |
+          echo "=== Build Output Directory ==="
+          ls -lhR build/bin/
+
+          echo ""
+          echo "=== App Bundle Structure ==="
+          ls -lhR build/bin/open-camera-mouse.app/
+
+          echo ""
+          echo "=== Checking for executable ==="
+          EXEC_PATH="build/bin/open-camera-mouse.app/Contents/MacOS/open-camera-mouse"
+          if [ -f "$EXEC_PATH" ]; then
+            echo "✓ Executable found: $EXEC_PATH"
+            file "$EXEC_PATH"
+            ls -lh "$EXEC_PATH"
+          else
+            echo "✗ ERROR: Executable missing at $EXEC_PATH"
+            echo "Build failed - app bundle is incomplete!"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Verifying executable is runnable ==="
+          if [ -x "$EXEC_PATH" ]; then
+            echo "✓ Executable has correct permissions"
+          else
+            echo "✗ ERROR: Executable is not executable"
+            chmod +x "$EXEC_PATH"
+            echo "Fixed permissions"
+          fi
 
       - name: Create DMG installer
         run: |
@@ -99,6 +158,9 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-opencv
+            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-qt6-svg
+            mingw-w64-x86_64-qt6-imageformats
             zip
 
       - uses: actions/setup-go@v5
@@ -277,18 +339,72 @@ jobs:
           cp /mingw64/bin/libpcre2-16*.dll . 2>/dev/null || true
           cp /mingw64/bin/libmd4c*.dll . 2>/dev/null || true
 
-          # Qt platform plugin (critical - Qt won't work without this)
+          # Qt platform plugin (CRITICAL - Qt won't work without this)
           echo ""
-          echo "=== Qt Platform Plugin (Required) ==="
+          echo "=== Qt Platform Plugin (REQUIRED) ==="
           mkdir -p platforms
+
+          # Try multiple possible locations for qwindows.dll
+          QWINDOWS_FOUND=false
+
+          # Location 1: Standard Qt6 location
           if [ -f "/mingw64/share/qt6/plugins/platforms/qwindows.dll" ]; then
             cp /mingw64/share/qt6/plugins/platforms/qwindows.dll platforms/
-            echo "✓ Copied Qt platform plugin: platforms/qwindows.dll"
-          else
-            echo "ERROR: Qt platform plugin not found - app will not launch!"
-            echo "Searching for qwindows.dll..."
-            find /mingw64 -name "qwindows.dll" 2>/dev/null || echo "Not found anywhere"
+            echo "✓ Copied qwindows.dll from Qt6 plugins directory"
+            QWINDOWS_FOUND=true
           fi
+
+          # Location 2: Qt5 location (fallback)
+          if [ "$QWINDOWS_FOUND" = false ] && [ -f "/mingw64/share/qt5/plugins/platforms/qwindows.dll" ]; then
+            cp /mingw64/share/qt5/plugins/platforms/qwindows.dll platforms/
+            echo "✓ Copied qwindows.dll from Qt5 plugins directory"
+            QWINDOWS_FOUND=true
+          fi
+
+          # Location 3: Alternative Qt6 location
+          if [ "$QWINDOWS_FOUND" = false ] && [ -f "/mingw64/lib/qt6/plugins/platforms/qwindows.dll" ]; then
+            cp /mingw64/lib/qt6/plugins/platforms/qwindows.dll platforms/
+            echo "✓ Copied qwindows.dll from Qt6 lib directory"
+            QWINDOWS_FOUND=true
+          fi
+
+          # Location 4: Search for it
+          if [ "$QWINDOWS_FOUND" = false ]; then
+            echo "⚠️  Searching for qwindows.dll in MSYS2..."
+            QWINDOWS_PATH=$(find /mingw64 -name "qwindows.dll" 2>/dev/null | head -1)
+            if [ -n "$QWINDOWS_PATH" ]; then
+              cp "$QWINDOWS_PATH" platforms/
+              echo "✓ Copied qwindows.dll from: $QWINDOWS_PATH"
+              QWINDOWS_FOUND=true
+            fi
+          fi
+
+          # FAIL THE BUILD if qwindows.dll wasn't found
+          if [ "$QWINDOWS_FOUND" = false ]; then
+            echo ""
+            echo "❌ CRITICAL ERROR: qwindows.dll not found!"
+            echo "Qt platform plugin is absolutely required for the app to run."
+            echo ""
+            echo "Searched locations:"
+            echo "  - /mingw64/share/qt6/plugins/platforms/qwindows.dll"
+            echo "  - /mingw64/share/qt5/plugins/platforms/qwindows.dll"
+            echo "  - /mingw64/lib/qt6/plugins/platforms/qwindows.dll"
+            echo "  - find /mingw64 -name qwindows.dll"
+            echo ""
+            echo "This indicates Qt is not properly installed in MSYS2."
+            echo "Build FAILED."
+            exit 1
+          fi
+
+          # Verify the file was actually copied
+          if [ ! -f "platforms/qwindows.dll" ]; then
+            echo "❌ CRITICAL ERROR: qwindows.dll was not copied to platforms/ folder!"
+            echo "Build FAILED."
+            exit 1
+          fi
+
+          echo "✓ Verified: platforms/qwindows.dll exists"
+          ls -lh platforms/qwindows.dll
 
           # Also copy Qt plugins that might be needed
           if [ -d "/mingw64/share/qt6/plugins/styles" ]; then
@@ -310,6 +426,31 @@ jobs:
           ls -la Qt6*.dll 2>/dev/null || echo "No Qt DLLs found"
           echo "Platform plugins:"
           ls -la platforms/ 2>/dev/null || echo "No platform plugins found"
+
+          echo ""
+          echo "=== Verifying Package Contents Before Packaging ==="
+
+          # Check if qwindows.dll exists in the package directory
+          if [ ! -f "platforms/qwindows.dll" ]; then
+            echo "❌ FATAL: platforms/qwindows.dll is missing from package!"
+            echo "The Windows build will not work without this file."
+            exit 1
+          fi
+
+          echo "✓ platforms/qwindows.dll found in package"
+          ls -lh platforms/qwindows.dll
+
+          # Check if Qt DLLs are present
+          for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll; do
+            if [ ! -f "$dll" ]; then
+              echo "⚠️  Warning: $dll is missing"
+            else
+              echo "✓ $dll found"
+            fi
+          done
+
+          echo ""
+          echo "✓ All critical Qt components verified"
 
           zip -r "../$ASSET_NAME" .
 
