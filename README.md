@@ -11,6 +11,36 @@ Get the latest release for your platform:
 - **[macOS](https://github.com/ivangrga/open-camera-mouse/releases/latest)** (Apple Silicon)
 - **[Windows](https://github.com/ivangrga/open-camera-mouse/releases/latest)** (64-bit)
 
+## Installation
+
+### macOS
+
+**Option 1: DMG Image (Recommended)**
+1. Download `open-camera-mouse_vX.X.X_macOS.dmg` from releases
+2. Open the DMG file
+3. Drag the application to your Applications folder
+4. Launch from Applications or Spotlight
+
+**Option 2: Portable ZIP**
+1. Download `open-camera-mouse_vX.X.X_macOS.zip`
+2. Extract and drag `open-camera-mouse.app` to Applications
+3. Launch from Applications or Spotlight
+
+**Note:** On first launch, you may need to right-click → Open to bypass Gatekeeper (unsigned application).
+
+### Windows
+
+**Option 1: Installer (Recommended)**
+1. Download `open-camera-mouse-amd64-installer.exe` from releases
+2. Run the installer (WebView2 will be installed automatically if needed)
+3. Launch from Start Menu or Desktop shortcut
+
+**Option 2: Portable ZIP**
+1. Download `open-camera-mouse_vX.X.X_Windows.zip`
+2. Extract to a folder
+3. Run `open-camera-mouse.exe`
+4. Note: Requires [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section)
+
 ## Features
 
 - **Head tracking** — Move your cursor by moving your head
