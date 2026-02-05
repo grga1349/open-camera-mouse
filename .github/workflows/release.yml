@@ -41,8 +41,8 @@ jobs:
 
       - name: Install OpenCV
         run: |
-          brew install opencv pkg-config
-          echo "PKG_CONFIG_PATH=$(brew --prefix opencv)/lib/pkgconfig" >> $GITHUB_ENV
+          brew install opencv pkg-config dylibbundler
+          echo "PKG_CONFIG_PATH=$(brew --prefix opencv)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Verify build environment
         run: |
@@ -71,44 +71,68 @@ jobs:
       - name: Build app
         run: |
           set -e
-          wails build -clean -v
+          export CGO_ENABLED=1
+          export PKG_CONFIG_PATH="$(brew --prefix opencv)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
+          wails build -clean -v -platform darwin/arm64 -tags "customenv"
 
           if [ $? -ne 0 ]; then
             echo "ERROR: Wails build failed!"
             exit 1
           fi
 
-      - name: Verify build output
+      - name: Bundle dylibs and verify app
         run: |
+          set -e
           echo "=== Build Output Directory ==="
           ls -lhR build/bin/
 
+          APP=$(ls -1 build/bin/*.app | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: No .app found in build/bin"
+            exit 1
+          fi
+          APPNAME=$(basename "$APP" .app)
+          BIN="$APP/Contents/MacOS/$APPNAME"
+          FW="$APP/Contents/Frameworks"
+
           echo ""
           echo "=== App Bundle Structure ==="
-          ls -lhR build/bin/open-camera-mouse.app/
+          ls -lhR "$APP"
 
           echo ""
           echo "=== Checking for executable ==="
-          EXEC_PATH="build/bin/open-camera-mouse.app/Contents/MacOS/open-camera-mouse"
-          if [ -f "$EXEC_PATH" ]; then
-            echo "✓ Executable found: $EXEC_PATH"
-            file "$EXEC_PATH"
-            ls -lh "$EXEC_PATH"
+          if [ -f "$BIN" ]; then
+            echo "✓ Executable found: $BIN"
+            file "$BIN"
+            ls -lh "$BIN"
           else
-            echo "✗ ERROR: Executable missing at $EXEC_PATH"
-            echo "Build failed - app bundle is incomplete!"
+            echo "✗ ERROR: Executable missing at $BIN"
             exit 1
           fi
 
           echo ""
-          echo "=== Verifying executable is runnable ==="
-          if [ -x "$EXEC_PATH" ]; then
-            echo "✓ Executable has correct permissions"
-          else
-            echo "✗ ERROR: Executable is not executable"
-            chmod +x "$EXEC_PATH"
-            echo "Fixed permissions"
+          echo "=== Bundling dylibs with dylibbundler ==="
+          mkdir -p "$FW"
+          dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks"
+
+          echo ""
+          echo "=== otool -L (post-bundle) ==="
+          otool -L "$BIN"
+
+          if otool -L "$BIN" | grep -qE "/opt/homebrew|/usr/local"; then
+            echo "ERROR: Found Homebrew paths in dylib references."
+            exit 1
           fi
+
+          if otool -L "$BIN" | grep -q "libopencv" && ! otool -L "$BIN" | grep -q "@executable_path/../Frameworks/libopencv"; then
+            echo "ERROR: OpenCV dylibs are not rebased to @executable_path/../Frameworks."
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Ad-hoc codesign ==="
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
 
       - name: Create DMG installer
         run: |
@@ -122,15 +146,21 @@ jobs:
 
       - name: Package artifact
         run: |
-          cd build/bin
-          zip -r "../$ASSET_NAME" open-camera-mouse.app
+          set -e
+          APP=$(ls -1 build/bin/*.app | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: No .app found in build/bin"
+            exit 1
+          fi
+          APPNAME=$(basename "$APP" .app)
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-bundle
           path: |
-            build/${{ env.ASSET_NAME }}
+            build/*-mac.zip
             build/open-camera-mouse_*.dmg
 
   build-windows:
