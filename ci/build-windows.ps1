@@ -27,11 +27,11 @@ $env:PKG_CONFIG_PATH = "$PWD\ci"
 $env:CGO_ENABLED = "1"
 
 Write-Host "=== pkg-config preflight ==="
-& bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --version"
-& bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --cflags opencv4-nogui"
+& bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --version'
+& bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --cflags opencv4-nogui'
 
-$cflagsRaw = bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --cflags opencv4-nogui"
-$libsRaw = bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --libs opencv4-nogui"
+$cflagsRaw = bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --cflags opencv4-nogui'
+$libsRaw = bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --libs opencv4-nogui'
 
 $cflags = ($cflagsRaw | Out-String).Trim()
 $libs = ($libsRaw | Out-String).Trim()

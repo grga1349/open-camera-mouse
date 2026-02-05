@@ -22,7 +22,19 @@ echo "App: $APP"
 echo "Binary: $BIN"
 
 mkdir -p "$FW"
-dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks"
+
+BREW_PREFIX="$(brew --prefix)"
+OPENCV_PREFIX="$(brew --prefix opencv)"
+GCC_PREFIX="$(brew --prefix gcc 2>/dev/null || true)"
+SEARCH_ARGS=(-s "$BREW_PREFIX/lib" -s "$OPENCV_PREFIX/lib")
+if [ -n "$GCC_PREFIX" ]; then
+  GCC_LIB_DIR=$(ls -d "$GCC_PREFIX"/lib/gcc/*/ 2>/dev/null | head -1 || true)
+  if [ -n "$GCC_LIB_DIR" ]; then
+    SEARCH_ARGS+=(-s "$GCC_LIB_DIR" -s "$GCC_PREFIX/lib")
+  fi
+fi
+
+dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks" "${SEARCH_ARGS[@]}"
 
 echo "=== otool -L (post-bundle) ==="
 otool -L "$BIN"
