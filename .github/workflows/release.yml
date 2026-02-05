@@ -46,23 +46,11 @@ jobs:
 
       - name: Verify build environment
         run: |
-          echo "=== Go Version ==="
-          go version
-
-          echo ""
-          echo "=== Wails Version ==="
-          wails version
-
-          echo ""
-          echo "=== OpenCV Configuration ==="
-          pkg-config --modversion opencv4 || echo "ERROR: OpenCV not found!"
+          wails version || true
+          wails build --help | head -40 || true
+          pkg-config --modversion opencv4 || true
           pkg-config --cflags opencv4
           pkg-config --libs opencv4
-
-          echo ""
-          echo "=== CGo Environment ==="
-          go env CGO_ENABLED
-          go env CC
 
       - name: Install frontend deps
         run: npm ci
@@ -73,87 +61,12 @@ jobs:
           set -e
           export CGO_ENABLED=1
           export PKG_CONFIG_PATH="$(brew --prefix opencv)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
-          wails build -clean -v -platform darwin/arm64 -tags "customenv"
+          wails build -clean -platform darwin/arm64 -tags "customenv"
 
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Wails build failed!"
-            exit 1
-          fi
-
-      - name: Bundle dylibs and verify app
-        run: |
-          set -e
-          echo "=== Build Output Directory ==="
-          ls -lhR build/bin/
-
-          APP=$(ls -1 build/bin/*.app | head -1)
-          if [ -z "$APP" ]; then
-            echo "ERROR: No .app found in build/bin"
-            exit 1
-          fi
-          APPNAME=$(basename "$APP" .app)
-          BIN="$APP/Contents/MacOS/$APPNAME"
-          FW="$APP/Contents/Frameworks"
-
-          echo ""
-          echo "=== App Bundle Structure ==="
-          ls -lhR "$APP"
-
-          echo ""
-          echo "=== Checking for executable ==="
-          if [ -f "$BIN" ]; then
-            echo "✓ Executable found: $BIN"
-            file "$BIN"
-            ls -lh "$BIN"
-          else
-            echo "✗ ERROR: Executable missing at $BIN"
-            exit 1
-          fi
-
-          echo ""
-          echo "=== Bundling dylibs with dylibbundler ==="
-          mkdir -p "$FW"
-          dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks"
-
-          echo ""
-          echo "=== otool -L (post-bundle) ==="
-          otool -L "$BIN"
-
-          if otool -L "$BIN" | grep -qE "/opt/homebrew|/usr/local"; then
-            echo "ERROR: Found Homebrew paths in dylib references."
-            exit 1
-          fi
-
-          if otool -L "$BIN" | grep -q "libopencv" && ! otool -L "$BIN" | grep -q "@executable_path/../Frameworks/libopencv"; then
-            echo "ERROR: OpenCV dylibs are not rebased to @executable_path/../Frameworks."
-            exit 1
-          fi
-
-          echo ""
-          echo "=== Ad-hoc codesign ==="
-          codesign --force --deep --sign - "$APP"
-          codesign --verify --deep --strict "$APP"
-
-      - name: Create DMG installer
+      - name: Package macOS app
         run: |
           npm install -g create-dmg
-          cd build/bin
-          create-dmg open-camera-mouse.app --overwrite || true
-          DMG_FILE=$(ls *.dmg 2>/dev/null | head -1)
-          if [ -n "$DMG_FILE" ]; then
-            mv "$DMG_FILE" "../open-camera-mouse_${GITHUB_REF#refs/tags/}_macOS.dmg"
-          fi
-
-      - name: Package artifact
-        run: |
-          set -e
-          APP=$(ls -1 build/bin/*.app | head -1)
-          if [ -z "$APP" ]; then
-            echo "ERROR: No .app found in build/bin"
-            exit 1
-          fi
-          APPNAME=$(basename "$APP" .app)
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
+          bash ci/package-macos.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -208,14 +121,13 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      - name: Build frontend
-        run: npm run build
-        working-directory: frontend
-
       - name: Build Go binary with Wails
         shell: msys2 {0}
         run: |
-          export PATH="/mingw64/bin:/usr/bin:$PATH"
+          GO_PATH=$(ls -d /c/hostedtoolcache/windows/go/*/x64/bin | head -1)
+          NODE_PATH=$(ls -d /c/hostedtoolcache/windows/node/*/x64/bin | head -1)
+          export PATH="$GO_PATH:$NODE_PATH:/mingw64/bin:/usr/bin:$PATH"
+          export PATH="$(cygpath -u "$(go env GOPATH)")/bin:$PATH"
           export PKG_CONFIG_PATH="$(pwd)/ci"
           export CGO_CFLAGS="$(pkg-config --cflags opencv4-nogui)"
           export CGO_CXXFLAGS="$(pkg-config --cflags opencv4-nogui)"
@@ -225,119 +137,15 @@ jobs:
           export CC=/mingw64/bin/gcc
           export CXX=/mingw64/bin/g++
 
-          # Find the Go binary path
-          GO_PATH=$(ls -d /c/hostedtoolcache/windows/go/*/x64/bin | head -1)
-          export PATH="$GO_PATH:$PATH"
-
-          # Find the Node.js binary path and add to PATH
-          NODE_PATH=$(ls -d /c/hostedtoolcache/windows/node/*/x64 | head -1)
-          export PATH="$NODE_PATH:$PATH"
-
-          # Convert Windows GOPATH to POSIX format and add wails to PATH
-          GOPATH_UNIX=$(cygpath -u "$(go env GOPATH)")
-          export PATH="$GOPATH_UNIX/bin:$PATH"
-
-          # Debug: verify wails and npm are accessible
-          echo "GOPATH (Windows): $(go env GOPATH)"
-          echo "GOPATH (POSIX): $GOPATH_UNIX"
-          echo "Node.js path: $NODE_PATH"
-          which wails || echo "wails not in PATH!"
-          which npm || echo "npm not in PATH!"
-          npm --version
-
           # Delete old icon so Wails regenerates from appicon.png
           rm -f build/windows/icon.ico
 
           wails build -clean -skipbindings -tags "customenv" --nsis
 
-      - name: Diagnostics (Qt/HighGUI)
-        shell: msys2 {0}
-        run: |
-          echo "=== pkg-config --libs opencv4 (informational) ==="
-          pkg-config --libs opencv4
-
-          echo "=== Checking for Qt/HighGUI dependencies in exe ==="
-          if objdump -p build/bin/*.exe | grep -qiE "opencv_highgui|Qt6"; then
-            echo "ERROR: Qt/HighGUI dependency detected in build/bin/*.exe"
-            objdump -p build/bin/*.exe | grep -iE "opencv_highgui|Qt6"
-            exit 1
-          fi
-
-          echo "=== build/bin DLLs ==="
-          ls -la build/bin
-
       - name: Collect DLLs and package
         shell: msys2 {0}
         run: |
-          cd build/bin
-
-          # List what we built
-          ls -la
-
-          echo "=== Automatic DLL Detection and Collection ==="
-          exe_file=$(ls -1 *.exe | head -1)
-          if [ -z "$exe_file" ]; then
-            echo "ERROR: No .exe found in build/bin"
-            exit 1
-          fi
-          echo "Analyzing dependencies for: $exe_file"
-
-          system_dll_regex='^(KERNEL32|USER32|GDI32|ADVAPI32|SHELL32|OLE32|OLEAUT32|WS2_32|SHLWAPI|COMDLG32|IMM32|WINMM|UCRTBASE|VCRUNTIME140|VCRUNTIME140_1|MSVCP140|MSVCP140_1|MSVCP140_2|MSVCP140_ATOMIC_WAIT|MSVCP140_CODECVT_IDS|VERSION|COMCTL32|WINSPOOL|api-ms-win|bcrypt|CRYPT32|ntdll|RPCRT4|SETUPAPI|USERENV|UxTheme|dwmapi|iphlpapi|MPR|NETAPI32|Secur32|WINHTTP|urlmon)\.dll$'
-
-          objdump -p "$exe_file" | grep "DLL Name:" | awk '{print $3}' | sort -u > deps.txt
-
-          echo "=== Final dependency list (from objdump) ==="
-          cat deps.txt
-
-          echo "=== Copying required DLLs ==="
-          missing=0
-          copied_list="copied-dlls.txt"
-          : > "$copied_list"
-
-          while read -r dll; do
-            if [[ "$dll" =~ $system_dll_regex ]]; then
-              continue
-            fi
-
-            if [ -f "/mingw64/bin/$dll" ]; then
-              cp -n "/mingw64/bin/$dll" .
-              echo "$dll" >> "$copied_list"
-            else
-              echo "ERROR: Required DLL not found in /mingw64/bin: $dll"
-              missing=1
-            fi
-          done < deps.txt
-
-          # Always ensure MinGW runtime trio is present (idempotent)
-          for rt in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll; do
-            if [ -f "/mingw64/bin/$rt" ]; then
-              cp -n "/mingw64/bin/$rt" .
-              echo "$rt" >> "$copied_list"
-            else
-              echo "ERROR: MinGW runtime DLL missing: $rt"
-              missing=1
-            fi
-          done
-
-          if [ "$missing" -ne 0 ]; then
-            echo "ERROR: Missing required DLLs, cannot package."
-            exit 1
-          fi
-
-          echo "=== Copied DLLs (final) ==="
-          sort -u "$copied_list"
-
-          echo "=== Re-checking for Qt/HighGUI dependencies (hard fail) ==="
-          if grep -qiE "opencv_highgui|Qt6" deps.txt; then
-            echo "ERROR: Qt/HighGUI dependency detected in dependency list"
-            grep -iE "opencv_highgui|Qt6" deps.txt
-            exit 1
-          fi
-          echo ""
-          echo "=== Final Package Contents ==="
-          ls -la
-
-          zip -r "../$ASSET_NAME" .
+          bash ci/package-windows.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

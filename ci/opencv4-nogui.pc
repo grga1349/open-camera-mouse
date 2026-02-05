@@ -1,7 +1,7 @@
 prefix=/mingw64
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
-includedir=${prefix}/include
+includedir=${prefix}/include/opencv4
 
 Name: opencv4-nogui
 Description: OpenCV without highgui (no Qt dependency)
