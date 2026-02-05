@@ -1,0 +1,16 @@
+prefix=/mingw64
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: opencv4-nogui
+Description: OpenCV without highgui (no Qt dependency)
+Version: 4.x
+Cflags: -I${includedir}
+# Modules included based on current Go usage:
+# - opencv_core: Mat, basic ops
+# - opencv_imgproc: CvtColor, MatchTemplate, PutText, drawing (Circle/Rectangle)
+# - opencv_imgcodecs: IMEncode (JPEG)
+# - opencv_videoio: VideoCaptureDevice
+Libs: -L${libdir} -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio
+Libs.private:

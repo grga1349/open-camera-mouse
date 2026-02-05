@@ -155,12 +155,9 @@ jobs:
           msystem: MINGW64
           update: false
           install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-pkgconf
             mingw-w64-x86_64-opencv
-            mingw-w64-x86_64-qt6-base
-            mingw-w64-x86_64-qt6-svg
-            mingw-w64-x86_64-qt6-imageformats
             zip
 
       - uses: actions/setup-go@v5
@@ -188,10 +185,11 @@ jobs:
       - name: Build Go binary with Wails
         shell: msys2 {0}
         run: |
-          export PATH="/mingw64/bin:$PATH"
-          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
-          export CGO_CPPFLAGS="$(pkg-config --cflags opencv4)"
-          export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
+          export PATH="/mingw64/bin:/usr/bin:$PATH"
+          export PKG_CONFIG_PATH="$(pwd)/ci"
+          export CGO_CFLAGS="$(pkg-config --cflags opencv4-nogui)"
+          export CGO_CXXFLAGS="$(pkg-config --cflags opencv4-nogui)"
+          export CGO_LDFLAGS="$(pkg-config --libs opencv4-nogui)"
           export CGO_ENABLED=1
           export GOFLAGS="-tags=customenv"
           export CC=/mingw64/bin/gcc
@@ -222,6 +220,22 @@ jobs:
 
           wails build -clean -skipbindings -tags "customenv" --nsis
 
+      - name: Diagnostics (Qt/HighGUI)
+        shell: msys2 {0}
+        run: |
+          echo "=== pkg-config --libs opencv4 (informational) ==="
+          pkg-config --libs opencv4
+
+          echo "=== Checking for Qt/HighGUI dependencies in exe ==="
+          if objdump -p build/bin/*.exe | grep -qiE "opencv_highgui|Qt6"; then
+            echo "ERROR: Qt/HighGUI dependency detected in build/bin/*.exe"
+            objdump -p build/bin/*.exe | grep -iE "opencv_highgui|Qt6"
+            exit 1
+          fi
+
+          echo "=== build/bin DLLs ==="
+          ls -la build/bin
+
       - name: Collect DLLs and package
         shell: msys2 {0}
         run: |
@@ -231,226 +245,67 @@ jobs:
           ls -la
 
           echo "=== Automatic DLL Detection and Collection ==="
-          # Use objdump to find all DLL dependencies recursively
-          function collect_dlls() {
-            local file="$1"
-            local processed_list="$2"
+          exe_file=$(ls -1 *.exe | head -1)
+          if [ -z "$exe_file" ]; then
+            echo "ERROR: No .exe found in build/bin"
+            exit 1
+          fi
+          echo "Analyzing dependencies for: $exe_file"
 
-            # Check if already processed
-            if grep -q "^$(basename "$file")$" "$processed_list" 2>/dev/null; then
-              return
+          system_dll_regex='^(KERNEL32|USER32|GDI32|ADVAPI32|SHELL32|OLE32|OLEAUT32|WS2_32|SHLWAPI|COMDLG32|IMM32|WINMM|UCRTBASE|VCRUNTIME140|VCRUNTIME140_1|MSVCP140|MSVCP140_1|MSVCP140_2|MSVCP140_ATOMIC_WAIT|MSVCP140_CODECVT_IDS|VERSION|COMCTL32|WINSPOOL|api-ms-win|bcrypt|CRYPT32|ntdll|RPCRT4|SETUPAPI|USERENV|UxTheme|dwmapi|iphlpapi|MPR|NETAPI32|Secur32|WINHTTP|urlmon)\.dll$'
+
+          objdump -p "$exe_file" | grep "DLL Name:" | awk '{print $3}' | sort -u > deps.txt
+
+          echo "=== Final dependency list (from objdump) ==="
+          cat deps.txt
+
+          echo "=== Copying required DLLs ==="
+          missing=0
+          copied_list="copied-dlls.txt"
+          : > "$copied_list"
+
+          while read -r dll; do
+            if [[ "$dll" =~ $system_dll_regex ]]; then
+              continue
             fi
 
-            # Mark as processed
-            echo "$(basename "$file")" >> "$processed_list"
-
-            # Get DLL dependencies
-            objdump -p "$file" 2>/dev/null | grep "DLL Name:" | awk '{print $3}' | while read dll; do
-              # Skip Windows system DLLs
-              if [[ "$dll" =~ ^(KERNEL32|USER32|GDI32|ADVAPI32|SHELL32|ole32|OLEAUT32|msvcrt|WS2_32|WINMM|VERSION|IMM32|COMCTL32|COMDLG32|WINSPOOL|api-ms-win|bcrypt|CRYPT32|ntdll|RPCRT4|SETUPAPI|USERENV|UxTheme|dwmapi|iphlpapi|MPR|NETAPI32|Secur32|Shlwapi|WINHTTP|urlmon)\.dll$ ]]; then
-                echo "  Skipping system DLL: $dll"
-                continue
-              fi
-
-              # Check if DLL exists in mingw64/bin
-              if [ -f "/mingw64/bin/$dll" ]; then
-                if [ ! -f "$dll" ]; then
-                  echo "  Copying dependency: $dll"
-                  cp "/mingw64/bin/$dll" . || echo "    WARNING: Failed to copy $dll"
-                  # Recursively collect dependencies of this DLL
-                  collect_dlls "/mingw64/bin/$dll" "$processed_list"
-                fi
-              else
-                echo "  WARNING: Required DLL not found: $dll"
-              fi
-            done
-          }
-
-          # Create a temp file to track processed DLLs
-          processed_dlls=$(mktemp)
-
-          # Start with the main executable
-          echo "Analyzing open-camera-mouse.exe dependencies..."
-          collect_dlls "open-camera-mouse.exe" "$processed_dlls"
-
-          # Clean up
-          rm -f "$processed_dlls"
-
-          echo ""
-          echo "=== Additional Manual DLL Collection (fallback) ==="
-          # Copy OpenCV DLLs
-          cp /mingw64/bin/libopencv_core*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_imgproc*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_imgcodecs*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_videoio*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_highgui*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_objdetect*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_features2d*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_video*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_calib3d*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libopencv_flann*.dll . 2>/dev/null || true
-
-          # MinGW runtime
-          cp /mingw64/bin/libgcc_s_seh-1.dll . 2>/dev/null || true
-          cp /mingw64/bin/libstdc++-6.dll . 2>/dev/null || true
-          cp /mingw64/bin/libwinpthread-1.dll . 2>/dev/null || true
-
-          # Image format libs
-          cp /mingw64/bin/libpng*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libjpeg*.dll . 2>/dev/null || true
-          cp /mingw64/bin/zlib1.dll . 2>/dev/null || true
-          cp /mingw64/bin/libtiff*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libwebp*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libsharpyuv*.dll . 2>/dev/null || true
-          cp /mingw64/bin/liblzma*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libzstd*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libdeflate*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libjbig*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libLerc*.dll . 2>/dev/null || true
-
-          # FFmpeg for video capture
-          cp /mingw64/bin/libavcodec*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libavformat*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libavutil*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libswscale*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libswresample*.dll . 2>/dev/null || true
-
-          # Other common dependencies
-          cp /mingw64/bin/libopenjp2*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libglib*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libintl*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libiconv*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libpcre2*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libharfbuzz*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libfreetype*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libbz2*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libbrotli*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libgraphite2*.dll . 2>/dev/null || true
-
-          # Qt libraries (required by OpenCV highgui/videoio)
-          echo "Copying Qt DLLs..."
-          cp /mingw64/bin/Qt6Core.dll . 2>/dev/null || echo "Warning: Qt6Core.dll not found"
-          cp /mingw64/bin/Qt6Gui.dll . 2>/dev/null || echo "Warning: Qt6Gui.dll not found"
-          cp /mingw64/bin/Qt6Widgets.dll . 2>/dev/null || echo "Warning: Qt6Widgets.dll not found"
-          cp /mingw64/bin/libdouble-conversion*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libicuin*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libicuuc*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libicudt*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libpcre2-16*.dll . 2>/dev/null || true
-          cp /mingw64/bin/libmd4c*.dll . 2>/dev/null || true
-
-          # Qt platform plugin (CRITICAL - Qt won't work without this)
-          echo ""
-          echo "=== Qt Platform Plugin (REQUIRED) ==="
-          mkdir -p platforms
-
-          # Try multiple possible locations for qwindows.dll
-          QWINDOWS_FOUND=false
-
-          # Location 1: Standard Qt6 location
-          if [ -f "/mingw64/share/qt6/plugins/platforms/qwindows.dll" ]; then
-            cp /mingw64/share/qt6/plugins/platforms/qwindows.dll platforms/
-            echo "✓ Copied qwindows.dll from Qt6 plugins directory"
-            QWINDOWS_FOUND=true
-          fi
-
-          # Location 2: Qt5 location (fallback)
-          if [ "$QWINDOWS_FOUND" = false ] && [ -f "/mingw64/share/qt5/plugins/platforms/qwindows.dll" ]; then
-            cp /mingw64/share/qt5/plugins/platforms/qwindows.dll platforms/
-            echo "✓ Copied qwindows.dll from Qt5 plugins directory"
-            QWINDOWS_FOUND=true
-          fi
-
-          # Location 3: Alternative Qt6 location
-          if [ "$QWINDOWS_FOUND" = false ] && [ -f "/mingw64/lib/qt6/plugins/platforms/qwindows.dll" ]; then
-            cp /mingw64/lib/qt6/plugins/platforms/qwindows.dll platforms/
-            echo "✓ Copied qwindows.dll from Qt6 lib directory"
-            QWINDOWS_FOUND=true
-          fi
-
-          # Location 4: Search for it
-          if [ "$QWINDOWS_FOUND" = false ]; then
-            echo "⚠️  Searching for qwindows.dll in MSYS2..."
-            QWINDOWS_PATH=$(find /mingw64 -name "qwindows.dll" 2>/dev/null | head -1)
-            if [ -n "$QWINDOWS_PATH" ]; then
-              cp "$QWINDOWS_PATH" platforms/
-              echo "✓ Copied qwindows.dll from: $QWINDOWS_PATH"
-              QWINDOWS_FOUND=true
-            fi
-          fi
-
-          # FAIL THE BUILD if qwindows.dll wasn't found
-          if [ "$QWINDOWS_FOUND" = false ]; then
-            echo ""
-            echo "❌ CRITICAL ERROR: qwindows.dll not found!"
-            echo "Qt platform plugin is absolutely required for the app to run."
-            echo ""
-            echo "Searched locations:"
-            echo "  - /mingw64/share/qt6/plugins/platforms/qwindows.dll"
-            echo "  - /mingw64/share/qt5/plugins/platforms/qwindows.dll"
-            echo "  - /mingw64/lib/qt6/plugins/platforms/qwindows.dll"
-            echo "  - find /mingw64 -name qwindows.dll"
-            echo ""
-            echo "This indicates Qt is not properly installed in MSYS2."
-            echo "Build FAILED."
-            exit 1
-          fi
-
-          # Verify the file was actually copied
-          if [ ! -f "platforms/qwindows.dll" ]; then
-            echo "❌ CRITICAL ERROR: qwindows.dll was not copied to platforms/ folder!"
-            echo "Build FAILED."
-            exit 1
-          fi
-
-          echo "✓ Verified: platforms/qwindows.dll exists"
-          ls -lh platforms/qwindows.dll
-
-          # Also copy Qt plugins that might be needed
-          if [ -d "/mingw64/share/qt6/plugins/styles" ]; then
-            mkdir -p styles
-            cp /mingw64/share/qt6/plugins/styles/*.dll styles/ 2>/dev/null || true
-            echo "✓ Copied Qt style plugins"
-          fi
-
-          if [ -d "/mingw64/share/qt6/plugins/imageformats" ]; then
-            mkdir -p imageformats
-            cp /mingw64/share/qt6/plugins/imageformats/*.dll imageformats/ 2>/dev/null || true
-            echo "✓ Copied Qt imageformat plugins"
-          fi
-
-          echo ""
-          echo "=== Final Package Contents ==="
-          ls -la
-          echo "Qt DLLs:"
-          ls -la Qt6*.dll 2>/dev/null || echo "No Qt DLLs found"
-          echo "Platform plugins:"
-          ls -la platforms/ 2>/dev/null || echo "No platform plugins found"
-
-          echo ""
-          echo "=== Verifying Package Contents Before Packaging ==="
-
-          # Check if qwindows.dll exists in the package directory
-          if [ ! -f "platforms/qwindows.dll" ]; then
-            echo "❌ FATAL: platforms/qwindows.dll is missing from package!"
-            echo "The Windows build will not work without this file."
-            exit 1
-          fi
-
-          echo "✓ platforms/qwindows.dll found in package"
-          ls -lh platforms/qwindows.dll
-
-          # Check if Qt DLLs are present
-          for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll; do
-            if [ ! -f "$dll" ]; then
-              echo "⚠️  Warning: $dll is missing"
+            if [ -f "/mingw64/bin/$dll" ]; then
+              cp -n "/mingw64/bin/$dll" .
+              echo "$dll" >> "$copied_list"
             else
-              echo "✓ $dll found"
+              echo "ERROR: Required DLL not found in /mingw64/bin: $dll"
+              missing=1
+            fi
+          done < deps.txt
+
+          # Always ensure MinGW runtime trio is present (idempotent)
+          for rt in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll; do
+            if [ -f "/mingw64/bin/$rt" ]; then
+              cp -n "/mingw64/bin/$rt" .
+              echo "$rt" >> "$copied_list"
+            else
+              echo "ERROR: MinGW runtime DLL missing: $rt"
+              missing=1
             fi
           done
 
+          if [ "$missing" -ne 0 ]; then
+            echo "ERROR: Missing required DLLs, cannot package."
+            exit 1
+          fi
+
+          echo "=== Copied DLLs (final) ==="
+          sort -u "$copied_list"
+
+          echo "=== Re-checking for Qt/HighGUI dependencies (hard fail) ==="
+          if grep -qiE "opencv_highgui|Qt6" deps.txt; then
+            echo "ERROR: Qt/HighGUI dependency detected in dependency list"
+            grep -iE "opencv_highgui|Qt6" deps.txt
+            exit 1
+          fi
           echo ""
-          echo "✓ All critical Qt components verified"
+          echo "=== Final Package Contents ==="
+          ls -la
 
           zip -r "../$ASSET_NAME" .
 
