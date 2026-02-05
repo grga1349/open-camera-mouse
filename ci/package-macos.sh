@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP=$(ls -1 build/bin/*.app | head -1 || true)
+APP=$(find build/bin -maxdepth 1 -name "*.app" -print -quit || true)
 if [ -z "$APP" ]; then
   echo "ERROR: No .app found in build/bin"
+  ls -la build/bin
   exit 1
 fi
 
+BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit || true)
+if [ -z "$BIN" ]; then
+  echo "ERROR: No executable found in $APP/Contents/MacOS"
+  ls -la "$APP/Contents/MacOS"
+  exit 1
+fi
 APPNAME=$(basename "$APP" .app)
-BIN="$APP/Contents/MacOS/$APPNAME"
 FW="$APP/Contents/Frameworks"
 TAG="${GITHUB_REF_NAME#v}"
 

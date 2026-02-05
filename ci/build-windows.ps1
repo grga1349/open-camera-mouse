@@ -26,8 +26,25 @@ wails version
 $env:PKG_CONFIG_PATH = "$PWD\ci"
 $env:CGO_ENABLED = "1"
 
-$cflags = bash -lc "pkg-config --cflags opencv4-nogui"
-$libs = bash -lc "pkg-config --libs opencv4-nogui"
+Write-Host "=== pkg-config preflight ==="
+& bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --version"
+& bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --cflags opencv4-nogui"
+
+$cflagsRaw = bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --cflags opencv4-nogui"
+$libsRaw = bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --libs opencv4-nogui"
+
+$cflags = ($cflagsRaw | Out-String).Trim()
+$libs = ($libsRaw | Out-String).Trim()
+
+if ([string]::IsNullOrWhiteSpace($cflags)) {
+  throw "pkg-config returned empty cflags for opencv4-nogui"
+}
+if ([string]::IsNullOrWhiteSpace($libs)) {
+  throw "pkg-config returned empty libs for opencv4-nogui"
+}
+
+Write-Host "CGO_CFLAGS: $cflags"
+Write-Host "CGO_LDFLAGS: $libs"
 
 $env:CGO_CFLAGS = $cflags
 $env:CGO_CXXFLAGS = $cflags
