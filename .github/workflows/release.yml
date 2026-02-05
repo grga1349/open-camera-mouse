@@ -69,9 +69,17 @@ jobs:
           wails build -clean -platform darwin/arm64 -tags "customenv"
 
       - name: Package macOS app
-        run: |
-          npm install -g create-dmg
-          bash ci/package-macos.sh
+        run: bash ci/package-macos.sh
+
+      - name: Smoke test macOS package
+        run: bash ci/smoke-macos.sh
+
+      - name: Upload debug (macOS) on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug
+          path: build/bin
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -126,37 +134,27 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      - name: Build Go binary with Wails
-        shell: msys2 {0}
+      - name: Build Windows app
+        shell: pwsh
         run: |
-          export PATH="/mingw64/bin:/usr/bin:$PATH"
-          if ! command -v node >/dev/null 2>&1; then
-            echo "ERROR: node not found in PATH. Ensure actions/setup-node ran."
-            exit 1
-          fi
-          node --version
-          if ! command -v go >/dev/null 2>&1; then
-            echo "ERROR: go not found in PATH. Ensure actions/setup-go ran."
-            exit 1
-          fi
-          export PATH="$(cygpath -u "$(go env GOPATH)")/bin:$PATH"
-          export PKG_CONFIG_PATH="$PWD/ci"
-          export CGO_ENABLED=1
-          export CGO_CFLAGS="$(pkg-config --cflags opencv4-nogui)"
-          export CGO_CXXFLAGS="$CGO_CFLAGS"
-          export CGO_LDFLAGS="$(pkg-config --libs opencv4-nogui)"
-          export CC=gcc
-          export CXX=g++
-
-          # Delete old icon so Wails regenerates from appicon.png
-          rm -f build/windows/icon.ico
-
-          wails build -clean -skipbindings -tags "customenv" --nsis
+          ./ci/build-windows.ps1
 
       - name: Collect DLLs and package
         shell: msys2 {0}
         run: |
           bash ci/package-windows.sh
+
+      - name: Smoke test Windows package
+        shell: pwsh
+        run: |
+          ./ci/smoke-windows.ps1
+
+      - name: Upload debug (Windows) on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-debug
+          path: build/bin
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

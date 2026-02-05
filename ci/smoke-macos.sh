@@ -9,16 +9,11 @@ fi
 
 APPNAME=$(basename "$APP" .app)
 BIN="$APP/Contents/MacOS/$APPNAME"
-FW="$APP/Contents/Frameworks"
-TAG="${GITHUB_REF_NAME#v}"
 
-echo "App: $APP"
-echo "Binary: $BIN"
+echo "=== file BIN ==="
+file "$BIN"
 
-mkdir -p "$FW"
-dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks"
-
-echo "=== otool -L (post-bundle) ==="
+echo "=== otool -L BIN ==="
 otool -L "$BIN"
 
 if otool -L "$BIN" | grep -qE "/opt/homebrew|/usr/local"; then
@@ -31,15 +26,12 @@ if otool -L "$BIN" | grep -q "libopencv" && ! otool -L "$BIN" | grep -q "@execut
   exit 1
 fi
 
-codesign --force --deep --sign - "$APP"
 codesign --verify --deep --strict "$APP"
 
-npx --yes create-dmg "$APP" --overwrite
-DMG_FILE=$(ls build/bin/*.dmg 2>/dev/null | head -1 || true)
-if [ -z "$DMG_FILE" ]; then
-  echo "ERROR: DMG not created"
+ZIP=$(ls -1 build/*-mac.zip 2>/dev/null | head -1 || true)
+if [ -z "$ZIP" ]; then
+  echo "ERROR: mac zip not found"
   exit 1
 fi
-mv "$DMG_FILE" "build/open-camera-mouse_${TAG}_macOS.dmg"
-
-ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
+echo "=== zip contents (head) ==="
+unzip -l "$ZIP" | head -40
