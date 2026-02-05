@@ -1,59 +1,40 @@
 $ErrorActionPreference = "Stop"
 
-$env:PATH = "C:\msys64\mingw64\bin;C:\msys64\usr\bin;$env:PATH"
-
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-  throw "node not found in PATH. Ensure actions/setup-node ran."
-}
+Write-Host "== Preflight =="
 node --version
 npm --version
 
-if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
-  throw "go not found in PATH. Ensure actions/setup-go ran."
-}
+$env:PATH = "C:\msys64\mingw64\bin;C:\msys64\usr\bin;" + $env:PATH
 
-if (-not (Get-Command wails -ErrorAction SilentlyContinue)) {
-  $goPath = (go env GOPATH)
-  $gopathBin = (cygpath -u $goPath) + "/bin"
-  $env:PATH = "$gopathBin;$env:PATH"
-}
+$gopath = (go env GOPATH)
+$env:PATH = "$gopath\bin;" + $env:PATH
 
-if (-not (Get-Command wails -ErrorAction SilentlyContinue)) {
-  throw "wails not found in PATH. Ensure go install wails CLI succeeded."
-}
 wails version
 
-$env:PKG_CONFIG_PATH = "$PWD\ci"
-$env:CGO_ENABLED = "1"
-
-Write-Host "=== pkg-config preflight ==="
-& bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --version'
-& bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --cflags opencv4-nogui'
-
-$cflagsRaw = bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --cflags opencv4-nogui'
-$libsRaw = bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; pkg-config --libs opencv4-nogui'
-
-$cflags = ($cflagsRaw | Out-String).Trim()
-$libs = ($libsRaw | Out-String).Trim()
-
-if ([string]::IsNullOrWhiteSpace($cflags)) {
-  throw "pkg-config returned empty cflags for opencv4-nogui"
-}
-if ([string]::IsNullOrWhiteSpace($libs)) {
-  throw "pkg-config returned empty libs for opencv4-nogui"
-}
-
-Write-Host "CGO_CFLAGS: $cflags"
-Write-Host "CGO_LDFLAGS: $libs"
-
-$env:CGO_CFLAGS = $cflags
-$env:CGO_CXXFLAGS = $cflags
-$env:CGO_LDFLAGS = $libs
 $env:CC = "gcc"
 $env:CXX = "g++"
+$env:CGO_ENABLED = "1"
 
-if (Test-Path "build/windows/icon.ico") {
-  Remove-Item "build/windows/icon.ico" -Force
+$pcPath = (Resolve-Path ".\ci").Path
+$env:PKG_CONFIG_PATH = $pcPath
+
+$cflagsRaw = & C:\msys64\usr\bin\bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --cflags opencv4-nogui"
+$libsRaw   = & C:\msys64\usr\bin\bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; pkg-config --libs opencv4-nogui"
+
+$cflags = ($cflagsRaw | Out-String).Trim()
+$libs   = ($libsRaw   | Out-String).Trim()
+
+if ([string]::IsNullOrWhiteSpace($cflags) -or [string]::IsNullOrWhiteSpace($libs)) {
+  throw "pkg-config returned empty flags. cflags='$cflags' libs='$libs'"
 }
 
+Write-Host "== pkg-config flags =="
+Write-Host "CFLAGS: $cflags"
+Write-Host "LDFLAGS: $libs"
+
+$env:CGO_CFLAGS   = $cflags
+$env:CGO_CXXFLAGS = $cflags
+$env:CGO_LDFLAGS  = $libs
+
+Write-Host "== Build =="
 wails build -clean -skipbindings -tags "customenv" --nsis -ldflags "-H=windowsgui"
