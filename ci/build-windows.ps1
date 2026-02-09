@@ -19,6 +19,7 @@ $pcPath = (Resolve-Path ".\ci").Path
 $env:PKG_CONFIG_PATH = $pcPath
 
 & C:\msys64\usr\bin\bash -lc "true" | Out-Null
+$null = & C:\msys64\usr\bin\bash -lc 'export PATH=/mingw64/bin:/usr/bin:$PATH; which pkg-config; pkg-config --version'
 $cflagsRaw = & C:\msys64\usr\bin\bash -lc 'PATH=/mingw64/bin:/usr/bin:$PATH pkg-config --cflags opencv4-nogui'
 $libsRaw   = & C:\msys64\usr\bin\bash -lc 'PATH=/mingw64/bin:/usr/bin:$PATH pkg-config --libs opencv4-nogui'
 
