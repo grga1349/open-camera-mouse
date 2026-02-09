@@ -38,19 +38,10 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-name: ci
-          create-args: >-
-            -c conda-forge
-            opencv
-            pkg-config
-
       - name: Install deps (OpenCV + tools)
         run: |
           brew update
-          brew install dylibbundler
+          brew install opencv pkg-config
 
       - name: Install frontend deps
         run: npm ci
@@ -60,19 +51,30 @@ jobs:
         run: |
           set -euo pipefail
           export CGO_ENABLED=1
-          export PKG_CONFIG_PATH="$MAMBA_ROOT_PREFIX/envs/ci/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          export PKG_CONFIG_PATH="$(brew --prefix opencv)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
           export CGO_CFLAGS="$(pkg-config --cflags opencv4)"
           export CGO_CXXFLAGS="$CGO_CFLAGS"
           export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
 
           export PATH="$(go env GOPATH)/bin:$PATH"
           wails version
-          wails build -clean -platform darwin/arm64 -tags "customenv"
+          wails build -clean -platform darwin/arm64 -tags "customenv" -skipbindings
 
       - name: Package (macOS)
         run: |
-          chmod +x ci/package-macos.sh
-          bash ci/package-macos.sh
+          set -euo pipefail
+          APP=$(find build/bin -maxdepth 1 -name "*.app" -print -quit)
+          if [ -z "$APP" ]; then
+            echo "ERROR: No .app found in build/bin"
+            ls -la build/bin || true
+            exit 1
+          fi
+          APPNAME=$(basename "$APP" .app)
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
+
+      - name: Note (macOS runtime requirement)
+        run: |
+          echo "NOTE: macOS users must install OpenCV via Homebrew: brew install opencv"
 
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
@@ -80,7 +82,6 @@ jobs:
           name: macos
           path: |
             build/*.zip
-            build/*.dmg
 
   build-windows:
     runs-on: windows-2022
@@ -109,19 +110,24 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: false
-          install: >-
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-opencv
-            zip
+      - name: Setup MSVC dev cmd
+        uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Prime MSYS2
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\\vcpkg\\installed
+            C:\\vcpkg\\packages
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Install OpenCV (vcpkg)
         shell: pwsh
-        run: C:\msys64\usr\bin\bash -lc "true"
+        run: |
+          $env:VCPKG_ROOT = "C:\\vcpkg"
+          & $env:VCPKG_ROOT\\vcpkg.exe install opencv4:x64-windows
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -133,15 +139,44 @@ jobs:
       - name: Build (Windows)
         shell: pwsh
         run: |
-          ./ci/build-windows.ps1
+          $env:VCPKG_ROOT = "C:\\vcpkg"
+          $prefix = "$env:VCPKG_ROOT\\installed\\x64-windows"
+
+          $env:PATH = "$prefix\\bin;" + $env:PATH
+          $env:INCLUDE = "$prefix\\include;" + $env:INCLUDE
+          $env:LIB = "$prefix\\lib;" + $env:LIB
+
+          $world = Get-ChildItem "$prefix\\lib\\opencv_world*.lib" | Select-Object -First 1
+          if (-not $world) { throw "opencv_world*.lib not found in $prefix\\lib" }
+          $libname = $world.BaseName
+
+          $env:CC = "cl.exe"
+          $env:CXX = "cl.exe"
+          $env:CGO_ENABLED = "1"
+          $env:CGO_CFLAGS = "-I$prefix\\include"
+          $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
+          $env:CGO_LDFLAGS = "-L$prefix\\lib -l$libname"
+
+          $env:PATH = "$(go env GOPATH)\\bin;" + $env:PATH
+          wails version
+          wails build -clean -skipbindings -tags "customenv" --nsis -ldflags "-H=windowsgui"
 
       - name: Package (Windows)
         shell: pwsh
-        env:
-          ASSET_NAME: open-camera-mouse_${{ github.ref_name }}_Windows.zip
         run: |
-          $env:PATH = "C:\\msys64\\mingw64\\bin;C:\\msys64\\usr\\bin;" + $env:PATH
-          & C:\\msys64\\usr\\bin\\bash -lc "export PATH=/mingw64/bin:/usr/bin:\$PATH; chmod +x ci/package-windows.sh; ASSET_NAME='${env:ASSET_NAME}' bash ci/package-windows.sh"
+          $env:VCPKG_ROOT = "C:\\vcpkg"
+          $prefix = "$env:VCPKG_ROOT\\installed\\x64-windows"
+
+          $exe = Get-ChildItem "build\\bin" -Filter *.exe | Select-Object -First 1
+          if (-not $exe) { throw "No .exe found in build\\bin" }
+
+          Get-ChildItem "$prefix\\bin\\opencv*.dll" | ForEach-Object {
+            Copy-Item $_.FullName -Destination "build\\bin" -Force
+          }
+
+          $zipPath = "build\\open-camera-mouse_${env:GITHUB_REF_NAME}_Windows.zip"
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path "build\\bin\\*" -DestinationPath $zipPath
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
