@@ -19,8 +19,8 @@ $pcPath = (Resolve-Path ".\ci").Path
 $env:PKG_CONFIG_PATH = $pcPath
 
 & C:\msys64\usr\bin\bash -lc "true" | Out-Null
-$cflagsRaw = & C:\msys64\usr\bin\bash -lc "PATH=/mingw64/bin:/usr/bin:\$PATH pkg-config --cflags opencv4-nogui"
-$libsRaw   = & C:\msys64\usr\bin\bash -lc "PATH=/mingw64/bin:/usr/bin:\$PATH pkg-config --libs opencv4-nogui"
+$cflagsRaw = & C:\msys64\usr\bin\bash -lc 'PATH=/mingw64/bin:/usr/bin:$PATH pkg-config --cflags opencv4-nogui'
+$libsRaw   = & C:\msys64\usr\bin\bash -lc 'PATH=/mingw64/bin:/usr/bin:$PATH pkg-config --libs opencv4-nogui'
 
 $cflags = ($cflagsRaw | Out-String).Trim()
 $libs   = ($libsRaw   | Out-String).Trim()
