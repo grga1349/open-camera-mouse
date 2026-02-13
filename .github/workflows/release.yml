@@ -130,7 +130,7 @@ jobs:
           Invoke-WebRequest -Uri $url -OutFile $destExe
 
           $size = (Get-Item $destExe).Length
-          if ($size -lt 200MB) { throw "Downloaded OpenCV archive is too small ($size bytes). Download likely failed." }
+          if ($size -lt 150MB) { throw "Downloaded OpenCV archive is too small ($size bytes). Download likely failed." }
 
           $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
           if (-not $sevenZip) {
