@@ -160,8 +160,10 @@ jobs:
           $libname = $world.BaseName
 
           $env:PATH = "$binDir;" + $env:PATH
-          $env:CC = "cl.exe"
-          $env:CXX = "cl.exe"
+          $clang = Get-Command clang-cl -ErrorAction SilentlyContinue
+          if (-not $clang) { throw "clang-cl not found in PATH" }
+          $env:CC = "clang-cl"
+          $env:CXX = "clang-cl"
           $env:CGO_ENABLED = "1"
           $env:CGO_CPPFLAGS = "-I$includeDir"
           $env:CGO_CXXFLAGS = $env:CGO_CPPFLAGS
