@@ -123,11 +123,11 @@ jobs:
       - name: Download OpenCV (prebuilt)
         shell: pwsh
         run: |
-          $url = "https://downloads.sourceforge.net/project/opencvlibrary/4.10.0/opencv-4.10.0-windows.exe"
+          $url = "https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe"
           $destDir = "$env:RUNNER_TEMP\opencv"
           $destExe = "$destDir\opencv-4.10.0-windows.exe"
           New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-          Invoke-WebRequest -Uri $url -OutFile $destExe -Headers @{ "User-Agent" = "Mozilla/5.0" }
+          Invoke-WebRequest -Uri $url -OutFile $destExe
 
           $size = (Get-Item $destExe).Length
           if ($size -lt 200MB) { throw "Downloaded OpenCV archive is too small ($size bytes). Download likely failed." }
