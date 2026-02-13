@@ -166,8 +166,8 @@ jobs:
           $env:CGO_CPPFLAGS = "-I$includeDir"
           $env:CGO_CXXFLAGS = $env:CGO_CPPFLAGS
           $env:CGO_LDFLAGS = "-L$libDir -l$libname"
-          $env:CGO_CFLAGS_DISALLOW = "-Werror|/Werror"
-          $env:CGO_CXXFLAGS_DISALLOW = "-Werror|/Werror"
+          $env:CGO_CFLAGS_ALLOW = "-Werror"
+          $env:CGO_CXXFLAGS_ALLOW = "-Werror"
 
           $env:PATH = "$(go env GOPATH)\bin;" + $env:PATH
           wails version
