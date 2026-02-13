@@ -113,22 +113,6 @@ jobs:
       - name: Setup MSVC dev cmd
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Cache vcpkg
-        uses: actions/cache@v4
-        with:
-          path: |
-            C:\\vcpkg\\installed
-            C:\\vcpkg\\packages
-          key: vcpkg-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
-          restore-keys: |
-            vcpkg-${{ runner.os }}-
-
-      - name: Install OpenCV (vcpkg)
-        shell: pwsh
-        run: |
-          $env:VCPKG_ROOT = "C:\\vcpkg"
-          & $env:VCPKG_ROOT\\vcpkg.exe install opencv4:x64-windows
-
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
@@ -136,41 +120,69 @@ jobs:
         run: npm ci
         working-directory: frontend
 
+      - name: Download OpenCV (prebuilt)
+        shell: pwsh
+        run: |
+          $url = "https://sourceforge.net/projects/opencvlibrary/files/4.10.0/opencv-4.10.0-windows.exe/download"
+          $destDir = "$env:RUNNER_TEMP\opencv"
+          $destExe = "$destDir\opencv-4.10.0-windows.exe"
+          New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+          Invoke-WebRequest -Uri $url -OutFile $destExe
+
+          $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
+          if (-not $sevenZip) {
+            choco install 7zip -y
+          }
+          7z x $destExe -o"$destDir" -y
+
       - name: Build (Windows)
         shell: pwsh
         run: |
-          $env:VCPKG_ROOT = "C:\\vcpkg"
-          $prefix = "$env:VCPKG_ROOT\\installed\\x64-windows"
+          $rootSearch = Get-ChildItem "$env:RUNNER_TEMP\opencv" -Directory -Recurse -Filter opencv | Select-Object -First 1
+          if (-not $rootSearch) { throw "OpenCV root folder not found under $env:RUNNER_TEMP\opencv" }
+          $opencvRoot = $rootSearch.FullName
 
-          $env:PATH = "$prefix\\bin;" + $env:PATH
-          $env:INCLUDE = "$prefix\\include;" + $env:INCLUDE
-          $env:LIB = "$prefix\\lib;" + $env:LIB
+          $includeDir = "$opencvRoot\build\include"
+          if (-not (Test-Path $includeDir)) { throw "OpenCV include dir not found: $includeDir" }
 
-          $world = Get-ChildItem "$prefix\\lib\\opencv_world*.lib" | Select-Object -First 1
-          if (-not $world) { throw "opencv_world*.lib not found in $prefix\\lib" }
+          $vcDir = Get-ChildItem "$opencvRoot\build\x64" -Directory -Filter "vc*" | Select-Object -First 1
+          if (-not $vcDir) { throw "OpenCV vc* directory not found under $opencvRoot\build\x64" }
+          $libDir = Join-Path $vcDir.FullName "lib"
+          $binDir = Join-Path $vcDir.FullName "bin"
+          if (-not (Test-Path $libDir)) { throw "OpenCV lib dir not found: $libDir" }
+          if (-not (Test-Path $binDir)) { throw "OpenCV bin dir not found: $binDir" }
+
+          $world = Get-ChildItem "$libDir\opencv_world*.lib" | Select-Object -First 1
+          if (-not $world) { throw "opencv_world*.lib not found in $libDir" }
           $libname = $world.BaseName
 
+          $env:PATH = "$binDir;" + $env:PATH
           $env:CC = "cl.exe"
           $env:CXX = "cl.exe"
           $env:CGO_ENABLED = "1"
-          $env:CGO_CFLAGS = "-I$prefix\\include"
-          $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
-          $env:CGO_LDFLAGS = "-L$prefix\\lib -l$libname"
+          $env:CGO_CPPFLAGS = "-I$includeDir"
+          $env:CGO_CXXFLAGS = $env:CGO_CPPFLAGS
+          $env:CGO_LDFLAGS = "-L$libDir -l$libname"
 
-          $env:PATH = "$(go env GOPATH)\\bin;" + $env:PATH
+          $env:PATH = "$(go env GOPATH)\bin;" + $env:PATH
           wails version
           wails build -clean -skipbindings -tags "customenv" --nsis -ldflags "-H=windowsgui"
 
       - name: Package (Windows)
         shell: pwsh
         run: |
-          $env:VCPKG_ROOT = "C:\\vcpkg"
-          $prefix = "$env:VCPKG_ROOT\\installed\\x64-windows"
-
           $exe = Get-ChildItem "build\\bin" -Filter *.exe | Select-Object -First 1
           if (-not $exe) { throw "No .exe found in build\\bin" }
 
-          Get-ChildItem "$prefix\\bin\\opencv*.dll" | ForEach-Object {
+          $rootSearch = Get-ChildItem "$env:RUNNER_TEMP\opencv" -Directory -Recurse -Filter opencv | Select-Object -First 1
+          if (-not $rootSearch) { throw "OpenCV root folder not found under $env:RUNNER_TEMP\opencv" }
+          $opencvRoot = $rootSearch.FullName
+          $vcDir = Get-ChildItem "$opencvRoot\build\x64" -Directory -Filter "vc*" | Select-Object -First 1
+          if (-not $vcDir) { throw "OpenCV vc* directory not found under $opencvRoot\build\x64" }
+          $binDir = Join-Path $vcDir.FullName "bin"
+          if (-not (Test-Path $binDir)) { throw "OpenCV bin dir not found: $binDir" }
+
+          Get-ChildItem "$binDir\opencv_world*.dll","$binDir\opencv_*.dll" | ForEach-Object {
             Copy-Item $_.FullName -Destination "build\\bin" -Force
           }
 
