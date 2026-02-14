@@ -110,8 +110,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Setup MSVC dev cmd
-        uses: ilammy/msvc-dev-cmd@v1
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-opencv
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -120,57 +126,23 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      - name: Download OpenCV (prebuilt)
-        shell: pwsh
-        run: |
-          $url = "https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe"
-          $destDir = "$env:RUNNER_TEMP\opencv"
-          $destExe = "$destDir\opencv-4.10.0-windows.exe"
-          New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-          Invoke-WebRequest -Uri $url -OutFile $destExe
-
-          $size = (Get-Item $destExe).Length
-          if ($size -lt 150MB) { throw "Downloaded OpenCV archive is too small ($size bytes). Download likely failed." }
-
-          $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
-          if (-not $sevenZip) {
-            choco install 7zip -y
-          }
-          7z x $destExe -o"$destDir" -y
-
       - name: Build (Windows)
         shell: pwsh
         run: |
-          $rootSearch = Get-ChildItem "$env:RUNNER_TEMP\opencv" -Directory -Recurse -Filter opencv | Select-Object -First 1
-          if (-not $rootSearch) { throw "OpenCV root folder not found under $env:RUNNER_TEMP\opencv" }
-          $opencvRoot = $rootSearch.FullName
-
-          $includeDir = "$opencvRoot\build\include"
-          if (-not (Test-Path $includeDir)) { throw "OpenCV include dir not found: $includeDir" }
-
-          $vcDir = Get-ChildItem "$opencvRoot\build\x64" -Directory -Filter "vc*" | Select-Object -First 1
-          if (-not $vcDir) { throw "OpenCV vc* directory not found under $opencvRoot\build\x64" }
-          $libDir = Join-Path $vcDir.FullName "lib"
-          $binDir = Join-Path $vcDir.FullName "bin"
-          if (-not (Test-Path $libDir)) { throw "OpenCV lib dir not found: $libDir" }
-          if (-not (Test-Path $binDir)) { throw "OpenCV bin dir not found: $binDir" }
-
-          $world = Get-ChildItem "$libDir\opencv_world*.lib" | Select-Object -First 1
-          if (-not $world) { throw "opencv_world*.lib not found in $libDir" }
-          $libname = $world.BaseName
-
-          $env:PATH = "$binDir;" + $env:PATH
-          $clang = Get-Command clang-cl -ErrorAction SilentlyContinue
-          if (-not $clang) { throw "clang-cl not found in PATH" }
-          $env:CC = "clang-cl"
-          $env:CXX = "clang-cl"
+          $env:PATH = "C:\msys64\mingw64\bin;C:\msys64\usr\bin;" + $env:PATH
+          $env:CC = "gcc"
+          $env:CXX = "g++"
           $env:CGO_ENABLED = "1"
-          $warnFix = "-Wno-error -Wno-unknown-argument -Wno-error=unknown-argument -Wno-unused-macros -Wno-error=unused-macros"
-          $env:CGO_CFLAGS = "-I$includeDir $warnFix"
-          $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
-          $env:CGO_LDFLAGS = "-L$libDir -l$libname"
-          $env:CGO_CFLAGS_ALLOW = "-Werror"
-          $env:CGO_CXXFLAGS_ALLOW = "-Werror"
+
+          $cflags = & pkg-config --cflags opencv4
+          $libs = & pkg-config --libs opencv4
+          if ([string]::IsNullOrWhiteSpace($cflags) -or [string]::IsNullOrWhiteSpace($libs)) {
+            throw "pkg-config returned empty flags"
+          }
+
+          $env:CGO_CPPFLAGS = $cflags
+          $env:CGO_CXXFLAGS = $cflags
+          $env:CGO_LDFLAGS = $libs
 
           $env:PATH = "$(go env GOPATH)\bin;" + $env:PATH
           wails version
@@ -179,24 +151,17 @@ jobs:
       - name: Package (Windows)
         shell: pwsh
         run: |
-          $exe = Get-ChildItem "build\\bin" -Filter *.exe | Select-Object -First 1
-          if (-not $exe) { throw "No .exe found in build\\bin" }
+          $exe = Get-ChildItem "build\bin" -Filter *.exe | Select-Object -First 1
+          if (-not $exe) { throw "No .exe found in build\bin" }
 
-          $rootSearch = Get-ChildItem "$env:RUNNER_TEMP\opencv" -Directory -Recurse -Filter opencv | Select-Object -First 1
-          if (-not $rootSearch) { throw "OpenCV root folder not found under $env:RUNNER_TEMP\opencv" }
-          $opencvRoot = $rootSearch.FullName
-          $vcDir = Get-ChildItem "$opencvRoot\build\x64" -Directory -Filter "vc*" | Select-Object -First 1
-          if (-not $vcDir) { throw "OpenCV vc* directory not found under $opencvRoot\build\x64" }
-          $binDir = Join-Path $vcDir.FullName "bin"
-          if (-not (Test-Path $binDir)) { throw "OpenCV bin dir not found: $binDir" }
+          Copy-Item "C:\msys64\mingw64\bin\opencv_*.dll" "build\bin" -ErrorAction SilentlyContinue
+          Copy-Item "C:\msys64\mingw64\bin\libstdc++-6.dll" "build\bin" -ErrorAction SilentlyContinue
+          Copy-Item "C:\msys64\mingw64\bin\libgcc_s_seh-1.dll" "build\bin" -ErrorAction SilentlyContinue
+          Copy-Item "C:\msys64\mingw64\bin\libwinpthread-1.dll" "build\bin" -ErrorAction SilentlyContinue
 
-          Get-ChildItem "$binDir\opencv_world*.dll","$binDir\opencv_*.dll" | ForEach-Object {
-            Copy-Item $_.FullName -Destination "build\\bin" -Force
-          }
-
-          $zipPath = "build\\open-camera-mouse_${env:GITHUB_REF_NAME}_Windows.zip"
+          $zipPath = "build\open-camera-mouse_${env:GITHUB_REF_NAME}_Windows.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-          Compress-Archive -Path "build\\bin\\*" -DestinationPath $zipPath
+          Compress-Archive -Path "build\bin\*" -DestinationPath $zipPath
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
@@ -206,7 +171,6 @@ jobs:
             build/*.zip
             build/bin/*installer*.exe
             build/bin/*-installer*.exe
-
   release:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
