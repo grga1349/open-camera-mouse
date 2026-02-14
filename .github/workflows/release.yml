@@ -134,8 +134,8 @@ jobs:
           $env:CXX = "g++"
           $env:CGO_ENABLED = "1"
 
-          $cflags = & pkg-config --cflags opencv4
-          $libs = & pkg-config --libs opencv4
+          $cflags = & C:\msys64\mingw64\bin\pkg-config.exe --cflags opencv4
+          $libs = & C:\msys64\mingw64\bin\pkg-config.exe --libs opencv4
           if ([string]::IsNullOrWhiteSpace($cflags) -or [string]::IsNullOrWhiteSpace($libs)) {
             throw "pkg-config returned empty flags"
           }
