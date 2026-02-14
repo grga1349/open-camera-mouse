@@ -135,7 +135,8 @@ jobs:
           $env:CGO_ENABLED = "1"
 
           $pc = "C:\msys64\mingw64\bin\pkg-config.exe"
-          if (-not (Test-Path $pc)) { throw "pkg-config not found at $pc" }
+          if (-not (Test-Path $pc)) { $pc = "C:\msys64\mingw64\bin\pkgconf.exe" }
+          if (-not (Test-Path $pc)) { throw "pkg-config/pkgconf not found in C:\msys64\mingw64\bin" }
           $cflags = & $pc --cflags opencv4
           $libs = & $pc --libs opencv4
           if ([string]::IsNullOrWhiteSpace($cflags) -or [string]::IsNullOrWhiteSpace($libs)) {
