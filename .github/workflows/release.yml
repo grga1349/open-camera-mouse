@@ -41,7 +41,7 @@ jobs:
       - name: Install deps (OpenCV + tools)
         run: |
           brew update
-          brew install opencv pkg-config
+          brew install opencv pkg-config dylibbundler
 
       - name: Install frontend deps
         run: npm ci
@@ -69,13 +69,18 @@ jobs:
             ls -la build/bin || true
             exit 1
           fi
+          BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
+          if [ -z "$BIN" ]; then
+            echo "ERROR: No executable found in $APP/Contents/MacOS"
+            ls -la "$APP/Contents/MacOS" || true
+            exit 1
+          fi
+          FW="$APP/Contents/Frameworks"
+          mkdir -p "$FW"
+          dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks"
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
-
-      - name: Note (macOS runtime requirement)
-        run: |
-          echo "NOTE: macOS users must install OpenCV via Homebrew: brew install opencv"
 
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
@@ -149,11 +154,33 @@ jobs:
         run: |
           exe=$(ls -1 build/bin/*.exe | head -1)
           [ -n "$exe" ] || { echo "No .exe found"; exit 1; }
-          cp /mingw64/bin/libopencv_*.dll build/bin/ 2>/dev/null || true
-          cp /mingw64/bin/opencv_*.dll build/bin/ 2>/dev/null || true
+
+          deps=$(objdump -p "$exe" | awk '/DLL Name:/{print $3}' | sort -u)
+          system_re='^(KERNEL32|USER32|GDI32|ADVAPI32|SHELL32|OLE32|OLEAUT32|WS2_32|SHLWAPI|COMDLG32|IMM32|WINMM|UCRTBASE|VCRUNTIME140|VCRUNTIME140_1|MSVCP140|MSVCP140_1|MSVCP140_2|VERSION|COMCTL32|WINSPOOL|api-ms-win|bcrypt|CRYPT32|ntdll|RPCRT4|SETUPAPI|USERENV|UxTheme|dwmapi|iphlpapi|MPR|NETAPI32|Secur32|WINHTTP|urlmon)\.dll$'
+
+          missing=0
+          while read -r dll; do
+            [ -z "$dll" ] && continue
+            if [[ "$dll" =~ $system_re ]]; then
+              continue
+            fi
+            if [ -f "/mingw64/bin/$dll" ]; then
+              cp -n "/mingw64/bin/$dll" build/bin/ || true
+            else
+              echo "MISSING: /mingw64/bin/$dll"
+              missing=1
+            fi
+          done <<< "$deps"
+
           cp /mingw64/bin/libstdc++-6.dll build/bin/ 2>/dev/null || true
           cp /mingw64/bin/libgcc_s_seh-1.dll build/bin/ 2>/dev/null || true
           cp /mingw64/bin/libwinpthread-1.dll build/bin/ 2>/dev/null || true
+
+          if [ "$missing" -ne 0 ]; then
+            echo "ERROR: Missing required DLLs."
+            exit 1
+          fi
+
           (cd build/bin && zip -r "../open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip" .)
 
       - name: Upload artifacts (Windows)
