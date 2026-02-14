@@ -130,7 +130,9 @@ jobs:
       - name: Build (Windows)
         shell: msys2 {0}
         run: |
-          export PATH="/c/hostedtoolcache/windows/go/*/x64/bin:/c/hostedtoolcache/windows/node/*/x64/bin:/mingw64/bin:/usr/bin:$PATH"
+          GO_PATH=$(ls -d /c/hostedtoolcache/windows/go/*/x64/bin | head -1)
+          NODE_PATH=$(ls -d /c/hostedtoolcache/windows/node/*/x64/bin | head -1)
+          export PATH="$GO_PATH:$NODE_PATH:/mingw64/bin:/usr/bin:$PATH"
           export PATH="$(cygpath -u "$(go env GOPATH)")/bin:$PATH"
           export CC=gcc
           export CXX=g++
