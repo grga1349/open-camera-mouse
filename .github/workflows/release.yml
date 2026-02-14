@@ -70,6 +70,7 @@ jobs:
             exit 1
           fi
           APPNAME=$(basename "$APP" .app)
+          codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
 
       - name: Note (macOS runtime requirement)
