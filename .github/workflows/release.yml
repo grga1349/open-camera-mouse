@@ -46,6 +46,9 @@ jobs:
             -c conda-forge
             opencv
             pkg-config
+            openblas
+            libblas
+            libcblas
 
       - name: Install deps (tools)
         run: |
@@ -90,6 +93,23 @@ jobs:
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
+
+      - name: Smoke test (macOS)
+        run: |
+          set -euo pipefail
+          APP=$(find build/bin -maxdepth 1 -name "*.app" -print -quit)
+          [ -n "$APP" ] || { echo "No .app found"; exit 1; }
+          BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
+          [ -n "$BIN" ] || { echo "No executable in app"; exit 1; }
+          otool -L "$BIN"
+          if otool -L "$BIN" | grep -qE "/opt/homebrew|/usr/local"; then
+            echo "ERROR: Homebrew paths found in dylib refs"
+            exit 1
+          fi
+          if otool -L "$BIN" | grep -q "@rpath"; then
+            echo "ERROR: @rpath references remain"
+            exit 1
+          fi
 
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
@@ -192,6 +212,25 @@ jobs:
 
           (cd build/bin && zip -r "../open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip" .)
 
+      - name: Smoke test (Windows)
+        shell: msys2 {0}
+        run: |
+          exe=$(ls -1 build/bin/*.exe | head -1)
+          [ -n "$exe" ] || { echo "No .exe found"; exit 1; }
+          deps=$(objdump -p "$exe" | awk '/DLL Name:/{print $3}' | sort -u)
+          system_re='^(KERNEL32|USER32|GDI32|ADVAPI32|SHELL32|OLE32|OLEAUT32|WS2_32|SHLWAPI|COMDLG32|IMM32|WINMM|UCRTBASE|VCRUNTIME140|VCRUNTIME140_1|MSVCP140|MSVCP140_1|MSVCP140_2|VERSION|COMCTL32|WINSPOOL|api-ms-win|bcrypt|CRYPT32|ntdll|RPCRT4|SETUPAPI|USERENV|UxTheme|dwmapi|iphlpapi|MPR|NETAPI32|Secur32|WINHTTP|urlmon|msvcrt)\.dll$'
+          missing=0
+          while read -r dll; do
+            [ -z "$dll" ] && continue
+            if [[ "$dll" =~ $system_re ]]; then
+              continue
+            fi
+            if [ ! -f "build/bin/$dll" ]; then
+              echo "MISSING: $dll"
+              missing=1
+            fi
+          done <<< "$deps"
+          [ "$missing" -eq 0 ] || exit 1
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
         with:
