@@ -63,7 +63,7 @@ jobs:
           export PKG_CONFIG_PATH="$MAMBA_ROOT_PREFIX/envs/ci/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
           export CGO_CFLAGS="$(pkg-config --cflags opencv4)"
           export CGO_CXXFLAGS="$CGO_CFLAGS"
-          export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
+          export CGO_LDFLAGS="$(pkg-config --libs opencv4) -Wl,-headerpad_max_install_names"
 
           export PATH="$(go env GOPATH)/bin:$PATH"
           wails version
@@ -156,7 +156,7 @@ jobs:
           export CGO_CXXFLAGS="$CGO_CPPFLAGS"
           export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
           wails version
-          wails build -clean -skipbindings -tags "customenv" --nsis -ldflags "-H=windowsgui"
+          wails build -clean -skipbindings -tags "customenv" -ldflags "-H=windowsgui"
 
       - name: Package (Windows)
         shell: msys2 {0}
@@ -198,8 +198,6 @@ jobs:
           name: windows
           path: |
             build/*.zip
-            build/bin/*installer*.exe
-            build/bin/*-installer*.exe
   release:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
