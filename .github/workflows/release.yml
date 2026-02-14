@@ -134,8 +134,10 @@ jobs:
           $env:CXX = "g++"
           $env:CGO_ENABLED = "1"
 
-          $cflags = & C:\msys64\mingw64\bin\pkg-config.exe --cflags opencv4
-          $libs = & C:\msys64\mingw64\bin\pkg-config.exe --libs opencv4
+          $pc = "C:\msys64\mingw64\bin\pkg-config.exe"
+          if (-not (Test-Path $pc)) { throw "pkg-config not found at $pc" }
+          $cflags = & $pc --cflags opencv4
+          $libs = & $pc --libs opencv4
           if ([string]::IsNullOrWhiteSpace($cflags) -or [string]::IsNullOrWhiteSpace($libs)) {
             throw "pkg-config returned empty flags"
           }
