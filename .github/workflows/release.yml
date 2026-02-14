@@ -165,7 +165,7 @@ jobs:
           $env:CC = "clang-cl"
           $env:CXX = "clang-cl"
           $env:CGO_ENABLED = "1"
-          $warnFix = "-Wno-error -Wno-unknown-argument -Wno-error=unknown-argument"
+          $warnFix = "-Wno-error -Wno-unknown-argument -Wno-error=unknown-argument -Wno-unused-macros -Wno-error=unused-macros"
           $env:CGO_CFLAGS = "-I$includeDir $warnFix"
           $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
           $env:CGO_LDFLAGS = "-L$libDir -l$libname"
