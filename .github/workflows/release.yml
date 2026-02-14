@@ -149,6 +149,7 @@ jobs:
         run: |
           exe=$(ls -1 build/bin/*.exe | head -1)
           [ -n "$exe" ] || { echo "No .exe found"; exit 1; }
+          cp /mingw64/bin/libopencv_*.dll build/bin/ 2>/dev/null || true
           cp /mingw64/bin/opencv_*.dll build/bin/ 2>/dev/null || true
           cp /mingw64/bin/libstdc++-6.dll build/bin/ 2>/dev/null || true
           cp /mingw64/bin/libgcc_s_seh-1.dll build/bin/ 2>/dev/null || true
