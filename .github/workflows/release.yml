@@ -118,6 +118,7 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-opencv
+            zip
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -127,44 +128,29 @@ jobs:
         working-directory: frontend
 
       - name: Build (Windows)
-        shell: pwsh
+        shell: msys2 {0}
         run: |
-          $env:PATH = "C:\msys64\mingw64\bin;C:\msys64\usr\bin;" + $env:PATH
-          $env:CC = "gcc"
-          $env:CXX = "g++"
-          $env:CGO_ENABLED = "1"
-
-          $pc = "C:\msys64\mingw64\bin\pkg-config.exe"
-          if (-not (Test-Path $pc)) { $pc = "C:\msys64\mingw64\bin\pkgconf.exe" }
-          if (-not (Test-Path $pc)) { throw "pkg-config/pkgconf not found in C:\msys64\mingw64\bin" }
-          $cflags = & $pc --cflags opencv4
-          $libs = & $pc --libs opencv4
-          if ([string]::IsNullOrWhiteSpace($cflags) -or [string]::IsNullOrWhiteSpace($libs)) {
-            throw "pkg-config returned empty flags"
-          }
-
-          $env:CGO_CPPFLAGS = $cflags
-          $env:CGO_CXXFLAGS = $cflags
-          $env:CGO_LDFLAGS = $libs
-
-          $env:PATH = "$(go env GOPATH)\bin;" + $env:PATH
+          export PATH="/c/hostedtoolcache/windows/go/*/x64/bin:/c/hostedtoolcache/windows/node/*/x64/bin:/mingw64/bin:/usr/bin:$PATH"
+          export PATH="$(cygpath -u "$(go env GOPATH)")/bin:$PATH"
+          export CC=gcc
+          export CXX=g++
+          export CGO_ENABLED=1
+          export CGO_CPPFLAGS="$(pkg-config --cflags opencv4)"
+          export CGO_CXXFLAGS="$CGO_CPPFLAGS"
+          export CGO_LDFLAGS="$(pkg-config --libs opencv4)"
           wails version
           wails build -clean -skipbindings -tags "customenv" --nsis -ldflags "-H=windowsgui"
 
       - name: Package (Windows)
-        shell: pwsh
+        shell: msys2 {0}
         run: |
-          $exe = Get-ChildItem "build\bin" -Filter *.exe | Select-Object -First 1
-          if (-not $exe) { throw "No .exe found in build\bin" }
-
-          Copy-Item "C:\msys64\mingw64\bin\opencv_*.dll" "build\bin" -ErrorAction SilentlyContinue
-          Copy-Item "C:\msys64\mingw64\bin\libstdc++-6.dll" "build\bin" -ErrorAction SilentlyContinue
-          Copy-Item "C:\msys64\mingw64\bin\libgcc_s_seh-1.dll" "build\bin" -ErrorAction SilentlyContinue
-          Copy-Item "C:\msys64\mingw64\bin\libwinpthread-1.dll" "build\bin" -ErrorAction SilentlyContinue
-
-          $zipPath = "build\open-camera-mouse_${env:GITHUB_REF_NAME}_Windows.zip"
-          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-          Compress-Archive -Path "build\bin\*" -DestinationPath $zipPath
+          exe=$(ls -1 build/bin/*.exe | head -1)
+          [ -n "$exe" ] || { echo "No .exe found"; exit 1; }
+          cp /mingw64/bin/opencv_*.dll build/bin/ 2>/dev/null || true
+          cp /mingw64/bin/libstdc++-6.dll build/bin/ 2>/dev/null || true
+          cp /mingw64/bin/libgcc_s_seh-1.dll build/bin/ 2>/dev/null || true
+          cp /mingw64/bin/libwinpthread-1.dll build/bin/ 2>/dev/null || true
+          (cd build/bin && zip -r "../open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip" .)
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
