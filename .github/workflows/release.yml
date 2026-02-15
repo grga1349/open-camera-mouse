@@ -101,6 +101,11 @@ jobs:
             src=$(ls -1 "$FW"/libcblas*.dylib 2>/dev/null | head -1 || true)
             if [ -n "$src" ]; then
               ln -sf "$(basename "$src")" "$FW/libcblas.3.dylib"
+            else
+              ob=$(ls -1 "$FW"/libopenblas*.dylib 2>/dev/null | head -1 || true)
+              if [ -n "$ob" ]; then
+                ln -sf "$(basename "$ob")" "$FW/libcblas.3.dylib"
+              fi
             fi
           fi
           if [ ! -f "$FW/libcblas.3.dylib" ]; then
