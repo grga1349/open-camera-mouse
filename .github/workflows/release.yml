@@ -97,6 +97,15 @@ jobs:
             [ -f "$f" ] || continue
             install_name_tool -id "@executable_path/../Frameworks/$(basename "$f")" "$f"
           done
+          if [ ! -f "$FW/libcblas.3.dylib" ]; then
+            echo "ERROR: libcblas.3.dylib not bundled"
+            ls -la "$FW" || true
+            exit 1
+          fi
+          for core in "$FW"/libopencv_core*.dylib; do
+            [ -f "$core" ] || continue
+            install_name_tool -change "@rpath/libcblas.3.dylib" "@executable_path/../Frameworks/libcblas.3.dylib" "$core"
+          done
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
