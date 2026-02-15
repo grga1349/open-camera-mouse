@@ -98,6 +98,12 @@ jobs:
             install_name_tool -id "@executable_path/../Frameworks/$(basename "$f")" "$f"
           done
           if [ ! -f "$FW/libcblas.3.dylib" ]; then
+            src=$(ls -1 "$FW"/libcblas*.dylib 2>/dev/null | head -1 || true)
+            if [ -n "$src" ]; then
+              ln -sf "$(basename "$src")" "$FW/libcblas.3.dylib"
+            fi
+          fi
+          if [ ! -f "$FW/libcblas.3.dylib" ]; then
             echo "ERROR: libcblas.3.dylib not bundled"
             ls -la "$FW" || true
             exit 1
@@ -108,7 +114,7 @@ jobs:
           done
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "build/open-camera-mouse_${GITHUB_REF_NAME}_macOS.zip"
 
       - name: Smoke test (macOS)
         run: |
@@ -132,7 +138,7 @@ jobs:
         with:
           name: macos
           path: |
-            build/*.zip
+            build/open-camera-mouse_${{ github.ref_name }}_macOS.zip
 
   build-windows:
     runs-on: windows-2022
