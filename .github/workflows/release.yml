@@ -89,9 +89,34 @@ jobs:
           fi
           FW="$APP/Contents/Frameworks"
           mkdir -p "$FW"
-          # Copy all conda dylibs to make the app portable
-          cp -f "$MAMBA_ROOT_PREFIX/envs/ci/lib/"*.dylib "$FW/" 2>/dev/null || true
+          # Copy the full conda runtime lib dir to maximize portability.
+          # This keeps symlinks and versioned filenames intact.
+          cp -a "$MAMBA_ROOT_PREFIX/envs/ci/lib/." "$FW/"
           dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks" -s "$MAMBA_ROOT_PREFIX/envs/ci/lib"
+          # Keep a stable libcblas filename for loaders that expect this exact SONAME.
+          if [ ! -f "$FW/libcblas.3.dylib" ]; then
+            cblas_src=$(ls -1 "$MAMBA_ROOT_PREFIX/envs/ci/lib/"libcblas*.dylib 2>/dev/null | head -1 || true)
+            if [ -n "$cblas_src" ]; then
+              cp -f "$cblas_src" "$FW/libcblas.3.dylib"
+            else
+              ob=$(ls -1 "$MAMBA_ROOT_PREFIX/envs/ci/lib/"libopenblas*.dylib 2>/dev/null | head -1 || true)
+              if [ -n "$ob" ]; then
+                cp -f "$ob" "$FW/libcblas.3.dylib"
+              fi
+            fi
+          fi
+          if [ ! -f "$FW/libcblas.3.dylib" ]; then
+            echo "ERROR: libcblas.3.dylib not bundled"
+            ls -la "$FW" || true
+            exit 1
+          fi
+          install_name_tool -id "@executable_path/../Frameworks/libcblas.3.dylib" "$FW/libcblas.3.dylib"
+          # Rewrite any @rpath libcblas refs in bundled binaries
+          for f in "$BIN" "$FW"/*.dylib; do
+            if otool -L "$f" | grep -q "@rpath/libcblas.3.dylib"; then
+              install_name_tool -change "@rpath/libcblas.3.dylib" "@executable_path/../Frameworks/libcblas.3.dylib" "$f"
+            fi
+          done
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/open-camera-mouse_${GITHUB_REF_NAME}_macOS.zip"
@@ -99,6 +124,37 @@ jobs:
       - name: Smoke test (macOS)
         run: |
           set -euo pipefail
+          ZIP="build/open-camera-mouse_${GITHUB_REF_NAME}_macOS.zip"
+          [ -f "$ZIP" ] || { echo "Missing package: $ZIP"; exit 1; }
+          PKG_DIR="$(mktemp -d)"
+          unzip -q "$ZIP" -d "$PKG_DIR"
+          APP=$(find "$PKG_DIR" -maxdepth 2 -name "*.app" -print -quit)
+          [ -n "$APP" ] || { echo "No .app found in packaged zip"; find "$PKG_DIR" -maxdepth 3 -print; exit 1; }
+          BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
+          [ -n "$BIN" ] || { echo "No executable in packaged app"; ls -la "$APP/Contents/MacOS" || true; exit 1; }
+          "$BIN" >"$PKG_DIR/runtime.log" 2>&1 &
+          PID=$!
+          sleep 8
+          if ! kill -0 "$PID" 2>/dev/null; then
+            echo "ERROR: Packaged macOS app exited too early"
+            cat "$PKG_DIR/runtime.log" || true
+            exit 1
+          fi
+          kill "$PID" || true
+          wait "$PID" || true
+
+          # Validate dylib references in the packaged binary.
+          otool -L "$BIN"
+          if otool -L "$BIN" | grep -qE "/opt/homebrew|/usr/local"; then
+            echo "ERROR: Homebrew paths found in dylib refs"
+            exit 1
+          fi
+          if otool -L "$BIN" | grep -q "@rpath"; then
+            echo "ERROR: @rpath references remain"
+            exit 1
+          fi
+
+          # Keep local build output checks too (diagnostics if packaging changes later).
           APP=$(find build/bin -maxdepth 1 -name "*.app" -print -quit)
           [ -n "$APP" ] || { echo "No .app found"; exit 1; }
           BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
@@ -185,17 +241,30 @@ jobs:
         run: |
           exe=$(ls -1 build/bin/*.exe | head -1)
           [ -n "$exe" ] || { echo "No .exe found"; exit 1; }
-          # Copy all MinGW DLLs to make the app portable
-          cp -f /mingw64/bin/*.dll build/bin/ 2>/dev/null || true
+          # Copy the full MinGW runtime bin dir to maximize portability.
+          cp -a /mingw64/bin/. build/bin/
+          cp -a /mingw64/share/opencv4 build/bin/share/ 2>/dev/null || true
 
           (cd build/bin && zip -r "../open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip" .)
 
       - name: Smoke test (Windows)
         shell: msys2 {0}
         run: |
-          exe=$(ls -1 build/bin/*.exe | head -1)
-          [ -n "$exe" ] || { echo "No .exe found"; exit 1; }
-          deps=$(objdump -p "$exe" | awk '/DLL Name:/{print $3}' | sort -u)
+          zip_path="build/open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip"
+          [ -f "$zip_path" ] || { echo "Missing package: $zip_path"; exit 1; }
+          pkg_dir="$(mktemp -d)"
+          unzip -q "$zip_path" -d "$pkg_dir"
+          pkg_exe=$(ls -1 "$pkg_dir"/*.exe 2>/dev/null | head -1)
+          [ -n "$pkg_exe" ] || { echo "No .exe found in packaged zip"; find "$pkg_dir" -maxdepth 3 -print; exit 1; }
+          pkg_exe_win=$(cygpath -w "$pkg_exe")
+          powershell -NoProfile -Command "\
+            \$ErrorActionPreference='Stop'; \
+            \$p = Start-Process -FilePath '$pkg_exe_win' -PassThru; \
+            Start-Sleep -Seconds 8; \
+            if (\$p.HasExited) { throw 'Packaged Windows app exited too early' }; \
+            Stop-Process -Id \$p.Id -Force"
+
+          deps=$(objdump -p "$pkg_exe" | awk '/DLL Name:/{print $3}' | sort -u)
           system_re='^(KERNEL32|USER32|GDI32|ADVAPI32|SHELL32|OLE32|OLEAUT32|WS2_32|SHLWAPI|COMDLG32|IMM32|WINMM|UCRTBASE|VCRUNTIME140|VCRUNTIME140_1|MSVCP140|MSVCP140_1|MSVCP140_2|VERSION|COMCTL32|WINSPOOL|api-ms-win|bcrypt|CRYPT32|ntdll|RPCRT4|SETUPAPI|USERENV|UxTheme|dwmapi|iphlpapi|MPR|NETAPI32|Secur32|WINHTTP|urlmon|msvcrt)\.dll$'
           missing=0
           while read -r dll; do
@@ -203,7 +272,7 @@ jobs:
             if [[ "$dll" =~ $system_re ]]; then
               continue
             fi
-            if [ ! -f "build/bin/$dll" ]; then
+            if [ ! -f "$pkg_dir/$dll" ]; then
               echo "MISSING: $dll"
               missing=1
             fi
