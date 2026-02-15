@@ -93,21 +93,16 @@ jobs:
           cp "$MAMBA_ROOT_PREFIX/envs/ci/lib/libcblas*.dylib" "$FW/" 2>/dev/null || true
           cp "$MAMBA_ROOT_PREFIX/envs/ci/lib/libblas*.dylib" "$FW/" 2>/dev/null || true
           cp "$MAMBA_ROOT_PREFIX/envs/ci/lib/libopenblas*.dylib" "$FW/" 2>/dev/null || true
+          # Ensure cblas/blas sonames exist (some conda builds only ship OpenBLAS)
+          ob=$(ls -1 "$FW"/libopenblas*.dylib 2>/dev/null | head -1 || true)
+          if [ -n "$ob" ]; then
+            ln -sf "$(basename "$ob")" "$FW/libcblas.3.dylib"
+            ln -sf "$(basename "$ob")" "$FW/libblas.3.dylib"
+          fi
           for f in "$FW"/libcblas*.dylib "$FW"/libblas*.dylib "$FW"/libopenblas*.dylib; do
             [ -f "$f" ] || continue
             install_name_tool -id "@executable_path/../Frameworks/$(basename "$f")" "$f"
           done
-          if [ ! -f "$FW/libcblas.3.dylib" ]; then
-            src=$(ls -1 "$FW"/libcblas*.dylib 2>/dev/null | head -1 || true)
-            if [ -n "$src" ]; then
-              ln -sf "$(basename "$src")" "$FW/libcblas.3.dylib"
-            else
-              ob=$(ls -1 "$FW"/libopenblas*.dylib 2>/dev/null | head -1 || true)
-              if [ -n "$ob" ]; then
-                ln -sf "$(basename "$ob")" "$FW/libcblas.3.dylib"
-              fi
-            fi
-          fi
           if [ ! -f "$FW/libcblas.3.dylib" ]; then
             echo "ERROR: libcblas.3.dylib not bundled"
             ls -la "$FW" || true
