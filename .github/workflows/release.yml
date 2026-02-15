@@ -90,6 +90,13 @@ jobs:
           FW="$APP/Contents/Frameworks"
           mkdir -p "$FW"
           dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks" -s "$MAMBA_ROOT_PREFIX/envs/ci/lib"
+          cp "$MAMBA_ROOT_PREFIX/envs/ci/lib/libcblas*.dylib" "$FW/" 2>/dev/null || true
+          cp "$MAMBA_ROOT_PREFIX/envs/ci/lib/libblas*.dylib" "$FW/" 2>/dev/null || true
+          cp "$MAMBA_ROOT_PREFIX/envs/ci/lib/libopenblas*.dylib" "$FW/" 2>/dev/null || true
+          for f in "$FW"/libcblas*.dylib "$FW"/libblas*.dylib "$FW"/libopenblas*.dylib; do
+            [ -f "$f" ] || continue
+            install_name_tool -id "@executable_path/../Frameworks/$(basename "$f")" "$f"
+          done
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/${APPNAME}-mac.zip"
