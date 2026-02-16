@@ -111,12 +111,32 @@ jobs:
             exit 1
           fi
           install_name_tool -id "@executable_path/../Frameworks/libcblas.3.dylib" "$FW/libcblas.3.dylib"
-          # Rewrite any @rpath libcblas refs in bundled binaries
-          for f in "$BIN" "$FW"/*.dylib; do
-            if otool -L "$f" | grep -q "@rpath/libcblas.3.dylib"; then
-              install_name_tool -change "@rpath/libcblas.3.dylib" "@executable_path/../Frameworks/libcblas.3.dylib" "$f"
-            fi
-          done
+          # Normalize install names for all bundled dylibs and fix internal refs.
+          # This catches transitive deps that are loaded only when camera/video starts.
+          while IFS= read -r lib; do
+            base="$(basename "$lib")"
+            install_name_tool -id "@executable_path/../Frameworks/$base" "$lib" || true
+          done < <(find "$FW" -type f -name "*.dylib" -print)
+
+          while IFS= read -r f; do
+            while IFS= read -r dep; do
+              [ -n "$dep" ] || continue
+              case "$dep" in
+                "$MAMBA_ROOT_PREFIX/envs/ci/lib/"*)
+                  dep_base="$(basename "$dep")"
+                  if [ -e "$FW/$dep_base" ]; then
+                    install_name_tool -change "$dep" "@executable_path/../Frameworks/$dep_base" "$f" || true
+                  fi
+                  ;;
+                @rpath/*)
+                  dep_base="$(basename "$dep")"
+                  if [ -e "$FW/$dep_base" ]; then
+                    install_name_tool -change "$dep" "@executable_path/../Frameworks/$dep_base" "$f" || true
+                  fi
+                  ;;
+              esac
+            done < <(otool -L "$f" | awk 'NR>1 {print $1}')
+          done < <(printf '%s\n' "$BIN"; find "$FW" -type f -name "*.dylib" -print)
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/open-camera-mouse_${GITHUB_REF_NAME}_macOS.zip"
@@ -153,6 +173,22 @@ jobs:
             echo "ERROR: @rpath references remain"
             exit 1
           fi
+          if otool -L "$BIN" | grep -q "$MAMBA_ROOT_PREFIX/envs/ci/lib"; then
+            echo "ERROR: Conda-prefix paths found in packaged binary"
+            exit 1
+          fi
+          while IFS= read -r lib; do
+            if otool -L "$lib" | grep -q "$MAMBA_ROOT_PREFIX/envs/ci/lib"; then
+              echo "ERROR: Conda-prefix dependency leaked in $lib"
+              otool -L "$lib"
+              exit 1
+            fi
+            if otool -L "$lib" | grep -q "@rpath"; then
+              echo "ERROR: @rpath reference remains in $lib"
+              otool -L "$lib"
+              exit 1
+            fi
+          done < <(find "$APP/Contents/Frameworks" -type f -name "*.dylib" -print)
 
           # Keep local build output checks too (diagnostics if packaging changes later).
           APP=$(find build/bin -maxdepth 1 -name "*.app" -print -quit)
