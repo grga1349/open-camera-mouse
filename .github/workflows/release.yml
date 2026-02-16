@@ -253,7 +253,9 @@ jobs:
           zip_path="build/open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip"
           [ -f "$zip_path" ] || { echo "Missing package: $zip_path"; exit 1; }
           pkg_dir="$(mktemp -d)"
-          unzip -q "$zip_path" -d "$pkg_dir"
+          zip_path_win=$(cygpath -w "$zip_path")
+          pkg_dir_win=$(cygpath -w "$pkg_dir")
+          powershell -NoProfile -Command "Expand-Archive -Path '$zip_path_win' -DestinationPath '$pkg_dir_win' -Force"
           pkg_exe=$(ls -1 "$pkg_dir"/*.exe 2>/dev/null | head -1)
           [ -n "$pkg_exe" ] || { echo "No .exe found in packaged zip"; find "$pkg_dir" -maxdepth 3 -print; exit 1; }
           pkg_exe_win=$(cygpath -w "$pkg_exe")
