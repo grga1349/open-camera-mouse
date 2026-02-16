@@ -137,6 +137,17 @@ jobs:
               esac
             done < <(otool -L "$f" | awk 'NR>1 {print $1}')
           done < <(printf '%s\n' "$BIN"; find "$FW" -type f -name "*.dylib" -print)
+
+          # Do not bundle libc++ from conda; use the macOS system runtime.
+          while IFS= read -r f; do
+            if otool -L "$f" | grep -q "@executable_path/../Frameworks/libc++.1.0.dylib"; then
+              install_name_tool -change "@executable_path/../Frameworks/libc++.1.0.dylib" "/usr/lib/libc++.1.dylib" "$f" || true
+            fi
+            if otool -L "$f" | grep -q "$MAMBA_ROOT_PREFIX/envs/ci/lib/libc++.1.0.dylib"; then
+              install_name_tool -change "$MAMBA_ROOT_PREFIX/envs/ci/lib/libc++.1.0.dylib" "/usr/lib/libc++.1.dylib" "$f" || true
+            fi
+          done < <(printf '%s\n' "$BIN"; find "$FW" -type f -name "*.dylib" -print)
+          rm -f "$FW/libc++.1.0.dylib" "$FW/libc++.dylib" || true
           APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/open-camera-mouse_${GITHUB_REF_NAME}_macOS.zip"
@@ -185,6 +196,11 @@ jobs:
             fi
             if otool -L "$lib" | grep -q "@rpath"; then
               echo "ERROR: @rpath reference remains in $lib"
+              otool -L "$lib"
+              exit 1
+            fi
+            if otool -L "$lib" | grep -q "@executable_path/../Frameworks/libc++.1.0.dylib"; then
+              echo "ERROR: bundled libc++ reference remains in $lib"
               otool -L "$lib"
               exit 1
             fi
