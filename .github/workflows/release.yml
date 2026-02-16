@@ -38,22 +38,10 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-name: ci
-          create-args: >-
-            -c conda-forge
-            opencv
-            pkg-config
-            openblas
-            libblas
-            libcblas
-
       - name: Install deps (tools)
         run: |
           brew update
-          brew install dylibbundler
+          brew install opencv pkg-config dylibbundler
 
       - name: Install frontend deps
         run: npm ci
@@ -63,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           export CGO_ENABLED=1
-          export PKG_CONFIG_PATH="$MAMBA_ROOT_PREFIX/envs/ci/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          export PKG_CONFIG_PATH="$(brew --prefix opencv)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
           export CGO_CFLAGS="$(pkg-config --cflags opencv4)"
           export CGO_CXXFLAGS="$CGO_CFLAGS"
           export CGO_LDFLAGS="$(pkg-config --libs opencv4) -Wl,-headerpad_max_install_names"
@@ -89,30 +77,23 @@ jobs:
           fi
           FW="$APP/Contents/Frameworks"
           mkdir -p "$FW"
-          # Copy the full conda runtime lib dir to maximize portability.
-          # This keeps symlinks and versioned filenames intact.
-          cp -a "$MAMBA_ROOT_PREFIX/envs/ci/lib/." "$FW/"
-          dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks" -s "$MAMBA_ROOT_PREFIX/envs/ci/lib"
-          # Keep a stable libcblas filename for loaders that expect this exact SONAME.
-          if [ ! -f "$FW/libcblas.3.dylib" ]; then
-            cblas_src=$(ls -1 "$MAMBA_ROOT_PREFIX/envs/ci/lib/"libcblas*.dylib 2>/dev/null | head -1 || true)
-            if [ -n "$cblas_src" ]; then
-              cp -f "$cblas_src" "$FW/libcblas.3.dylib"
-            else
-              ob=$(ls -1 "$MAMBA_ROOT_PREFIX/envs/ci/lib/"libopenblas*.dylib 2>/dev/null | head -1 || true)
-              if [ -n "$ob" ]; then
-                cp -f "$ob" "$FW/libcblas.3.dylib"
-              fi
-            fi
-          fi
-          if [ ! -f "$FW/libcblas.3.dylib" ]; then
-            echo "ERROR: libcblas.3.dylib not bundled"
-            ls -la "$FW" || true
+          OPENCV_LIB_DIR="$(brew --prefix opencv)/lib"
+          while IFS= read -r src; do
+            cp -a "$src" "$FW/"
+          done < <(find "$OPENCV_LIB_DIR" -maxdepth 1 -name "libopencv*.dylib" -print)
+          opencv_count=$(find "$FW" -maxdepth 1 -name "libopencv*.dylib" | wc -l | tr -d ' ')
+          if [ "$opencv_count" -eq 0 ]; then
+            echo "ERROR: no OpenCV dylibs were copied to Frameworks"
             exit 1
           fi
-          install_name_tool -id "@executable_path/../Frameworks/libcblas.3.dylib" "$FW/libcblas.3.dylib"
-          # Normalize install names for all bundled dylibs and fix internal refs.
-          # This catches transitive deps that are loaded only when camera/video starts.
+
+          # Bundle dependency closure for app binary and OpenCV dylibs.
+          dylibbundler -od -b -x "$BIN" -d "$FW" -p "@executable_path/../Frameworks" -s "$OPENCV_LIB_DIR" -s "$(brew --prefix)/lib"
+          while IFS= read -r lib; do
+            dylibbundler -od -b -x "$lib" -d "$FW" -p "@executable_path/../Frameworks" -s "$OPENCV_LIB_DIR" -s "$(brew --prefix)/lib" || true
+          done < <(find "$FW" -maxdepth 1 -name "libopencv*.dylib" -print)
+
+          # Normalize install names and rewrite any absolute Homebrew refs.
           while IFS= read -r lib; do
             base="$(basename "$lib")"
             install_name_tool -id "@executable_path/../Frameworks/$base" "$lib" || true
@@ -122,7 +103,7 @@ jobs:
             while IFS= read -r dep; do
               [ -n "$dep" ] || continue
               case "$dep" in
-                "$MAMBA_ROOT_PREFIX/envs/ci/lib/"*)
+                /opt/homebrew/*|/usr/local/*)
                   dep_base="$(basename "$dep")"
                   if [ -e "$FW/$dep_base" ]; then
                     install_name_tool -change "$dep" "@executable_path/../Frameworks/$dep_base" "$f" || true
@@ -137,18 +118,6 @@ jobs:
               esac
             done < <(otool -L "$f" | awk 'NR>1 {print $1}')
           done < <(printf '%s\n' "$BIN"; find "$FW" -type f -name "*.dylib" -print)
-
-          # Do not bundle libc++ from conda; use the macOS system runtime.
-          while IFS= read -r f; do
-            if otool -L "$f" | grep -q "@executable_path/../Frameworks/libc++.1.0.dylib"; then
-              install_name_tool -change "@executable_path/../Frameworks/libc++.1.0.dylib" "/usr/lib/libc++.1.dylib" "$f" || true
-            fi
-            if otool -L "$f" | grep -q "$MAMBA_ROOT_PREFIX/envs/ci/lib/libc++.1.0.dylib"; then
-              install_name_tool -change "$MAMBA_ROOT_PREFIX/envs/ci/lib/libc++.1.0.dylib" "/usr/lib/libc++.1.dylib" "$f" || true
-            fi
-          done < <(printf '%s\n' "$BIN"; find "$FW" -type f -name "*.dylib" -print)
-          rm -f "$FW/libc++.1.0.dylib" "$FW/libc++.dylib" || true
-          APPNAME=$(basename "$APP" .app)
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "build/open-camera-mouse_${GITHUB_REF_NAME}_macOS.zip"
 
@@ -184,13 +153,9 @@ jobs:
             echo "ERROR: @rpath references remain"
             exit 1
           fi
-          if otool -L "$BIN" | grep -q "$MAMBA_ROOT_PREFIX/envs/ci/lib"; then
-            echo "ERROR: Conda-prefix paths found in packaged binary"
-            exit 1
-          fi
           while IFS= read -r lib; do
-            if otool -L "$lib" | grep -q "$MAMBA_ROOT_PREFIX/envs/ci/lib"; then
-              echo "ERROR: Conda-prefix dependency leaked in $lib"
+            if otool -L "$lib" | grep -qE "/opt/homebrew|/usr/local"; then
+              echo "ERROR: Homebrew path leaked in $lib"
               otool -L "$lib"
               exit 1
             fi
@@ -199,27 +164,7 @@ jobs:
               otool -L "$lib"
               exit 1
             fi
-            if otool -L "$lib" | grep -q "@executable_path/../Frameworks/libc++.1.0.dylib"; then
-              echo "ERROR: bundled libc++ reference remains in $lib"
-              otool -L "$lib"
-              exit 1
-            fi
           done < <(find "$APP/Contents/Frameworks" -type f -name "*.dylib" -print)
-
-          # Keep local build output checks too (diagnostics if packaging changes later).
-          APP=$(find build/bin -maxdepth 1 -name "*.app" -print -quit)
-          [ -n "$APP" ] || { echo "No .app found"; exit 1; }
-          BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
-          [ -n "$BIN" ] || { echo "No executable in app"; exit 1; }
-          otool -L "$BIN"
-          if otool -L "$BIN" | grep -qE "/opt/homebrew|/usr/local"; then
-            echo "ERROR: Homebrew paths found in dylib refs"
-            exit 1
-          fi
-          if otool -L "$BIN" | grep -q "@rpath"; then
-            echo "ERROR: @rpath references remain"
-            exit 1
-          fi
 
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
