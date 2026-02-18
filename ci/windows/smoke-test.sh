@@ -4,7 +4,7 @@ ZIP="build/open-camera-mouse_${GITHUB_REF_NAME}_Windows.zip"
 [ -f "$ZIP" ] || { echo "Missing: $ZIP"; exit 1; }
 
 PKG_DIR="$(mktemp -d)"
-(cd "$PKG_DIR" && unzip -q "$(cygpath -u "$(cygpath -w "$ZIP")")")
+unzip -q "$ZIP" -d "$PKG_DIR"
 
 PKG_EXE=$(ls -1 "$PKG_DIR"/*.exe 2>/dev/null | head -1)
 [ -n "$PKG_EXE" ] || { echo "No .exe in package"; find "$PKG_DIR" -maxdepth 2; exit 1; }

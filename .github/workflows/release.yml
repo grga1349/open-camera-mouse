@@ -88,7 +88,6 @@ jobs:
             mingw-w64-x86_64-opencv
             mingw-w64-x86_64-qt6-base
             mingw-w64-x86_64-qt6-5compat
-            mingw-w64-x86_64-ntldd-git
             zip
             unzip
 

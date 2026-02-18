@@ -9,34 +9,35 @@ DIST="build/dist"
 mkdir -p "$DIST"
 cp "$EXE" "$DIST/"
 
-# ntldd -R output format: "  foo.dll => /mingw64/bin/foo.dll (0xADDR)"
-# $3 is the resolved path; $NF is the trailing hex address — use $3
-echo "Collecting DLL dependencies via ntldd..."
-ntldd -R "$EXE" 2>/dev/null \
-  | awk '$2 == "=>" && $3 ~ /[Mm]ingw/ { print $3 }' \
-  | sort -u \
-  | while read -r dll_path; do
-      [ -f "$dll_path" ] && cp -n "$dll_path" "$DIST/" || true
-    done
+# Recursively collect all MinGW DLLs using objdump (part of the toolchain, no extra package).
+collect_dlls() {
+  local target="$1"
+  while IFS= read -r dll; do
+    local src="/mingw64/bin/$dll"
+    if [ -f "$src" ] && [ ! -f "$DIST/$dll" ]; then
+      cp "$src" "$DIST/$dll"
+      collect_dlls "$DIST/$dll"
+    fi
+  done < <(objdump -p "$target" 2>/dev/null | awk '/DLL Name:/{print $3}')
+}
+
+echo "Collecting DLL dependencies..."
+collect_dlls "$EXE"
 
 dll_count=$(find "$DIST" -maxdepth 1 -name "*.dll" | wc -l | tr -d ' ')
 echo "DLLs copied: $dll_count"
-[ "$dll_count" -gt 0 ] || { echo "ERROR: ntldd found no MinGW DLLs"; exit 1; }
+[ "$dll_count" -gt 0 ] || { echo "ERROR: no MinGW DLLs found for $EXE"; exit 1; }
 
-# Qt plugins are loaded dynamically by OpenCV HighGUI — ntldd won't find them
+# Qt platform plugin (required by OpenCV HighGUI; loaded dynamically, not via import table)
 echo "Locating Qt plugins directory..."
 PLUGINS_SRC=""
-for candidate in \
-    /mingw64/share/qt6/plugins \
-    /mingw64/lib/qt6/plugins \
-    /mingw64/plugins; do
+for candidate in /mingw64/share/qt6/plugins /mingw64/lib/qt6/plugins /mingw64/plugins; do
   if [ -d "$candidate/platforms" ]; then
     PLUGINS_SRC="$candidate"
     break
   fi
 done
 if [ -z "$PLUGINS_SRC" ]; then
-  # Last-resort: search the mingw64 tree
   qwindows=$(find /mingw64 -type f -name "qwindows.dll" 2>/dev/null | head -1 || true)
   [ -n "$qwindows" ] && PLUGINS_SRC="$(dirname "$(dirname "$qwindows")")"
 fi
