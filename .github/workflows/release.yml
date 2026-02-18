@@ -34,7 +34,7 @@ jobs:
       - name: Install native deps
         run: |
           brew update
-          brew install opencv pkg-config dylibbundler
+          brew install opencv pkg-config
 
       - name: Install frontend deps
         run: npm ci

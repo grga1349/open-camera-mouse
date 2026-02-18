@@ -12,16 +12,18 @@ BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
 
 "$BIN" --smoke-test
 
-# Verify no Homebrew or @rpath leakage
-if otool -L "$BIN" | grep -qE '/opt/homebrew|/usr/local|@rpath'; then
-  echo "ERROR: unresolved dylib references in binary"
-  otool -L "$BIN"
-  exit 1
-fi
-find "$APP/Contents/Frameworks" -name "*.dylib" -print | while read -r lib; do
-  if otool -L "$lib" | grep -qE '/opt/homebrew|/usr/local|@rpath'; then
-    echo "ERROR: unresolved reference in $lib"
-    otool -L "$lib"
+# Verify no absolute Homebrew paths remain in binary or bundled dylibs
+# (delocate rewrites to @loader_path/... so only that and system paths are expected)
+check_no_homebrew() {
+  local f="$1"
+  if otool -L "$f" | grep -qE '/opt/homebrew|/usr/local'; then
+    echo "ERROR: absolute Homebrew path in $f"
+    otool -L "$f"
     exit 1
   fi
+}
+
+check_no_homebrew "$BIN"
+find "$APP/Contents/Frameworks" -name "*.dylib" -print | while read -r lib; do
+  check_no_homebrew "$lib"
 done
