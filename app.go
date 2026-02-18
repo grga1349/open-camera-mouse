@@ -134,8 +134,8 @@ func (a *App) applyHotkeys(binding config.HotkeysParams) {
 	}
 	if binding.Recenter != "" {
 		actions[binding.Recenter] = func() {
-			if err := a.service.Recenter(); err != nil {
-				a.logErrorf("recenter hotkey failed: %v", err)
+			if a.ctx != nil {
+				runtime.EventsEmit(a.ctx, "recenter:hotkey")
 			}
 		}
 	}

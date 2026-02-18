@@ -1,8 +1,9 @@
-import { useEffect, useRef, type FC, type MouseEvent } from "react";
+import { useEffect, useRef, useCallback, type FC, type MouseEvent } from "react";
 import { ScreenShell } from "../../components/layout/ScreenShell";
 import { useAppStore } from "../../state/useAppStore";
 import { config as backendConfig } from "../../../wailsjs/go/models";
 import { Recenter, SetPickPoint, ToggleTracking, UpdateParams } from "../../../wailsjs/go/main/App";
+import { EventsOn } from "../../../wailsjs/runtime/runtime";
 import { CameraPreview } from "./components/CameraPreview";
 import { ClickModeControls } from "./components/ClickModeControls";
 import { PrimaryActions } from "./components/PrimaryActions";
@@ -41,7 +42,7 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
     }
   };
 
-  const handleRecenter = async () => {
+  const handleRecenter = useCallback(async () => {
     if (recenterCountdown > 0) {
       return;
     }
@@ -70,7 +71,14 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
         }
       }
     });
-  };
+  }, [recenterCountdown, telemetry.trackingOn, startCountdown]);
+
+  useEffect(() => {
+    const off = EventsOn("recenter:hotkey", () => {
+      void handleRecenter();
+    });
+    return off;
+  }, [handleRecenter]);
 
   const handlePreviewClick = async (event: MouseEvent<HTMLDivElement>) => {
     if (!preview) {

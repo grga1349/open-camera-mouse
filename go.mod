@@ -8,6 +8,7 @@ require (
 	github.com/go-vgo/robotgo v1.0.0
 	github.com/wailsapp/wails/v2 v2.11.0
 	gocv.io/x/gocv v0.43.0
+	golang.design/x/hotkey v0.4.1
 )
 
 require (
