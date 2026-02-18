@@ -9,7 +9,7 @@ BIN=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 -print -quit)
 echo "App: $APP"
 echo "Binary: $BIN"
 
-pip3 install --quiet delocate
+pip3 install --quiet --break-system-packages delocate
 
 # delocate-path walks the entire .app, collects all non-system dylib deps
 # (including transitive ones like libgfortran → libquadmath), copies them
