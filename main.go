@@ -2,7 +2,11 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
+	"os"
+
+	"gocv.io/x/gocv"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -12,7 +16,15 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+var version = "dev"
+
 func main() {
+	for _, arg := range os.Args[1:] {
+		if arg == "--smoke-test" {
+			runSmokeTest()
+		}
+	}
+
 	app, err := NewApp()
 	if err != nil {
 		log.Fatal(err)
@@ -37,4 +49,13 @@ func main() {
 	if err != nil {
 		log.Printf("Error: %v", err)
 	}
+}
+
+func runSmokeTest() {
+	fmt.Printf("open-camera-mouse %s\n", version)
+	fmt.Printf("OpenCV %s\n", gocv.OpenCVVersion())
+	mat := gocv.NewMat()
+	mat.Close()
+	fmt.Println("smoke test passed")
+	os.Exit(0)
 }
