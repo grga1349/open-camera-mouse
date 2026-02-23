@@ -8,21 +8,14 @@ Control your computer cursor with head movements using just a webcam. No special
 
 Get the latest release for your platform:
 
-- **[macOS](https://github.com/ivangrga/open-camera-mouse/releases/latest)** (Apple Silicon)
-- **[Windows](https://github.com/ivangrga/open-camera-mouse/releases/latest)** (64-bit)
+- **[macOS](https://github.com/grga1349/open-camera-mouse/releases/latest)** (Apple Silicon)
+- **[Windows](https://github.com/grga1349/open-camera-mouse/releases/latest)** (64-bit)
 
 ## Installation
 
 ### macOS
 
-**Option 1: DMG Image (Recommended)**
-1. Download `open-camera-mouse_vX.X.X_macOS.dmg` from releases
-2. Open the DMG file
-3. Drag the application to your Applications folder
-4. Launch from Applications or Spotlight
-
-**Option 2: Portable ZIP**
-1. Download `open-camera-mouse_vX.X.X_macOS.zip`
+1. Download `open-camera-mouse_vX.X.X_macOS.zip` from releases
 2. Extract and drag `open-camera-mouse.app` to Applications
 3. Launch from Applications or Spotlight
 
@@ -30,16 +23,11 @@ Get the latest release for your platform:
 
 ### Windows
 
-**Option 1: Installer (Recommended)**
-1. Download `open-camera-mouse-amd64-installer.exe` from releases
-2. Run the installer (WebView2 will be installed automatically if needed)
-3. Launch from Start Menu or Desktop shortcut
-
-**Option 2: Portable ZIP**
-1. Download `open-camera-mouse_vX.X.X_Windows.zip`
+1. Download `open-camera-mouse_vX.X.X_Windows.zip` from releases
 2. Extract to a folder
 3. Run `open-camera-mouse.exe`
-4. Note: Requires [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section)
+
+**Note:** Requires [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section) (pre-installed on Windows 11 and most Windows 10 systems).
 
 ## Features
 
@@ -79,13 +67,14 @@ Get the latest release for your platform:
 | Cursor jumps around | Increase template size, improve lighting |
 | Tracking lost frequently | Lower score threshold, use higher contrast point |
 | Cursor too fast/slow | Adjust sensitivity in Pointer settings |
-| Hotkeys don't work | macOS: Grant accessibility permissions |
+| Cursor doesn't move | macOS: Grant Accessibility permissions in System Settings → Privacy & Security |
+| Hotkeys don't work | Check hotkey bindings in General settings; ensure no other app claims the same key |
 
 ## Platforms
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| macOS | ✅ | Requires accessibility permissions |
+| macOS | ✅ | Requires Accessibility permissions for mouse control |
 | Windows | ✅ | Tested on Windows 10/11 |
 | Linux | ⚠️ | X11 only, requires libx11-dev |
 
@@ -95,7 +84,7 @@ Get the latest release for your platform:
 
 ### Requirements
 
-- Go 1.21+
+- Go 1.24+
 - Node.js 18+
 - OpenCV 4.x
 - [Wails CLI](https://wails.io/)

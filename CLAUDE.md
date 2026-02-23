@@ -37,7 +37,7 @@ Hands-free desktop application that turns your webcam into a mouse controller us
 │   ├── config/             # Settings persistence
 │   ├── stream/             # Preview/telemetry streaming
 │   ├── overlay/            # Marker rendering
-│   └── hotkeys/            # Global hotkey handling (platform-specific)
+│   └── hotkeys/            # Global hotkey handling (golang.design/x/hotkey)
 └── .github/workflows/      # CI/CD
 ```
 
@@ -139,13 +139,13 @@ Config stored at:
 ## Platform-Specific Notes
 
 ### macOS
-- Requires Accessibility permissions for mouse control
-- Hotkeys use Carbon Event Tap (CGEventTap)
+- Requires Accessibility permissions for mouse control (robotgo)
+- Hotkeys use `golang.design/x/hotkey` (Carbon) — no Accessibility permissions required
 
 ### Windows
-- Hotkeys use low-level keyboard hook (SetWindowsHookEx)
+- Hotkeys use `golang.design/x/hotkey`
 - Requires MinGW OpenCV for builds
 
 ### Linux
-- Hotkeys use X11 (XGrabKey) - X11 only, no Wayland support
+- Hotkeys use `golang.design/x/hotkey` (X11 only, no Wayland support)
 - Requires `libx11-dev` for builds
