@@ -59,6 +59,8 @@
           {{end}}
         </array>
         {{end}}
+        <key>NSCameraUsageDescription</key>
+        <string>Open Camera Mouse uses your camera to track face or body markers for hands-free mouse control.</string>
         <key>NSAppTransportSecurity</key>
         <dict>
             <key>NSAllowsLocalNetworking</key>
