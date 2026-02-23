@@ -7,6 +7,7 @@ export CGO_CFLAGS="$(pkg-config --cflags opencv4)"
 export CGO_CXXFLAGS="$CGO_CFLAGS"
 export CGO_LDFLAGS="$(pkg-config --libs opencv4) -Wl,-headerpad_max_install_names"
 export PATH="$(go env GOPATH)/bin:$PATH"
+export MACOSX_DEPLOYMENT_TARGET=14.0
 wails build \
   -clean \
   -platform darwin/arm64 \
