@@ -5,7 +5,6 @@ import (
 	"errors"
 	"image"
 	"sync"
-	"time"
 
 	"open-camera-mouse/internal/camera"
 	"open-camera-mouse/internal/config"
@@ -17,10 +16,7 @@ import (
 var (
 	ErrAlreadyRunning = errors.New("app: capture already running")
 	ErrNotRunning     = errors.New("app: capture not running")
-	ErrNoFrame        = errors.New("app: no frame available")
 )
-
-const previewInterval = 66 * time.Millisecond
 
 type Service struct {
 	cfgManager   *config.Manager
@@ -29,12 +25,15 @@ type Service struct {
 	mu     sync.RWMutex
 	params config.AllParams
 
-	camera         *camera.Manager
-	frameProcessor *FrameProcessor
-	cursorMover    *CursorMover
+	camera      *camera.Manager
+	tracker     *tracking.Tracker
+	cursorMover *CursorMover
+	broker      *stream.Broker
 
-	ctx     context.Context
-	cancel  context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
+	done   chan struct{}
+
 	running bool
 }
 
@@ -48,7 +47,7 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 		params.Clicking.DwellEnabled = false
 	}
 
-	broker := stream.NewBroker()
+	broker := stream.NewBroker(stream.DefaultBrokerPolicy())
 	controller := mouse.NewRobotController()
 
 	svc := &Service{
@@ -56,14 +55,9 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 		notifyParams: notify,
 		params:       params,
 		camera:       camera.NewManager(0),
+		tracker:      tracking.NewTracker(buildTrackerParams(params.Tracking)),
+		broker:       broker,
 	}
-
-	svc.frameProcessor = NewFrameProcessor(
-		buildTrackerParams(params.Tracking),
-		buildProcessorParams(params.Tracking),
-		previewInterval,
-		broker,
-	)
 
 	svc.cursorMover = NewCursorMover(
 		controller,
@@ -76,7 +70,7 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 }
 
 func (s *Service) Broker() *stream.Broker {
-	return s.frameProcessor.Broker()
+	return s.broker
 }
 
 func (s *Service) Start(ctx context.Context) error {
@@ -92,14 +86,29 @@ func (s *Service) Start(ctx context.Context) error {
 	s.running = true
 	s.mu.Unlock()
 
-	if err := s.camera.Start(captureCtx, s.handleFrame); err != nil {
+	if err := s.runPipeline(captureCtx); err != nil {
 		s.mu.Lock()
 		s.running = false
 		s.cancel = nil
 		s.mu.Unlock()
+		cancel()
 		return err
 	}
 
+	return nil
+}
+
+func (s *Service) runPipeline(ctx context.Context) error {
+	frames, err := s.camera.Stream(ctx)
+	if err != nil {
+		return err
+	}
+	results := track(ctx, frames, s.tracker)
+	s.done = make(chan struct{})
+	go func() {
+		defer close(s.done)
+		process(ctx, results, s.cursorMover, s.broker)
+	}()
 	return nil
 }
 
@@ -109,16 +118,17 @@ func (s *Service) Stop() error {
 		s.mu.Unlock()
 		return ErrNotRunning
 	}
+	done := s.done
 	if s.cancel != nil {
 		s.cancel()
 	}
 	s.running = false
 	s.mu.Unlock()
 
-	s.camera.Stop()
-	s.frameProcessor.Close()
+	if done != nil {
+		<-done
+	}
 	s.cursorMover.Reset()
-
 	return nil
 }
 
@@ -126,12 +136,6 @@ func (s *Service) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
-}
-
-func (s *Service) handleFrame(frame camera.Frame) {
-	result := s.frameProcessor.Process(frame)
-	s.cursorMover.Update(result.Point, result.Lost)
-	s.cursorMover.UpdateDwell(result.Lost)
 }
 
 func (s *Service) handleDwellClick() {
@@ -146,7 +150,7 @@ func (s *Service) handleDwellClick() {
 }
 
 func (s *Service) SetPickPoint(point image.Point) error {
-	err := s.frameProcessor.SetPickPoint(point)
+	err := s.tracker.SetPickPoint(point)
 	if err == nil {
 		s.cursorMover.Reset()
 	}
@@ -154,7 +158,7 @@ func (s *Service) SetPickPoint(point image.Point) error {
 }
 
 func (s *Service) Recenter() error {
-	err := s.frameProcessor.Recenter()
+	err := s.tracker.Recenter()
 	if err == nil {
 		s.cursorMover.Reset()
 		s.cursorMover.CenterCursor()
@@ -163,7 +167,7 @@ func (s *Service) Recenter() error {
 }
 
 func (s *Service) ToggleTracking(enabled bool) {
-	s.frameProcessor.SetTrackingEnabled(enabled)
+	s.tracker.SetTrackingEnabled(enabled)
 	if !enabled {
 		s.cursorMover.Reset()
 	}
@@ -197,89 +201,7 @@ func (s *Service) emitParamsLocked() {
 }
 
 func (s *Service) applyRuntimeParamsLocked() {
-	s.frameProcessor.SetTrackerParams(buildTrackerParams(s.params.Tracking))
-	s.frameProcessor.SetProcessorParams(buildProcessorParams(s.params.Tracking))
+	s.tracker.UpdateParams(buildTrackerParams(s.params.Tracking))
 	s.cursorMover.SetMappingParams(buildMappingParams(s.params.Pointer))
 	s.cursorMover.SetDwellParams(buildDwellParams(s.params.Clicking))
-}
-
-func buildTrackerParams(t config.TrackingParams) tracking.Params {
-	return tracking.Params{
-		TemplateSize:     t.TemplateSizePx,
-		SearchMargin:     t.SearchMarginPx,
-		ScoreThreshold:   float32(t.ScoreThreshold),
-		AdaptiveTemplate: t.AdaptiveTemplate,
-		TemplateAlpha:    float32(t.TemplateUpdateAlpha),
-	}
-}
-
-func buildProcessorParams(t config.TrackingParams) FrameProcessorParams {
-	return FrameProcessorParams{
-		MarkerShape:  string(t.MarkerShape),
-		TemplateSize: t.TemplateSizePx,
-	}
-}
-
-func buildMappingParams(p config.PointerParams) mouse.MappingParams {
-	gain := mapRange(float64(p.Sensitivity), 1, 100, 1.2, 5.0) * 4
-	smoothing := mapRange(float64(p.Sensitivity), 1, 100, 0.35, 0.15)
-	gainX := gain
-	gainY := gain
-
-	if adv := p.Advanced; adv != nil {
-		if adv.GainX != 0 {
-			gainX = adv.GainX
-		}
-		if adv.GainY != 0 {
-			gainY = adv.GainY
-		}
-		if adv.Smoothing != 0 {
-			smoothing = adv.Smoothing
-		}
-	}
-
-	return mouse.MappingParams{
-		Sensitivity: float64(p.Sensitivity),
-		GainX:       gainX,
-		GainY:       gainY,
-		Smoothing:   smoothing,
-		DeadzonePx:  max(0, float64(p.DeadzonePx)),
-		MaxSpeedPx:  max(1, float64(p.MaxSpeedPx)),
-	}
-}
-
-func buildDwellParams(c config.ClickingParams) mouse.DwellParams {
-	return mouse.DwellParams{
-		Enabled:     c.DwellEnabled,
-		DwellTime:   time.Duration(c.DwellTimeMs) * time.Millisecond,
-		RadiusPx:    float64(c.DwellRadiusPx),
-		ClickButton: mapClickButton(c.ClickType, c.RightClickToggle),
-	}
-}
-
-func mapClickButton(click config.ClickType, rightToggle bool) mouse.ClickButton {
-	if rightToggle {
-		return mouse.ClickRight
-	}
-	switch click {
-	case config.ClickTypeRight:
-		return mouse.ClickRight
-	case config.ClickTypeDouble:
-		return mouse.ClickLeft
-	default:
-		return mouse.ClickLeft
-	}
-}
-
-func mapRange(value, inMin, inMax, outMin, outMax float64) float64 {
-	if inMax == inMin {
-		return outMin
-	}
-	if value < inMin {
-		value = inMin
-	}
-	if value > inMax {
-		value = inMax
-	}
-	return (value-inMin)*(outMax-outMin)/(inMax-inMin) + outMin
 }

@@ -69,9 +69,19 @@ func (m *manager) Update(bindings map[string]Action) error {
 		entries = append(entries, &entry{hk: hk, done: done})
 		go func(hk *hotkey.Hotkey, action Action, done chan struct{}) {
 			defer close(done)
+			trigger := make(chan struct{}, 1)
+			go func() {
+				for range trigger {
+					action()
+				}
+			}()
 			for range hk.Keydown() {
-				go action()
+				select {
+				case trigger <- struct{}{}:
+				default:
+				}
 			}
+			close(trigger)
 		}(hk, action, done)
 	}
 

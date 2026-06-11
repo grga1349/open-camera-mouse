@@ -9,13 +9,19 @@ import (
 )
 
 type CursorMover struct {
-	mu         sync.Mutex
 	controller mouse.Controller
 	mapper     *mouse.Mapper
 	dwell      *mouse.DwellState
 
+	// pipeline-goroutine-owned — no lock needed
 	lastPoint image.Point
 	pointSet  bool
+
+	// control-plane → pipeline dirty flags
+	mappingMu      sync.Mutex
+	pendingMapping mouse.MappingParams
+	mappingDirty   bool
+	resetPending   bool
 }
 
 func NewCursorMover(
@@ -33,8 +39,18 @@ func NewCursorMover(
 }
 
 func (cm *CursorMover) Update(point image.Point, lost bool) bool {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
+	cm.mappingMu.Lock()
+	pending, dirty, reset := cm.pendingMapping, cm.mappingDirty, cm.resetPending
+	cm.mappingDirty, cm.resetPending = false, false
+	cm.mappingMu.Unlock()
+
+	if reset {
+		cm.mapper.Reset()
+		cm.pointSet = false
+	}
+	if dirty {
+		cm.mapper.SetParams(pending)
+	}
 
 	if lost {
 		cm.mapper.Reset()
@@ -84,16 +100,16 @@ func (cm *CursorMover) UpdateDwell(lost bool) {
 }
 
 func (cm *CursorMover) Reset() {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-	cm.mapper.Reset()
-	cm.pointSet = false
+	cm.mappingMu.Lock()
+	cm.resetPending = true
+	cm.mappingMu.Unlock()
 }
 
 func (cm *CursorMover) SetMappingParams(params mouse.MappingParams) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-	cm.mapper.SetParams(params)
+	cm.mappingMu.Lock()
+	cm.pendingMapping = params
+	cm.mappingDirty = true
+	cm.mappingMu.Unlock()
 }
 
 func (cm *CursorMover) SetDwellParams(params mouse.DwellParams) {

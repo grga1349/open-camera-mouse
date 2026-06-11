@@ -2,7 +2,6 @@ package stream
 
 import (
 	"encoding/base64"
-	"sync"
 	"time"
 
 	"gocv.io/x/gocv"
@@ -16,7 +15,6 @@ type PreviewFrame struct {
 }
 
 type PreviewEncoder struct {
-	mu       sync.Mutex
 	interval time.Duration
 	lastSend time.Time
 }
@@ -26,9 +24,6 @@ func NewPreviewEncoder(interval time.Duration) *PreviewEncoder {
 }
 
 func (p *PreviewEncoder) Encode(frame gocv.Mat) (PreviewFrame, bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	now := time.Now()
 	if p.interval > 0 && now.Sub(p.lastSend) < p.interval {
 		return PreviewFrame{}, false

@@ -1,3 +1,52 @@
-build/bin
-node_modules
-frontend/dist
+# Wails build output
+build/bin/
+build/windows/
+build/darwin/
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+
+# GoCV / OpenCV build artifacts
+*.a
+*.o
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Wails dev server
+wailsjs/
+
+# Test coverage
+coverage.out
+coverage.html

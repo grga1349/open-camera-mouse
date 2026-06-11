@@ -82,88 +82,14 @@ Get the latest release for your platform:
 
 ## Contributing
 
-### Requirements
+See [docs/RUNBOOK.md](docs/RUNBOOK.md) for build setup, dev workflow, and release steps.
 
-- Go 1.24+
-- Node.js 18+
-- OpenCV 4.x
-- [Wails CLI](https://wails.io/)
+## Documentation
 
-### Frontend Class Names
-
-- Use the shared `cn` helper for conditional class names.
-- Import from `frontend/src/lib/cn.ts`.
-
-### Setup
-
-```bash
-# Install Wails
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-# Install golines for Go formatting
-go install github.com/segmentio/golines@latest
-
-# Install frontend dependencies
-cd frontend && npm install && cd ..
-
-# Run in development mode
-wails dev
-
-# Build for production
-wails build
-```
-
-### Makefile Commands
-
-The repo includes a `Makefile` to keep common tasks consistent:
-
-| Command | Description |
-|---------|-------------|
-| `make format` | Runs golines on Go code and Prettier on the frontend (120 char width) |
-| `make frontend-install` | Installs frontend dependencies |
-| `make frontend-build` | Builds the React frontend (`npm run build`) |
-| `make frontend-dev` | Starts the frontend dev server |
-| `make wails-dev` | Starts the Wails dev environment |
-| `make wails-build` | Builds the desktop app with `wails build -clean` |
-
-### Platform-specific Dependencies
-
-**macOS:**
-```bash
-brew install opencv pkg-config
-```
-
-**Windows (MSYS2):**
-```bash
-pacman -S mingw-w64-x86_64-opencv mingw-w64-x86_64-pkg-config
-```
-
-**Linux:**
-```bash
-sudo apt-get install libopencv-dev libx11-dev pkg-config
-```
-
-### Project Structure
-
-```
-├── main.go              # Entry point
-├── app.go               # Wails bindings
-├── frontend/            # React UI
-└── internal/
-    ├── app/             # Core logic
-    ├── camera/          # Webcam capture
-    ├── tracking/        # Template matching
-    ├── mouse/           # Cursor control
-    ├── config/          # Settings persistence
-    ├── stream/          # Preview streaming
-    └── hotkeys/         # Global shortcuts
-```
-
-### Releasing
-
-1. Update `VERSION` file
-2. Create and push tag: `git tag v0.x.x && git push --tags`
-3. GitHub Actions builds and publishes releases
+- [Architecture & data flow](docs/ARCHITECTURE.md)
+- [Full tech stack](docs/STACK.md)
+- [CI/CD and release process](docs/CI.md)
+- [Dev runbook](docs/RUNBOOK.md)
 
 ## License
 

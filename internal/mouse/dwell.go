@@ -2,6 +2,7 @@ package mouse
 
 import (
 	"math"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type DwellParams struct {
 }
 
 type DwellState struct {
+	mu         sync.Mutex
 	params     DwellParams
 	controller Controller
 	afterClick func()
@@ -28,11 +30,16 @@ func NewDwellState(controller Controller, params DwellParams, afterClick func())
 }
 
 func (d *DwellState) SetParams(params DwellParams) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.params = params
 	d.reset(d.refX, d.refY)
 }
 
 func (d *DwellState) Update(cursorX, cursorY int, trackingLost bool) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if !d.params.Enabled || trackingLost {
 		d.reset(cursorX, cursorY)
 		return

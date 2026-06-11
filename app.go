@@ -9,7 +9,6 @@ import (
 	appsvc "open-camera-mouse/internal/app"
 	"open-camera-mouse/internal/config"
 	"open-camera-mouse/internal/hotkeys"
-	"open-camera-mouse/internal/stream"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -48,12 +47,18 @@ func (a *App) startup(ctx context.Context) {
 	params := a.service.GetParams()
 
 	broker := a.service.Broker()
-	broker.SubscribePreview(func(frame stream.PreviewFrame) {
-		runtime.EventsEmit(ctx, "preview:frame", frame)
-	})
-	broker.SubscribeTelemetry(func(t stream.Telemetry) {
-		runtime.EventsEmit(ctx, "telemetry:state", t)
-	})
+	previewCh := broker.SubscribePreview(ctx, 4)
+	telemCh := broker.SubscribeTelemetry(ctx, 4)
+	go func() {
+		for frame := range previewCh {
+			runtime.EventsEmit(ctx, "preview:frame", frame)
+		}
+	}()
+	go func() {
+		for t := range telemCh {
+			runtime.EventsEmit(ctx, "telemetry:state", t)
+		}
+	}()
 
 	a.applyHotkeys(params.Hotkeys)
 	if params.General.AutoStart {
