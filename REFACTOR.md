@@ -327,6 +327,156 @@ Each step compiles and passes `go build ./...` before moving to the next.
 
 ---
 
+---
+
+## React frontend
+
+### The god object — `useAppStore.tsx`
+
+`useAppStore` puts four categories of state in a single context:
+
+| State | Update rate | Who cares |
+|-------|------------|-----------|
+| `params` | Rare (save/load) | SettingsScreen, ClickModeControls, MainScreen |
+| `isRunning` | Rare (start/stop) | PrimaryActions, StatusHeader |
+| `telemetry` | ~30fps | StatusHeader only |
+| `preview` | ~15fps | CameraPreview only |
+
+Because it's one context, a 30fps telemetry tick re-renders every component that calls `useAppStore()` — including `ClickModeControls` and `PrimaryActions`, which read only from `params` and `isRunning`. This is a continuous render storm.
+
+**Fix: split into four focused contexts/hooks:**
+
+```
+src/state/
+  useParams.ts       — params + setParams (slow, shared widely)
+  useRunning.ts      — isRunning + setRunning (slow)
+  useTelemetry.ts    — telemetry + setTelemetry (30fps, only StatusHeader)
+  usePreview.ts      — preview + setPreview (15fps, only CameraPreview)
+```
+
+Each hook exposes its own `Context` + `Provider`. `App.tsx` composes the four providers. Components subscribe only to what they need.
+
+The `StoreActions` exported type and the `AppState` mega-type both disappear. `AppProvider` is replaced by four small providers.
+
+`PreviewFrame` type moves from `useAppStore.tsx` to `types/preview.ts` — it's a domain type, not a store concern.
+
+---
+
+### `MainScreen.tsx` has too much inline logic
+
+At 176 lines, `MainScreen` owns:
+- Recenter orchestration (pause → recenter → countdown → resume)
+- Dwell hover auto-enable (timeout on mouse-enter)
+- Preview click → pick-point mapping
+- Clicking param optimistic updates
+
+The recenter timer is already extracted (`useRecenterCountdown`), but `handleRecenter` itself — which sequences pause/recenter/resume — is inline. The dwell hover timer (`dwellHoverRef`) is also inline. Both should be hooks.
+
+**Extract:**
+```
+screens/main/hooks/
+  useRecenterCountdown.ts   — already exists ✓
+  useRecenter.ts            — NEW: pause → Recenter() → countdown → resume
+  useDwellHover.ts          — NEW: hover timeout → enableDwell
+  usePickPoint.ts           — NEW: click event → SetPickPoint(x, y)
+```
+
+After extraction `MainScreen` becomes wiring-only: compose hooks, pass props to leaf components.
+
+---
+
+### Repeated section-updater boilerplate in every tab
+
+Every tab defines the same pattern:
+
+```ts
+const updateTracking = (changes: Partial<typeof tracking>) =>
+  updateDraft((current) => ({ ...current, tracking: { ...current.tracking, ...changes } }));
+```
+
+Four tabs × ~5 lines each = ~20 lines of copy-paste. Replace with a shared factory in `TabProps` or a utility:
+
+```ts
+// shared util (tabs/utils.ts or inline in TabProps)
+function makeUpdater<K extends keyof AllParams>(
+  updateDraft: TabProps['updateDraft'],
+  key: K,
+) {
+  return (changes: Partial<AllParams[K]>) =>
+    updateDraft((curr) => ({ ...curr, [key]: { ...curr[key], ...changes } }));
+}
+
+// usage in tab:
+const updateTracking = makeUpdater(updateDraft, 'tracking');
+```
+
+---
+
+### `useSettingsDraft.ts` — dead export and duplicate clone
+
+`saveDraft` is exported in `SettingsDraft` but never called (SettingsScreen uses the `onSave` callback instead). Remove it.
+
+`cloneParams` inside `useSettingsDraft.ts` and `normalizeParams` inside `App.tsx` are the same `JSON.parse(JSON.stringify(...))` one-liner with different names. Extract to `src/lib/clone.ts`:
+
+```ts
+export const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+```
+
+---
+
+### `useMemo` on JSX in `SettingsScreen.tsx`
+
+```ts
+const activeTabContent = useMemo(() => {
+  const Component = TAB_COMPONENTS[activeTab];
+  return <Component draft={draft} updateDraft={updateDraft} />;
+}, [activeTab, draft, updateDraft]);
+```
+
+`useMemo` on JSX is not useful — `React.createElement` is cheap; the memo doesn't prevent child renders. If the goal is to avoid re-creating the element when other SettingsScreen state changes, this is redundant (there is no other state). Remove it; render directly.
+
+---
+
+### `App.tsx` — PascalCase event field fallbacks
+
+```ts
+const data = frame?.Data ?? frame?.data;
+const fps = payload?.FPS ?? payload?.fps ?? 0;
+```
+
+Wails serializes Go struct fields using their JSON tags (camelCase), so these PascalCase fallbacks are never hit. The `normalizeParams` JSON round-trip already handles the struct serialization correctly. The telemetry/preview event payloads go through the same Wails serializer — trust the camelCase and drop the `?? PascalCase` chains.
+
+---
+
+### `GeneralTab.tsx` — duplicate inline defaults
+
+```ts
+const general = draft.general ?? { autoStart: false, dwellOnStartup: false };
+```
+
+Appears twice. `draft.general` is always present per `AllParams` type — the `??` is dead code caused by mistrust of the type. Remove the fallbacks; they hide a real type issue if they're ever needed.
+
+---
+
+### `ScreenShell.tsx` — comment violates coding standard
+
+Remove the JSDoc comment. The name and props are self-explanatory.
+
+---
+
+### Priority
+
+| # | Severity | Location |
+|---|----------|----------|
+| 1 | **Perf / arch** | `useAppStore.tsx` → split into 4 focused hooks |
+| 2 | **Structure** | `MainScreen.tsx` → extract 3 hooks |
+| 3 | Code quality | Tab boilerplate → `makeUpdater` util |
+| 4 | Dead code | `saveDraft`, duplicate `cloneParams`/`normalizeParams` |
+| 5 | Correctness | `useMemo` on JSX in `SettingsScreen` |
+| 6 | Cleanup | Wails PascalCase fallbacks, `GeneralTab` dead defaults, comment |
+
+---
+
 ## What does NOT change
 
 - The three-goroutine topology (camera → track → process) — correct, stays
