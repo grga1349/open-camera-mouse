@@ -1,8 +1,11 @@
 import type { ButtonHTMLAttributes, FC } from "react";
 import { cn } from "../lib/cn";
 
-const baseClasses =
-  "inline-flex items-center justify-center rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+const baseClasses = `
+  inline-flex items-center justify-center rounded-full border px-5 py-2 text-sm font-semibold
+  transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+  disabled:cursor-not-allowed disabled:opacity-50
+`;
 
 const variantClasses = {
   action: "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-400 focus-visible:outline-emerald-400",
@@ -18,8 +21,5 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Button: FC<ButtonProps> = ({ variant = "highlight", fullWidth, className, ...props }) => (
-  <button
-    className={cn(baseClasses, variantClasses[variant], fullWidth && "w-full", className)}
-    {...props}
-  />
+  <button className={cn(baseClasses, variantClasses[variant], fullWidth && "w-full", className)} {...props} />
 );
