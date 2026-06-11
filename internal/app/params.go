@@ -20,7 +20,7 @@ func buildTrackerParams(t config.TrackingParams) tracking.Params {
 }
 
 func buildMappingParams(p config.PointerParams) mouse.MappingParams {
-	gain := mapRange(float64(p.Sensitivity), 1, 100, 1.2, 5.0) * 4
+	gain := mapRange(float64(p.Sensitivity), 1, 100, 1.2, 5.0) * p.Amplification
 	smoothing := mapRange(float64(p.Sensitivity), 1, 100, 0.35, 0.15)
 	gainX := gain
 	gainY := gain

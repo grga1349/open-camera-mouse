@@ -18,6 +18,7 @@ export type PointerAdvancedParams = {
 
 export type PointerParams = {
   sensitivity: number;
+  amplification: number;
   deadzonePx: number;
   maxSpeedPx: number;
   advanced: PointerAdvancedParams | null;

@@ -31,10 +31,11 @@ type PointerAdvancedParams struct {
 }
 
 type PointerParams struct {
-	Sensitivity int                    `json:"sensitivity"`
-	DeadzonePx  int                    `json:"deadzonePx"`
-	MaxSpeedPx  int                    `json:"maxSpeedPx"`
-	Advanced    *PointerAdvancedParams `json:"advanced"`
+	Sensitivity    int                    `json:"sensitivity"`
+	Amplification  float64                `json:"amplification"`
+	DeadzonePx     int                    `json:"deadzonePx"`
+	MaxSpeedPx     int                    `json:"maxSpeedPx"`
+	Advanced       *PointerAdvancedParams `json:"advanced"`
 }
 
 type ClickingParams struct {
@@ -74,10 +75,11 @@ func DefaultParams() AllParams {
 			MarkerShape:         MarkerShapeCircle,
 		},
 		Pointer: PointerParams{
-			Sensitivity: 30,
-			DeadzonePx:  1,
-			MaxSpeedPx:  25,
-			Advanced:    nil,
+			Sensitivity:   30,
+			Amplification: 4.0,
+			DeadzonePx:    1,
+			MaxSpeedPx:    25,
+			Advanced:      nil,
 		},
 		Clicking: ClickingParams{
 			DwellEnabled:     false,
@@ -98,6 +100,9 @@ func DefaultParams() AllParams {
 }
 
 func (p *AllParams) ensureDefaults() {
+	if p.Pointer.Amplification == 0 {
+		p.Pointer.Amplification = 4.0
+	}
 	if p.Hotkeys.StartPause == "" {
 		p.Hotkeys.StartPause = "F11"
 	}

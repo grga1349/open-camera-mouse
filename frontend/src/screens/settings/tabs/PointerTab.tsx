@@ -5,11 +5,11 @@ import { SliderField } from "../../../components/inputs/SliderField";
 import type { TabProps } from "./types";
 
 const clampSensitivity = (value: number) => Math.min(100, Math.max(1, value));
-const gainFromSensitivity = (value: number) => {
+const gainFromSensitivity = (value: number, amplification: number) => {
   const clamped = clampSensitivity(value);
   const normalized = (clamped - 1) / 99;
   const baseGain = 1.2 + normalized * (5 - 1.2);
-  return baseGain * 3;
+  return baseGain * amplification;
 };
 const smoothingFromSensitivity = (value: number) => {
   const clamped = clampSensitivity(value);
@@ -29,7 +29,7 @@ export const PointerTab: FC<TabProps> = ({ draft, updateDraft }) => {
     }));
   };
 
-  const autoGain = gainFromSensitivity(pointer.sensitivity);
+  const autoGain = gainFromSensitivity(pointer.sensitivity, pointer.amplification);
   const autoSmoothing = smoothingFromSensitivity(pointer.sensitivity);
   const autoAdvancedDefaults = { gainX: autoGain, gainY: autoGain, smoothing: autoSmoothing };
 
@@ -48,6 +48,15 @@ export const PointerTab: FC<TabProps> = ({ draft, updateDraft }) => {
         step={1}
         value={pointer.sensitivity}
         onChange={(value) => updatePointer({ sensitivity: value })}
+      />
+
+      <SliderField
+        label={`Amplification (${pointer.amplification}x)`}
+        min={1}
+        max={10}
+        step={1}
+        value={pointer.amplification}
+        onChange={(value) => updatePointer({ amplification: value })}
       />
 
       <SliderField

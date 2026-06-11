@@ -13,6 +13,7 @@ export const defaultParams: AllParams = {
   },
   pointer: {
     sensitivity: 30,
+    amplification: 4,
     deadzonePx: 1,
     maxSpeedPx: 25,
     advanced: null,
