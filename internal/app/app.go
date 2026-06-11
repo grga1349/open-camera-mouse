@@ -25,14 +25,12 @@ type Service struct {
 	mu     sync.RWMutex
 	params config.AllParams
 
-	camera      *camera.Manager
+	camera      *camera.Service
 	tracker     *tracking.Tracker
 	cursorMover *CursorMover
-	broker      *stream.Broker
 
-	ctx    context.Context
 	cancel context.CancelFunc
-	done   chan struct{}
+	done   <-chan struct{}
 
 	running bool
 }
@@ -47,16 +45,14 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 		params.Clicking.DwellEnabled = false
 	}
 
-	broker := stream.NewBroker(stream.DefaultBrokerPolicy())
 	controller := mouse.NewRobotController()
 
 	svc := &Service{
 		cfgManager:   cfg,
 		notifyParams: notify,
 		params:       params,
-		camera:       camera.NewManager(0),
+		camera:       camera.NewService(0),
 		tracker:      tracking.NewTracker(buildTrackerParams(params.Tracking)),
-		broker:       broker,
 	}
 
 	svc.cursorMover = NewCursorMover(
@@ -69,47 +65,40 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 	return svc, nil
 }
 
-func (s *Service) Broker() *stream.Broker {
-	return s.broker
-}
-
-func (s *Service) Start(ctx context.Context) error {
+func (s *Service) Start(ctx context.Context) (<-chan stream.PreviewFrame, <-chan stream.Telemetry, error) {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
-		return ErrAlreadyRunning
+		return nil, nil, ErrAlreadyRunning
 	}
 
 	captureCtx, cancel := context.WithCancel(ctx)
-	s.ctx = captureCtx
 	s.cancel = cancel
 	s.running = true
 	s.mu.Unlock()
 
-	if err := s.runPipeline(captureCtx); err != nil {
+	previewCh, telemCh, err := s.runPipeline(captureCtx)
+	if err != nil {
 		s.mu.Lock()
 		s.running = false
 		s.cancel = nil
 		s.mu.Unlock()
 		cancel()
-		return err
+		return nil, nil, err
 	}
 
-	return nil
+	return previewCh, telemCh, nil
 }
 
-func (s *Service) runPipeline(ctx context.Context) error {
+func (s *Service) runPipeline(ctx context.Context) (<-chan stream.PreviewFrame, <-chan stream.Telemetry, error) {
 	frames, err := s.camera.Stream(ctx)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	results := track(ctx, frames, s.tracker)
-	s.done = make(chan struct{})
-	go func() {
-		defer close(s.done)
-		process(ctx, results, s.cursorMover, s.broker)
-	}()
-	return nil
+	previewCh, telemCh, done := process(ctx, results, s.cursorMover)
+	s.done = done
+	return previewCh, telemCh, nil
 }
 
 func (s *Service) Stop() error {

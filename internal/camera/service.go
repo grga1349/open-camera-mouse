@@ -13,15 +13,15 @@ type Frame struct {
 	FPS       float64
 }
 
-type Manager struct {
+type Service struct {
 	deviceID int
 }
 
-func NewManager(deviceID int) *Manager {
-	return &Manager{deviceID: deviceID}
+func NewService(deviceID int) *Service {
+	return &Service{deviceID: deviceID}
 }
 
-func (m *Manager) Stream(ctx context.Context) (<-chan Frame, error) {
+func (m *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 	cap, err := gocv.VideoCaptureDevice(m.deviceID)
 	if err != nil {
 		return nil, err

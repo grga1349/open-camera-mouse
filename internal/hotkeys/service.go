@@ -11,15 +11,15 @@ import (
 
 type Action func()
 
-type Manager interface {
+type Service interface {
 	Update(map[string]Action) error
 	Close()
 }
 
 var ErrUnsupported = errors.New("hotkeys: global shortcuts unsupported on this platform")
 
-func NewManager() (Manager, error) {
-	return &manager{}, nil
+func NewService() (Service, error) {
+	return &svc{}, nil
 }
 
 type entry struct {
@@ -27,12 +27,12 @@ type entry struct {
 	done chan struct{}
 }
 
-type manager struct {
+type svc struct {
 	mu      sync.Mutex
 	entries []*entry
 }
 
-func (m *manager) Update(bindings map[string]Action) error {
+func (m *svc) Update(bindings map[string]Action) error {
 	m.mu.Lock()
 	old := m.entries
 	m.entries = nil
@@ -91,7 +91,7 @@ func (m *manager) Update(bindings map[string]Action) error {
 	return nil
 }
 
-func (m *manager) Close() {
+func (m *svc) Close() {
 	m.mu.Lock()
 	old := m.entries
 	m.entries = nil

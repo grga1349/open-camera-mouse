@@ -16,7 +16,7 @@ import (
 type App struct {
 	ctx     context.Context
 	service *appsvc.Service
-	hotkeys hotkeys.Manager
+	hotkeys hotkeys.Service
 }
 
 func NewApp() (*App, error) {
@@ -31,7 +31,7 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 	app.service = svc
-	if hk, err := hotkeys.NewManager(); err == nil {
+	if hk, err := hotkeys.NewService(); err == nil {
 		app.hotkeys = hk
 	} else if errors.Is(err, hotkeys.ErrUnsupported) {
 		log.Printf("global hotkeys not supported on this platform")
@@ -45,21 +45,6 @@ func NewApp() (*App, error) {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	params := a.service.GetParams()
-
-	broker := a.service.Broker()
-	previewCh := broker.SubscribePreview(ctx, 4)
-	telemCh := broker.SubscribeTelemetry(ctx, 4)
-	go func() {
-		for frame := range previewCh {
-			runtime.EventsEmit(ctx, "preview:frame", frame)
-		}
-	}()
-	go func() {
-		for t := range telemCh {
-			runtime.EventsEmit(ctx, "telemetry:state", t)
-		}
-	}()
-
 	a.applyHotkeys(params.Hotkeys)
 	if params.General.AutoStart {
 		go func() {
@@ -71,9 +56,20 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) Start() error {
-	if err := a.service.Start(a.ctx); err != nil {
+	previewCh, telemCh, err := a.service.Start(a.ctx)
+	if err != nil {
 		return err
 	}
+	go func() {
+		for frame := range previewCh {
+			runtime.EventsEmit(a.ctx, "preview:frame", frame)
+		}
+	}()
+	go func() {
+		for t := range telemCh {
+			runtime.EventsEmit(a.ctx, "telemetry:state", t)
+		}
+	}()
 	a.emitRunning(true)
 	return nil
 }

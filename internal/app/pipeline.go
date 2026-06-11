@@ -61,30 +61,39 @@ func track(ctx context.Context, frames <-chan camera.Frame, t *tracking.Tracker)
 	return out
 }
 
-func process(ctx context.Context, results <-chan FrameResult, cursor *CursorMover, broker *stream.Broker) {
-	enc := stream.NewPreviewEncoder(previewInterval)
-	for {
-		select {
-		case <-ctx.Done():
-			drainResults(results)
-			return
-		case result, ok := <-results:
-			if !ok {
+func process(ctx context.Context, results <-chan FrameResult, cursor *CursorMover) (<-chan stream.PreviewFrame, <-chan stream.Telemetry, <-chan struct{}) {
+	previewCh := make(chan stream.PreviewFrame, 2)
+	telemCh := make(chan stream.Telemetry, 4)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer close(previewCh)
+		defer close(telemCh)
+		enc := stream.NewPreviewEncoder(previewInterval)
+		for {
+			select {
+			case <-ctx.Done():
+				drainResults(results)
 				return
+			case result, ok := <-results:
+				if !ok {
+					return
+				}
+				processFrame(result, cursor, enc, previewCh, telemCh)
 			}
-			processFrame(result, cursor, broker, enc)
 		}
-	}
+	}()
+	return previewCh, telemCh, done
 }
 
-func processFrame(result FrameResult, cursor *CursorMover, broker *stream.Broker, enc *stream.PreviewEncoder) {
+func processFrame(result FrameResult, cursor *CursorMover, enc *stream.PreviewEncoder, previewCh chan<- stream.PreviewFrame, telemCh chan<- stream.Telemetry) {
 	defer result.Frame.Mat.Close()
 	cursor.Update(result.Point, result.Lost)
 	cursor.UpdateDwell(result.Lost)
-	renderAndPublish(result, enc, broker)
+	renderAndPublish(result, enc, previewCh, telemCh)
 }
 
-func renderAndPublish(result FrameResult, enc *stream.PreviewEncoder, broker *stream.Broker) {
+func renderAndPublish(result FrameResult, enc *stream.PreviewEncoder, previewCh chan<- stream.PreviewFrame, telemCh chan<- stream.Telemetry) {
 	markerColor := color.RGBA{G: 255}
 	if !result.Tracking {
 		markerColor = color.RGBA{R: 255, G: 255, B: 255}
@@ -111,17 +120,23 @@ func renderAndPublish(result FrameResult, enc *stream.PreviewEncoder, broker *st
 	})
 
 	if preview, ok := enc.Encode(display); ok {
-		broker.PublishPreview(preview)
+		select {
+		case previewCh <- preview:
+		default:
+		}
 	}
 
-	broker.PublishTelemetry(stream.Telemetry{
+	select {
+	case telemCh <- stream.Telemetry{
 		FPS:      result.Frame.FPS,
 		Score:    result.Score,
 		Lost:     result.Lost,
 		Tracking: result.Tracking,
 		PosX:     result.Point.X,
 		PosY:     result.Point.Y,
-	})
+	}:
+	default:
+	}
 }
 
 func drainFrames(ch <-chan camera.Frame) {
