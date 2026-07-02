@@ -31,11 +31,7 @@ export const ParamsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setParamsState((prev) => updater(prev));
   }, []);
 
-  return (
-    <ParamsContext.Provider value={{ params, setParams, updateParams }}>
-      {children}
-    </ParamsContext.Provider>
-  );
+  return <ParamsContext.Provider value={{ params, setParams, updateParams }}>{children}</ParamsContext.Provider>;
 };
 
 export const useParams = (): ParamsContextValue => {

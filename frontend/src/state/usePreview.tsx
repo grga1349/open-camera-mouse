@@ -15,11 +15,7 @@ export const PreviewProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPreviewState(frame);
   }, []);
 
-  return (
-    <PreviewContext.Provider value={{ preview, setPreview }}>
-      {children}
-    </PreviewContext.Provider>
-  );
+  return <PreviewContext.Provider value={{ preview, setPreview }}>{children}</PreviewContext.Provider>;
 };
 
 export const usePreview = (): PreviewContextValue => {

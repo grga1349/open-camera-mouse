@@ -14,7 +14,7 @@ const (
 
 type command struct {
 	kind    commandKind
-	x, y   int
+	x, y    int
 	params  config.Params
 	enabled bool
 }

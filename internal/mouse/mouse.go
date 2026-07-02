@@ -127,8 +127,10 @@ func (m *Mouse) updateDwell(lost bool) {
 	}
 }
 
-func move(x, y int)        { robotgo.Move(x, y) }
-func clickLeft()            { robotgo.Click("left", false) }
+func move(x, y int) { robotgo.Move(x, y) }
+
+func clickLeft() { robotgo.Click("left", false) }
+
 func position() (int, int) { return robotgo.Location() }
 
 func clampF(v, lo, hi float64) float64 {

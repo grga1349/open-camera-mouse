@@ -14,11 +14,7 @@ export const RunningProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setIsRunning(running);
   }, []);
 
-  return (
-    <RunningContext.Provider value={{ isRunning, setRunning }}>
-      {children}
-    </RunningContext.Provider>
-  );
+  return <RunningContext.Provider value={{ isRunning, setRunning }}>{children}</RunningContext.Provider>;
 };
 
 export const useRunning = (): RunningContextValue => {

@@ -14,7 +14,7 @@ export const ChoiceButton: FC<ChoiceButtonProps> = ({ selected, children, classN
     className={cn(
       "flex-1 text-sm",
       !selected && "border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900",
-      className
+      className,
     )}
     {...props}
   >

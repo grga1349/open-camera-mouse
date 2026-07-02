@@ -52,10 +52,7 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
   }, [params, setParams]);
 
   return (
-    <ScreenShell
-      header={<StatusHeader lost={status.lost} onOpenSettings={onOpenSettings} />}
-      mainClassName="gap-4"
-    >
+    <ScreenShell header={<StatusHeader lost={status.lost} onOpenSettings={onOpenSettings} />} mainClassName="gap-4">
       <CameraPreview preview={preview} onSelectPoint={onSelectPoint} />
       <div className="grid gap-3 text-sm">
         <PrimaryActions
