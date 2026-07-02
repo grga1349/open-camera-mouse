@@ -11,13 +11,13 @@ camera.Service (goroutine)
 app.App.run() goroutine
      ├── select on: ctx.Done | command | frame
      ├── tracking.Tracker.Update()  → cursor movement via mouse.Mouse
-     ├── mouse.Mouse.Update()       → Controller.Move + dwell click
+     ├── mouse.Mouse.Update()       → robotgo.Move + dwell click
      └── preview.Encoder.Encode()   → "preview:frame" Wails event
 ```
 
 Commands (pick point, recenter, set params, etc.) are sent via a buffered channel from Wails methods. The run goroutine drains them between frames.
 
-Shutdown: `cancel()` → camera goroutine exits → closes `frames` channel → `run` goroutine returns.
+Shutdown: `Stop()` cancels context and blocks on `<-done` until `run()` exits. The camera goroutine exits on `ctx.Done()`, closes `frames`, which causes `run` to return and close `done`.
 
 The visible orchestration in `run`:
 ```go
@@ -54,15 +54,14 @@ func (a *App) run(ctx context.Context) {
 1. **Single runtime goroutine owns all state** — tracker, mouse, dwell, and frame state are only mutated from `app.run()`; no locking needed on the frame path
 2. **Command channel for control plane** — Wails methods send commands into the loop instead of directly mutating state
 3. **Single Responsibility** — each package does one thing; no engine/manager/broker abstractions
-4. **Interface-based abstractions** — `mouse.Controller` is an interface for testability
+4. **No unnecessary abstractions** — packages call robotgo and GoCV directly; interfaces only where a second implementation exists today
 5. **Platform isolation** — platform-specific code uses build tags
 
 ## Mutex Inventory
 
 | Component | Mutex | Protects | Reason |
 |-----------|-------|----------|--------|
-| `app.App` | `sync.Mutex` | `running`, `params`, `cancel` | Lifecycle: Start/Stop called from any goroutine |
-| `hotkeys.svc` | `sync.Mutex` | entries list | Updated from control plane |
+| `app.App` | `sync.Mutex` | `running`, `params`, `cancel`, `done` | Lifecycle: Start/Stop called from any goroutine |
 
 Components with **no mutex** (single-goroutine ownership):
 - `tracking.Tracker` — owned by `app.run()` goroutine

@@ -9,8 +9,10 @@ All settings are persisted to `config.json` in the platform config directory (se
 | Setting | Key | Default | Description |
 |---------|-----|---------|-------------|
 | Auto-start | `autoStart` | `false` | Start tracking automatically when the app launches. |
-| Start/Pause hotkey | `startPause` | `"F11"` | Global hotkey to toggle tracking on/off. F1–F20 only. |
-| Recenter hotkey | `recenter` | `"F12"` | Global hotkey to recenters the tracker. F1–F20 only. |
+
+**Fixed shortcuts (not configurable):**
+- `F11` — toggle start/stop
+- `F12` — recenter tracker and reset cursor position
 
 ---
 
@@ -32,7 +34,7 @@ All settings are persisted to `config.json` in the platform config directory (se
 | Setting | Key | Default | Range | Description |
 |---------|-----|---------|-------|-------------|
 | Gain | `gainMultiplier` | `8.0` | 1–30 | Multiplier applied to raw pixel delta. Higher = more cursor movement per head movement. |
-| Smoothing | `smoothing` | `0.30` | 0–0.85 | EMA lerp coefficient. Higher = more responsive, less smooth. Lower = smoother, more lag. |
+| Smoothing | `smoothing` | `0.30` | 0.05–1.0 | EMA lerp coefficient. Higher = more responsive, less smooth. Lower = smoother, more lag. Values ≤ 0 or > 1 are reset to the default on load. |
 
 **Constants (not user-configurable):**
 - Deadzone = `1px` — sub-pixel deltas are ignored

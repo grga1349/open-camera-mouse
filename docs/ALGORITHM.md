@@ -30,28 +30,28 @@ Called once per frame. Uses OpenCV normalized cross-correlation.
 
 ```
 INPUT:  grayscale frame, stored template patch (NxN pixels), last known templatePoint
-OUTPUT: Result{OK, Lost, X, Y, Score}
+OUTPUT: Result{Lost, X, Y}
 
 1. Convert frame to grayscale
 2. Compute search region:
-     margin = templateSizePx * SearchMarginMultiplier (constant: 2)
+     margin = templateSizePx * 2  (search margin constant)
      x = clamp(templatePoint.X ± margin, 0, frameWidth)
      y = clamp(templatePoint.Y ± margin, 0, frameHeight)
 3. Run NCC template match on search region:
      gocv.MatchTemplate(searchRegion, template, TmCcoeffNormed)
 4. Find peak (MinMaxLoc → maxVal, maxLoc)
-5. If maxVal < ScoreThreshold (constant: 0.68) → return Lost=true, X/Y=last known point
+5. If maxVal < 0.68 (score threshold) → return Lost=true, X/Y=last known point
 6. Compute center = searchRect.Min + maxLoc + template.Size/2
 7. Update templatePoint = center
-8. Return Result{OK=true, X=center.X, Y=center.Y, Score=maxVal}
+8. Return Result{Lost=false, X=center.X, Y=center.Y}
 ```
 
 **Fallback on loss:** the tracker returns the last known `templatePoint` when lost,
 so downstream always has a valid position reference.
 
 **Constants (not user-configurable):**
-- `SearchMarginMultiplier = 2` — search region = templateSize × 2 in each direction
-- `ScoreThreshold = 0.68` — minimum match quality to accept
+- Search margin = `templateSizePx × 2` — search region in each direction
+- Score threshold = `0.68` — minimum NCC match quality to accept
 
 ---
 
@@ -82,7 +82,7 @@ OUTPUT: cursor moved by (moveX, moveY)
 7. Move cursor:
      newX = round(cursorX + smoothX)
      newY = round(cursorY + smoothY)
-     controller.Move(newX, newY)
+     robotgo.Move(newX, newY)
 ```
 
 **Constants (not user-configurable):**
@@ -117,7 +117,7 @@ STATE:  dwellRefX/Y, dwellStart, dwellRefSet
      return
 
 4. If time.Since(dwellStart) >= DwellTime:
-     controller.Click(ClickLeft)
+     robotgo.Click("left")
      dwellStart = now                  (restart timer)
 ```
 
