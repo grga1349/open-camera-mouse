@@ -23,11 +23,11 @@ type Params struct {
 type Mouse struct {
 	params Params
 
-	lastX   float64
-	lastY   float64
-	smoothX float64
-	smoothY float64
-	init    bool
+	lastX       float64
+	lastY       float64
+	smoothX     float64
+	smoothY     float64
+	initialized bool
 
 	dwellRefX   int
 	dwellRefY   int
@@ -44,7 +44,7 @@ func (m *Mouse) SetParams(params Params) {
 }
 
 func (m *Mouse) Reset() {
-	m.init = false
+	m.initialized = false
 	m.smoothX = 0
 	m.smoothY = 0
 	m.dwellRefSet = false
@@ -58,9 +58,9 @@ func (m *Mouse) Update(x, y int, lost bool) {
 func (m *Mouse) updateCursor(x, y int, lost bool) {
 	fx, fy := float64(x), float64(y)
 
-	if lost || !m.init {
+	if lost || !m.initialized {
 		if !lost {
-			m.init = true
+			m.initialized = true
 		}
 		m.lastX = fx
 		m.lastY = fy

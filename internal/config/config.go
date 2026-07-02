@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -53,6 +54,7 @@ func (m *Manager) Load() (Params, error) {
 	}
 	p := DefaultParams()
 	if err := json.Unmarshal(data, &p); err != nil {
+		log.Printf("config: failed to parse %s, using defaults: %v", m.path, err)
 		return DefaultParams(), nil
 	}
 	if p.TemplateSizePx <= 0 {
@@ -60,6 +62,9 @@ func (m *Manager) Load() (Params, error) {
 	}
 	if p.GainMultiplier <= 0 {
 		p.GainMultiplier = DefaultGainMultiplier
+	}
+	if p.Smoothing <= 0 || p.Smoothing > 1 {
+		p.Smoothing = DefaultSmoothing
 	}
 	if p.DwellTimeMs <= 0 {
 		p.DwellTimeMs = DefaultDwellTimeMs

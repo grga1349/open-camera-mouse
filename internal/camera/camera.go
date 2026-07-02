@@ -7,6 +7,8 @@ import (
 	"gocv.io/x/gocv"
 )
 
+const maxReadFailures = 30
+
 type Frame struct {
 	Mat    gocv.Mat
 	Width  int
@@ -35,6 +37,7 @@ func (s *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 		frame := gocv.NewMat()
 		defer frame.Close()
 
+		failures := 0
 		for {
 			select {
 			case <-ctx.Done():
@@ -43,9 +46,14 @@ func (s *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 			}
 
 			if ok := vcap.Read(&frame); !ok || frame.Empty() {
+				failures++
+				if failures >= maxReadFailures {
+					return
+				}
 				time.Sleep(10 * time.Millisecond)
 				continue
 			}
+			failures = 0
 
 			select {
 			case ch <- Frame{

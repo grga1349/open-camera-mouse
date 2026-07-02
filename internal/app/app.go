@@ -12,6 +12,8 @@ import (
 	"open-camera-mouse/internal/tracking"
 )
 
+const commandBufferSize = 8
+
 var (
 	ErrAlreadyRunning = errors.New("app: already running")
 	ErrNotRunning     = errors.New("app: not running")
@@ -61,7 +63,7 @@ func NewApp(cfg *config.Manager) (*App, error) {
 		camera:   camera.NewService(0),
 		tracker:  tracking.New(tracking.Params{TemplateSizePx: params.TemplateSizePx}),
 		mouse:    mouse.New(mouseParams(params)),
-		commands: make(chan command, 8),
+		commands: make(chan command, commandBufferSize),
 		params:   params,
 	}, nil
 }
@@ -75,6 +77,7 @@ func (a *App) Start(ctx context.Context) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	a.cancel = cancel
 	a.done = make(chan struct{})
+	a.commands = make(chan command, commandBufferSize)
 	a.running = true
 	a.mu.Unlock()
 
@@ -118,9 +121,13 @@ func (a *App) UpdateParams(p config.Params) error {
 		return err
 	}
 	a.mu.Lock()
+	running := a.running
 	a.params = p
 	a.mu.Unlock()
-	return a.sendCommand(command{kind: cmdSetParams, params: p})
+	if running {
+		return a.sendCommand(command{kind: cmdSetParams, params: p})
+	}
+	return nil
 }
 
 func (a *App) SendPickPoint(x, y int) error {
@@ -163,6 +170,12 @@ func (a *App) run(ctx context.Context) {
 		}
 		return
 	}
+
+	a.mu.Lock()
+	params := a.params
+	a.mu.Unlock()
+	a.tracker.SetParams(tracking.Params{TemplateSizePx: params.TemplateSizePx})
+	a.mouse.SetParams(mouseParams(params))
 
 	a.enc = preview.NewEncoder()
 	a.lastLost = true

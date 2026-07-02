@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	SearchMarginMultiplier = 2
-	ScoreThreshold         = 0.68
+	searchMarginMultiplier = 2
+	scoreThreshold         = 0.68
 )
 
-var ErrInvalidPick = errors.New("tracking: invalid pick point")
+var errInvalidPick = errors.New("tracking: invalid pick point")
 
 type Params struct {
 	TemplateSizePx int
@@ -49,7 +49,7 @@ func (t *Tracker) HasTemplate() bool {
 func (t *Tracker) Pick(frame gocv.Mat, x, y int) error {
 	size := t.params.TemplateSizePx
 	if size <= 0 {
-		return ErrInvalidPick
+		return errInvalidPick
 	}
 
 	gray := toGray(frame)
@@ -70,7 +70,7 @@ func (t *Tracker) Pick(frame gocv.Mat, x, y int) error {
 }
 
 func (t *Tracker) Update(frame gocv.Mat) Result {
-	base := Result{Lost: true, X: t.templatePoint.X, Y: t.templatePoint.Y}
+	fallback := Result{Lost: true, X: t.templatePoint.X, Y: t.templatePoint.Y}
 
 	if !t.hasTemplate || t.template.Empty() {
 		return Result{Lost: true}
@@ -79,16 +79,16 @@ func (t *Tracker) Update(frame gocv.Mat) Result {
 	gray := toGray(frame)
 	defer gray.Close()
 
-	margin := t.params.TemplateSizePx * SearchMarginMultiplier
+	margin := t.params.TemplateSizePx * searchMarginMultiplier
 	searchRect := computeSearchRect(gray, t.templatePoint, margin)
 	if searchRect.Empty() {
-		return base
+		return fallback
 	}
 
 	resultCols := searchRect.Dx() - t.template.Cols() + 1
 	resultRows := searchRect.Dy() - t.template.Rows() + 1
 	if resultCols <= 0 || resultRows <= 0 {
-		return base
+		return fallback
 	}
 
 	searchMat := gray.Region(searchRect)
@@ -102,8 +102,8 @@ func (t *Tracker) Update(frame gocv.Mat) Result {
 	gocv.MatchTemplate(searchMat, t.template, &response, gocv.TmCcoeffNormed, mask)
 
 	_, maxVal, _, maxLoc := gocv.MinMaxLoc(response)
-	if float64(maxVal) < ScoreThreshold {
-		return base
+	if float64(maxVal) < scoreThreshold {
+		return fallback
 	}
 
 	topLeft := image.Point{
@@ -117,13 +117,6 @@ func (t *Tracker) Update(frame gocv.Mat) Result {
 	t.templatePoint = center
 
 	return Result{X: center.X, Y: center.Y}
-}
-
-func (t *Tracker) Reset() {
-	t.template.Close()
-	t.template = gocv.NewMat()
-	t.hasTemplate = false
-	t.templatePoint = image.Point{}
 }
 
 func (t *Tracker) Close() {
