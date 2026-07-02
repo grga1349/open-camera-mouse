@@ -1,5 +1,5 @@
 import type { FC, MouseEvent } from "react";
-import type { PreviewFrame } from "../../../state/useAppStore";
+import type { PreviewFrame } from "../../../types/preview";
 
 type CameraPreviewProps = {
   preview: PreviewFrame | null;

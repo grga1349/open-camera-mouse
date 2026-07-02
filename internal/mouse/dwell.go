@@ -38,10 +38,10 @@ func (d *DwellState) SetParams(params DwellParams) {
 
 func (d *DwellState) Update(cursorX, cursorY int, trackingLost bool) {
 	d.mu.Lock()
-	defer d.mu.Unlock()
 
 	if !d.params.Enabled || trackingLost {
 		d.reset(cursorX, cursorY)
+		d.mu.Unlock()
 		return
 	}
 
@@ -50,6 +50,7 @@ func (d *DwellState) Update(cursorX, cursorY int, trackingLost bool) {
 		d.refY = cursorY
 		d.refSet = true
 		d.dwellStart = time.Now()
+		d.mu.Unlock()
 		return
 	}
 
@@ -58,16 +59,23 @@ func (d *DwellState) Update(cursorX, cursorY int, trackingLost bool) {
 		d.refX = cursorX
 		d.refY = cursorY
 		d.dwellStart = time.Now()
+		d.mu.Unlock()
 		return
 	}
 
 	if time.Since(d.dwellStart) >= d.params.DwellTime {
-		_ = d.controller.Click(d.params.ClickButton)
-		if d.afterClick != nil {
-			d.afterClick()
-		}
+		btn := d.params.ClickButton
+		cb := d.afterClick
 		d.dwellStart = time.Now()
+		d.mu.Unlock()
+		_ = d.controller.Click(btn)
+		if cb != nil {
+			cb()
+		}
+		return
 	}
+
+	d.mu.Unlock()
 }
 
 func (d *DwellState) reset(x, y int) {

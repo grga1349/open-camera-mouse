@@ -25,12 +25,12 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	app := &App{}
-	svc, err := appsvc.NewService(cfg, app.emitParams)
+	svc, err := appsvc.NewService(cfg)
 	if err != nil {
 		return nil, err
 	}
-	app.service = svc
+
+	app := &App{service: svc}
 	if hk, err := hotkeys.NewService(); err == nil {
 		app.hotkeys = hk
 	} else if errors.Is(err, hotkeys.ErrUnsupported) {
@@ -44,6 +44,11 @@ func NewApp() (*App, error) {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	go func() {
+		for p := range a.service.ParamChanges() {
+			runtime.EventsEmit(ctx, "params:update", p)
+		}
+	}()
 	params := a.service.GetParams()
 	a.applyHotkeys(params.Hotkeys)
 	if params.General.AutoStart {
@@ -109,13 +114,6 @@ func (a *App) Recenter() error {
 
 func (a *App) ToggleTracking(enabled bool) {
 	a.service.ToggleTracking(enabled)
-}
-
-func (a *App) emitParams(params config.AllParams) {
-	if a.ctx == nil {
-		return
-	}
-	runtime.EventsEmit(a.ctx, "params:update", params)
 }
 
 func (a *App) emitRunning(running bool) {

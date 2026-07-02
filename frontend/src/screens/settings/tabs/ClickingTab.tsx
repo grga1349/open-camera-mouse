@@ -1,18 +1,11 @@
 import type { FC } from "react";
 import { SliderField } from "../../../components/inputs/SliderField";
 import type { TabProps } from "./types";
+import { makeUpdater } from "./utils";
 
 export const ClickingTab: FC<TabProps> = ({ draft, updateDraft }) => {
   const clicking = draft.clicking;
-  const updateClicking = (changes: Partial<typeof clicking>) => {
-    updateDraft((current) => ({
-      ...current,
-      clicking: {
-        ...current.clicking,
-        ...changes,
-      },
-    }));
-  };
+  const updateClicking = makeUpdater(updateDraft, "clicking");
 
   return (
     <div className="space-y-4">

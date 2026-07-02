@@ -8,6 +8,7 @@ import (
 
 	"open-camera-mouse/internal/camera"
 	"open-camera-mouse/internal/config"
+	"open-camera-mouse/internal/cursor"
 	"open-camera-mouse/internal/mouse"
 	"open-camera-mouse/internal/stream"
 	"open-camera-mouse/internal/tracking"
@@ -19,15 +20,15 @@ var (
 )
 
 type Service struct {
-	cfgManager   *config.Manager
-	notifyParams func(config.AllParams)
+	cfgManager *config.Manager
+	paramsCh   chan config.AllParams
 
 	mu     sync.RWMutex
 	params config.AllParams
 
-	camera      *camera.Service
-	tracker     *tracking.Tracker
-	cursorMover *CursorMover
+	camera  *camera.Service
+	tracker *tracking.Service
+	cursor  *cursor.Service
 
 	cancel context.CancelFunc
 	done   <-chan struct{}
@@ -35,7 +36,7 @@ type Service struct {
 	running bool
 }
 
-func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, error) {
+func NewService(cfg *config.Manager) (*Service, error) {
 	params, err := cfg.Load()
 	if err != nil {
 		return nil, err
@@ -48,14 +49,14 @@ func NewService(cfg *config.Manager, notify func(config.AllParams)) (*Service, e
 	controller := mouse.NewRobotController()
 
 	svc := &Service{
-		cfgManager:   cfg,
-		notifyParams: notify,
-		params:       params,
-		camera:       camera.NewService(0),
-		tracker:      tracking.NewTracker(buildTrackerParams(params.Tracking)),
+		cfgManager: cfg,
+		paramsCh:   make(chan config.AllParams, 1),
+		params:     params,
+		camera:     camera.NewService(0),
+		tracker:    tracking.NewService(buildTrackerParams(params.Tracking)),
 	}
 
-	svc.cursorMover = NewCursorMover(
+	svc.cursor = cursor.NewService(
 		controller,
 		buildMappingParams(params.Pointer),
 		buildDwellParams(params.Clicking),
@@ -95,8 +96,8 @@ func (s *Service) runPipeline(ctx context.Context) (<-chan stream.PreviewFrame, 
 	if err != nil {
 		return nil, nil, err
 	}
-	results := track(ctx, frames, s.tracker)
-	previewCh, telemCh, done := process(ctx, results, s.cursorMover)
+	results := s.tracker.Stream(ctx, frames)
+	previewCh, telemCh, done := s.cursor.Run(ctx, results)
 	s.done = done
 	return previewCh, telemCh, nil
 }
@@ -117,7 +118,7 @@ func (s *Service) Stop() error {
 	if done != nil {
 		<-done
 	}
-	s.cursorMover.Reset()
+	s.cursor.Reset()
 	return nil
 }
 
@@ -125,6 +126,10 @@ func (s *Service) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
+}
+
+func (s *Service) ParamChanges() <-chan config.AllParams {
+	return s.paramsCh
 }
 
 func (s *Service) handleDwellClick() {
@@ -141,7 +146,7 @@ func (s *Service) handleDwellClick() {
 func (s *Service) SetPickPoint(point image.Point) error {
 	err := s.tracker.SetPickPoint(point)
 	if err == nil {
-		s.cursorMover.Reset()
+		s.cursor.Reset()
 	}
 	return err
 }
@@ -149,8 +154,8 @@ func (s *Service) SetPickPoint(point image.Point) error {
 func (s *Service) Recenter() error {
 	err := s.tracker.Recenter()
 	if err == nil {
-		s.cursorMover.Reset()
-		s.cursorMover.CenterCursor()
+		s.cursor.Reset()
+		s.cursor.CenterCursor()
 	}
 	return err
 }
@@ -158,7 +163,7 @@ func (s *Service) Recenter() error {
 func (s *Service) ToggleTracking(enabled bool) {
 	s.tracker.SetTrackingEnabled(enabled)
 	if !enabled {
-		s.cursorMover.Reset()
+		s.cursor.Reset()
 	}
 }
 
@@ -182,15 +187,15 @@ func (s *Service) SaveParams(next config.AllParams) error {
 }
 
 func (s *Service) emitParamsLocked() {
-	if s.notifyParams == nil {
-		return
+	p := s.params
+	select {
+	case s.paramsCh <- p:
+	default:
 	}
-	params := s.params
-	go s.notifyParams(params)
 }
 
 func (s *Service) applyRuntimeParamsLocked() {
 	s.tracker.UpdateParams(buildTrackerParams(s.params.Tracking))
-	s.cursorMover.SetMappingParams(buildMappingParams(s.params.Pointer))
-	s.cursorMover.SetDwellParams(buildDwellParams(s.params.Clicking))
+	s.cursor.SetMappingParams(buildMappingParams(s.params.Pointer))
+	s.cursor.SetDwellParams(buildDwellParams(s.params.Clicking))
 }

@@ -1,30 +1,13 @@
 import type { FC } from "react";
 import { HotkeyField } from "../../../components/inputs/HotkeyField";
 import type { TabProps } from "./types";
+import { makeUpdater } from "./utils";
 
 export const GeneralTab: FC<TabProps> = ({ draft, updateDraft }) => {
   const hotkeys = draft.hotkeys;
-  const general = draft.general ?? { autoStart: false, dwellOnStartup: false };
-
-  const updateHotkeys = (changes: Partial<typeof hotkeys>) => {
-    updateDraft((current) => ({
-      ...current,
-      hotkeys: {
-        ...current.hotkeys,
-        ...changes,
-      },
-    }));
-  };
-
-  const updateGeneral = (changes: Partial<typeof general>) => {
-    updateDraft((current) => ({
-      ...current,
-      general: {
-        ...(current.general ?? { autoStart: false, dwellOnStartup: false }),
-        ...changes,
-      },
-    }));
-  };
+  const general = draft.general;
+  const updateHotkeys = makeUpdater(updateDraft, "hotkeys");
+  const updateGeneral = makeUpdater(updateDraft, "general");
 
   return (
     <div className="space-y-4 text-sm text-zinc-300">

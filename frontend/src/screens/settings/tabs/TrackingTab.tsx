@@ -2,21 +2,14 @@ import type { FC } from "react";
 import { ChoiceButton } from "../../../components/inputs/ChoiceButton";
 import { SliderField } from "../../../components/inputs/SliderField";
 import type { TabProps } from "./types";
+import { makeUpdater } from "./utils";
 
 const TEMPLATE_SIZES = [30, 40, 50];
 const MARKER_SHAPES = ["circle", "square"] as const;
 
 export const TrackingTab: FC<TabProps> = ({ draft, updateDraft }) => {
   const tracking = draft.tracking;
-  const updateTracking = (changes: Partial<typeof tracking>) => {
-    updateDraft((current) => ({
-      ...current,
-      tracking: {
-        ...current.tracking,
-        ...changes,
-      },
-    }));
-  };
+  const updateTracking = makeUpdater(updateDraft, "tracking");
 
   return (
     <div className="space-y-4">

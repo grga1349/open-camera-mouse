@@ -9,9 +9,6 @@ type ScreenShellProps = {
   mainClassName?: string;
 };
 
-/**
- * Shared layout wrapper that keeps screens consistent.
- */
 export const ScreenShell: FC<ScreenShellProps> = ({ header, footer, children, className, mainClassName }) => (
   <div
     className={cn(

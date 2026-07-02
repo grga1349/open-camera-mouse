@@ -4,7 +4,7 @@ import (
 	"errors"
 	"image"
 	"sync"
-	"time"
+	"sync/atomic"
 
 	"open-camera-mouse/internal/camera"
 
@@ -16,6 +16,8 @@ var (
 	ErrInvalidPick    = errors.New("tracking: invalid pick point")
 	ErrNoSearchRegion = errors.New("tracking: search region empty")
 	ErrNoFrame        = errors.New("tracking: no frame available")
+
+	errBelowThreshold = errors.New("tracking: below threshold")
 )
 
 type Params struct {
@@ -28,67 +30,124 @@ type Params struct {
 }
 
 type Result struct {
-	Point     image.Point
-	Score     float32
-	Lost      bool
-	Timestamp time.Time
+	Point image.Point
+	Score float32
+	Lost  bool
 }
 
-type Tracker struct {
-	mu              sync.RWMutex
-	params          Params
-	template        gocv.Mat
-	templatePoint   image.Point
-	lastFrame       gocv.Mat
-	trackingEnabled bool
-	lost            bool
+type pendingPick struct {
+	point image.Point
+	set   bool
 }
 
-func NewTracker(params Params) *Tracker {
-	return &Tracker{
-		params:          params,
-		template:        gocv.NewMat(),
-		lastFrame:       gocv.NewMat(),
-		trackingEnabled: true,
+type Service struct {
+	trackingEnabled atomic.Bool
+
+	// control-plane dirty flags — short critical sections, no CV work
+	controlMu      sync.Mutex
+	pendingParams  Params
+	paramsDirty    bool
+	pendingPick    pendingPick
+	pickDirty      bool
+	rencenterDirty bool
+
+	// goroutine-owned state — accessed only from Stream() goroutine
+	params        Params
+	template      gocv.Mat
+	templatePoint image.Point
+}
+
+func NewService(params Params) *Service {
+	svc := &Service{
+		params:   params,
+		template: gocv.NewMat(),
 	}
+	svc.trackingEnabled.Store(true)
+	return svc
 }
 
-func (t *Tracker) UpdateParams(params Params) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.params = params
+func (t *Service) UpdateParams(params Params) {
+	t.controlMu.Lock()
+	t.pendingParams = params
+	t.paramsDirty = true
+	t.controlMu.Unlock()
 }
 
-func (t *Tracker) Snapshot() Params {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+func (t *Service) Snapshot() Params {
+	t.controlMu.Lock()
+	defer t.controlMu.Unlock()
+	if t.paramsDirty {
+		return t.pendingParams
+	}
 	return t.params
 }
 
-func (t *Tracker) SetTrackingEnabled(enabled bool) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.trackingEnabled = enabled
+func (t *Service) SetTrackingEnabled(enabled bool) {
+	t.trackingEnabled.Store(enabled)
 }
 
-func (t *Tracker) IsTrackingEnabled() bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.trackingEnabled
+func (t *Service) IsTrackingEnabled() bool {
+	return t.trackingEnabled.Load()
 }
 
-func (t *Tracker) Update(frame camera.Frame) Result {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (t *Service) SetPickPoint(displayPoint image.Point) error {
+	t.controlMu.Lock()
+	t.pendingPick = pendingPick{point: displayPoint, set: true}
+	t.pickDirty = true
+	t.controlMu.Unlock()
+	return nil
+}
 
-	if !t.lastFrame.Empty() {
-		t.lastFrame.Close()
+func (t *Service) Recenter() error {
+	t.controlMu.Lock()
+	t.rencenterDirty = true
+	t.controlMu.Unlock()
+	return nil
+}
+
+func (t *Service) Close() {
+	t.controlMu.Lock()
+	defer t.controlMu.Unlock()
+	t.template.Close()
+	t.template = gocv.NewMat()
+}
+
+// drainControlPlane applies pending control-plane updates using the incoming frame.
+// Must be called only from the Stream() goroutine.
+func (t *Service) drainControlPlane(frame camera.Frame) {
+	t.controlMu.Lock()
+	paramsDirty := t.paramsDirty
+	pendingParams := t.pendingParams
+	pick := t.pendingPick
+	pickDirty := t.pickDirty
+	recenter := t.rencenterDirty
+	t.paramsDirty = false
+	t.pickDirty = false
+	t.rencenterDirty = false
+	t.controlMu.Unlock()
+
+	if paramsDirty {
+		t.params = pendingParams
 	}
-	t.lastFrame = frame.Mat.Clone()
+	if pickDirty && pick.set {
+		point := pick.point
+		if frame.Mat.Cols() > 0 {
+			point.X = frame.Mat.Cols() - pick.point.X
+		}
+		_ = t.extractTemplateFromFrame(frame.Mat, point)
+	}
+	if recenter {
+		point := image.Point{X: frame.Mat.Cols() / 2, Y: frame.Mat.Rows() / 2}
+		_ = t.extractTemplateFromFrame(frame.Mat, point)
+	}
+}
 
-	base := Result{Lost: true, Point: t.templatePoint, Timestamp: frame.Timestamp}
+// updateFrame runs template matching on the given frame without holding any lock.
+// Must be called only from the Stream() goroutine.
+func (t *Service) updateFrame(frame camera.Frame) Result {
+	base := Result{Lost: true, Point: t.templatePoint}
 
-	if !t.trackingEnabled || t.template.Empty() {
+	if !t.trackingEnabled.Load() || t.template.Empty() {
 		return base
 	}
 
@@ -97,68 +156,26 @@ func (t *Tracker) Update(frame camera.Frame) Result {
 
 	searchRect, err := t.computeSearchRect(gray)
 	if err != nil {
-		t.lost = true
 		return base
 	}
 
 	maxVal, maxLoc, err := t.matchTemplate(gray, searchRect)
 	if err != nil {
-		t.lost = true
 		return base
 	}
 
-	result := t.buildResult(searchRect, maxLoc, maxVal, frame.Timestamp)
+	result := t.buildResult(searchRect, maxLoc, maxVal)
 
 	if t.params.AdaptiveTemplate {
 		t.applyAdaptiveTemplate(gray, searchRect, maxLoc)
 	}
 
 	t.templatePoint = result.Point
-	t.lost = false
 
 	return result
 }
 
-func (t *Tracker) SetPickPoint(displayPoint image.Point) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if t.lastFrame.Empty() {
-		return ErrNoFrame
-	}
-
-	point := displayPoint
-	if t.lastFrame.Cols() > 0 {
-		point.X = t.lastFrame.Cols() - displayPoint.X
-	}
-
-	return t.extractTemplate(t.lastFrame, point)
-}
-
-func (t *Tracker) Recenter() error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if t.lastFrame.Empty() {
-		return ErrNoFrame
-	}
-
-	point := image.Point{X: t.lastFrame.Cols() / 2, Y: t.lastFrame.Rows() / 2}
-	return t.extractTemplate(t.lastFrame, point)
-}
-
-func (t *Tracker) Close() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.template.Close()
-	t.template = gocv.NewMat()
-	if !t.lastFrame.Empty() {
-		t.lastFrame.Close()
-	}
-	t.lastFrame = gocv.NewMat()
-}
-
-func (t *Tracker) extractTemplate(frame gocv.Mat, point image.Point) error {
+func (t *Service) extractTemplateFromFrame(frame gocv.Mat, point image.Point) error {
 	gray := gocv.NewMat()
 	if frame.Channels() > 1 {
 		gocv.CvtColor(frame, &gray, gocv.ColorBGRToGray)
@@ -182,11 +199,10 @@ func (t *Tracker) extractTemplate(frame gocv.Mat, point image.Point) error {
 	tmpl.Close()
 
 	t.templatePoint = image.Point{X: x + size/2, Y: y + size/2}
-	t.lost = false
 	return nil
 }
 
-func (t *Tracker) toGray(frame camera.Frame) gocv.Mat {
+func (t *Service) toGray(frame camera.Frame) gocv.Mat {
 	gray := gocv.NewMat()
 	if frame.Mat.Channels() > 1 {
 		gocv.CvtColor(frame.Mat, &gray, gocv.ColorBGRToGray)
@@ -196,7 +212,7 @@ func (t *Tracker) toGray(frame camera.Frame) gocv.Mat {
 	return gray
 }
 
-func (t *Tracker) computeSearchRect(gray gocv.Mat) (image.Rectangle, error) {
+func (t *Service) computeSearchRect(gray gocv.Mat) (image.Rectangle, error) {
 	searchRect := t.searchRect(gray.Cols(), gray.Rows())
 	if searchRect.Empty() {
 		return image.Rectangle{}, ErrNoSearchRegion
@@ -209,7 +225,7 @@ func (t *Tracker) computeSearchRect(gray gocv.Mat) (image.Rectangle, error) {
 	return searchRect, nil
 }
 
-func (t *Tracker) matchTemplate(gray gocv.Mat, searchRect image.Rectangle) (float64, image.Point, error) {
+func (t *Service) matchTemplate(gray gocv.Mat, searchRect image.Rectangle) (float64, image.Point, error) {
 	searchMat := gray.Region(searchRect)
 	defer searchMat.Close()
 
@@ -225,24 +241,24 @@ func (t *Tracker) matchTemplate(gray gocv.Mat, searchRect image.Rectangle) (floa
 
 	_, maxVal, _, maxLoc := gocv.MinMaxLoc(response)
 	if float32(maxVal) < t.params.ScoreThreshold {
-		return 0, image.Point{}, errors.New("below threshold")
+		return 0, image.Point{}, errBelowThreshold
 	}
 	return float64(maxVal), maxLoc, nil
 }
 
-func (t *Tracker) buildResult(searchRect image.Rectangle, maxLoc image.Point, maxVal float64, ts time.Time) Result {
+func (t *Service) buildResult(searchRect image.Rectangle, maxLoc image.Point, maxVal float64) Result {
 	topLeft := image.Point{X: searchRect.Min.X + maxLoc.X, Y: searchRect.Min.Y + maxLoc.Y}
 	center := image.Point{X: topLeft.X + t.template.Cols()/2, Y: topLeft.Y + t.template.Rows()/2}
-	return Result{Point: center, Score: float32(maxVal), Lost: false, Timestamp: ts}
+	return Result{Point: center, Score: float32(maxVal), Lost: false}
 }
 
-func (t *Tracker) applyAdaptiveTemplate(gray gocv.Mat, searchRect image.Rectangle, maxLoc image.Point) {
+func (t *Service) applyAdaptiveTemplate(gray gocv.Mat, searchRect image.Rectangle, maxLoc image.Point) {
 	searchMat := gray.Region(searchRect)
 	defer searchMat.Close()
 	t.updateTemplate(searchMat, maxLoc)
 }
 
-func (t *Tracker) updateTemplate(searchMat gocv.Mat, localTopLeft image.Point) {
+func (t *Service) updateTemplate(searchMat gocv.Mat, localTopLeft image.Point) {
 	alpha := t.params.TemplateAlpha
 	if alpha <= 0 {
 		return
@@ -264,7 +280,7 @@ func (t *Tracker) updateTemplate(searchMat gocv.Mat, localTopLeft image.Point) {
 	gocv.AddWeighted(roi, float64(alpha), t.template, float64(1-alpha), 0, &t.template)
 }
 
-func (t *Tracker) searchRect(width, height int) image.Rectangle {
+func (t *Service) searchRect(width, height int) image.Rectangle {
 	size := t.params.TemplateSize
 	margin := t.params.SearchMargin
 
@@ -275,12 +291,6 @@ func (t *Tracker) searchRect(width, height int) image.Rectangle {
 	y2 := clamp(t.templatePoint.Y+margin, size, height)
 
 	return image.Rect(x, y, x2, y2)
-}
-
-func (t *Tracker) Lost() bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.lost
 }
 
 func clamp(val, min, max int) int {

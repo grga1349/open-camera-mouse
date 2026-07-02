@@ -1,10 +1,11 @@
-import { useMemo, useState, type FC } from "react";
+import { useState, type FC } from "react";
 import { Button } from "../../components/Button";
 import { ScreenShell } from "../../components/layout/ScreenShell";
 import { SettingsTabs } from "../../components/settings/SettingsTabs";
-import { defaultParams } from "../../state/useAppStore";
+import { defaultParams } from "../../state/useParams";
 import { useSettingsDraft } from "../../state/useSettingsDraft";
 import type { AllParams } from "../../types/params";
+import { deepClone } from "../../lib/clone";
 import { ClickingTab } from "./tabs/ClickingTab";
 import { GeneralTab } from "./tabs/GeneralTab";
 import { PointerTab } from "./tabs/PointerTab";
@@ -20,8 +21,6 @@ const TAB_COMPONENTS: Record<SettingsTab, FC<TabProps>> = {
   Clicking: ClickingTab,
   General: GeneralTab,
 };
-
-const cloneDefaults = (): AllParams => JSON.parse(JSON.stringify(defaultParams));
 
 type SettingsScreenProps = {
   onSave: (params: AllParams) => void | Promise<void>;
@@ -43,13 +42,10 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
   };
 
   const handleResetDefaults = () => {
-    updateDraft(() => cloneDefaults());
+    updateDraft(() => deepClone(defaultParams));
   };
 
-  const activeTabContent = useMemo(() => {
-    const Component = TAB_COMPONENTS[activeTab];
-    return <Component draft={draft} updateDraft={updateDraft} />;
-  }, [activeTab, draft, updateDraft]);
+  const Component = TAB_COMPONENTS[activeTab];
 
   return (
     <ScreenShell
@@ -75,7 +71,9 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
     >
       <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950">
         <SettingsTabs tabs={SETTINGS_TABS} activeTab={activeTab} onChange={setActiveTab} />
-        <section className="flex-1 overflow-auto px-4 py-4 text-sm text-zinc-300">{activeTabContent}</section>
+        <section className="flex-1 overflow-auto px-4 py-4 text-sm text-zinc-300">
+          <Component draft={draft} updateDraft={updateDraft} />
+        </section>
       </div>
     </ScreenShell>
   );

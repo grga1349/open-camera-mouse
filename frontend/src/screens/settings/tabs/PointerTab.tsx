@@ -3,6 +3,7 @@ import { Button } from "../../../components/Button";
 import { NumberField } from "../../../components/inputs/NumberField";
 import { SliderField } from "../../../components/inputs/SliderField";
 import type { TabProps } from "./types";
+import { makeUpdater } from "./utils";
 
 const clampSensitivity = (value: number) => Math.min(100, Math.max(1, value));
 const gainFromSensitivity = (value: number, amplification: number) => {
@@ -19,15 +20,7 @@ const smoothingFromSensitivity = (value: number) => {
 
 export const PointerTab: FC<TabProps> = ({ draft, updateDraft }) => {
   const pointer = draft.pointer;
-  const updatePointer = (changes: Partial<typeof pointer>) => {
-    updateDraft((current) => ({
-      ...current,
-      pointer: {
-        ...current.pointer,
-        ...changes,
-      },
-    }));
-  };
+  const updatePointer = makeUpdater(updateDraft, "pointer");
 
   const autoGain = gainFromSensitivity(pointer.sensitivity, pointer.amplification);
   const autoSmoothing = smoothingFromSensitivity(pointer.sensitivity);

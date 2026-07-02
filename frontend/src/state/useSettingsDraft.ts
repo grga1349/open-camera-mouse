@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AllParams } from "../types/params";
-import { useAppStore } from "./useAppStore";
+import { useParams } from "./useParams";
+import { deepClone } from "../lib/clone";
 
 export type SettingsDraft = {
   snapshot: AllParams;
@@ -8,13 +9,10 @@ export type SettingsDraft = {
   dirty: boolean;
   updateDraft: (updater: (current: AllParams) => AllParams) => void;
   resetDraft: () => void;
-  saveDraft: () => void;
 };
 
-const cloneParams = (value: AllParams): AllParams => JSON.parse(JSON.stringify(value));
-
 export const useSettingsDraft = (): SettingsDraft => {
-  const { params, setParams } = useAppStore();
+  const { params } = useParams();
   const [snapshot, setSnapshot] = useState<AllParams>(params);
   const [draft, setDraft] = useState<AllParams>(params);
 
@@ -28,12 +26,8 @@ export const useSettingsDraft = (): SettingsDraft => {
   }, []);
 
   const resetDraft = useCallback(() => {
-    setDraft(snapshot);
+    setDraft(deepClone(snapshot));
   }, [snapshot]);
-
-  const saveDraft = useCallback(() => {
-    setParams(cloneParams(draft));
-  }, [draft, setParams]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(snapshot), [draft, snapshot]);
 
@@ -43,6 +37,5 @@ export const useSettingsDraft = (): SettingsDraft => {
     dirty,
     updateDraft,
     resetDraft,
-    saveDraft,
   };
 };

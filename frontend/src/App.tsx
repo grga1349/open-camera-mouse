@@ -4,16 +4,21 @@ import { GetParams, SaveParams, Start, Stop } from "../wailsjs/go/main/App";
 import { config as backendConfig } from "../wailsjs/go/models";
 import { MainScreen } from "./screens/main/MainScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
-import { useAppStore } from "./state/useAppStore";
+import { useParams } from "./state/useParams";
+import { useRunning } from "./state/useRunning";
+import { useTelemetry } from "./state/useTelemetry";
+import { usePreview } from "./state/usePreview";
 import type { AllParams } from "./types/params";
+import { deepClone } from "./lib/clone";
 
 type Screen = "main" | "settings";
 
-const normalizeParams = (input: backendConfig.AllParams): AllParams => JSON.parse(JSON.stringify(input));
-
 function App() {
   const [screen, setScreen] = useState<Screen>("main");
-  const { setParams, setTelemetry, setPreview, setRunning } = useAppStore();
+  const { setParams } = useParams();
+  const { setRunning } = useRunning();
+  const { setTelemetry } = useTelemetry();
+  const { setPreview } = usePreview();
 
   useEffect(() => {
     let offPreview: (() => void) | undefined;
@@ -22,42 +27,36 @@ function App() {
     let offRunning: (() => void) | undefined;
 
     GetParams()
-      .then((res) => setParams(normalizeParams(res)))
+      .then((res) => setParams(deepClone(res) as unknown as AllParams))
       .catch((err) => console.error("failed to load params", err));
 
     offPreview = EventsOn("preview:frame", (frame) => {
-      const data = frame?.Data ?? frame?.data;
-      if (!data) {
-        return;
-      }
+      if (!frame?.data) return;
       setPreview({
-        data,
-        width: frame?.Width ?? frame?.width ?? 0,
-        height: frame?.Height ?? frame?.height ?? 0,
-        timestamp: frame?.Timestamp ?? frame?.timestamp ?? new Date().toISOString(),
+        data: frame.data,
+        width: frame.width ?? 0,
+        height: frame.height ?? 0,
+        timestamp: frame.timestamp ?? new Date().toISOString(),
       });
     });
 
     offTelemetry = EventsOn("telemetry:state", (payload) => {
-      const fps = payload?.FPS ?? payload?.fps ?? 0;
-      const lost = payload?.Lost ?? payload?.lost ?? false;
-      const tracking = payload?.Tracking ?? payload?.tracking ?? false;
+      const lost = payload?.lost ?? false;
+      const tracking = payload?.tracking ?? false;
       setTelemetry({
-        fps,
-        score: payload?.Score ?? payload?.score ?? 0,
+        fps: payload?.fps ?? 0,
+        score: payload?.score ?? 0,
         state: lost ? "lost" : tracking ? "tracking" : "idle",
         trackingOn: tracking,
         lost,
-        posX: payload?.PosX ?? payload?.posX ?? null,
-        posY: payload?.PosY ?? payload?.posY ?? null,
+        posX: payload?.posX ?? null,
+        posY: payload?.posY ?? null,
       });
     });
 
     offParams = EventsOn("params:update", (payload) => {
-      if (!payload) {
-        return;
-      }
-      setParams(normalizeParams(payload));
+      if (!payload) return;
+      setParams(deepClone(payload) as unknown as AllParams);
     });
 
     offRunning = EventsOn("service:running", (payload) => {
