@@ -1,7 +1,6 @@
 package mouse
 
 import (
-	"fmt"
 	"math"
 	"time"
 
@@ -14,21 +13,6 @@ const (
 	DwellRadiusPx = 30.0
 )
 
-type ClickButton string
-
-const (
-	ClickLeft   ClickButton = "left"
-	ClickRight  ClickButton = "right"
-	ClickMiddle ClickButton = "middle"
-)
-
-type Controller interface {
-	Move(x, y int) error
-	Click(button ClickButton) error
-	CurrentPosition() (int, int, error)
-	ScreenSize() (int, int, error)
-}
-
 type Params struct {
 	GainMultiplier float64
 	Smoothing      float64
@@ -37,8 +21,7 @@ type Params struct {
 }
 
 type Mouse struct {
-	controller Controller
-	params     Params
+	params Params
 
 	lastX   float64
 	lastY   float64
@@ -52,12 +35,8 @@ type Mouse struct {
 	dwellRefSet bool
 }
 
-func New(controller Controller, params Params) *Mouse {
-	return &Mouse{controller: controller, params: params}
-}
-
-func NewRobotController() *robotController {
-	return &robotController{}
+func New(params Params) *Mouse {
+	return &Mouse{params: params}
 }
 
 func (m *Mouse) SetParams(params Params) {
@@ -111,14 +90,10 @@ func (m *Mouse) updateCursor(x, y int, lost bool) {
 	m.smoothX += (targetX - m.smoothX) * m.params.Smoothing
 	m.smoothY += (targetY - m.smoothY) * m.params.Smoothing
 
-	curX, curY, err := m.controller.CurrentPosition()
-	if err != nil {
-		return
-	}
-
+	curX, curY := position()
 	newX := curX + int(math.Round(m.smoothX))
 	newY := curY + int(math.Round(m.smoothY))
-	_ = m.controller.Move(newX, newY)
+	move(newX, newY)
 }
 
 func (m *Mouse) updateDwell(lost bool) {
@@ -127,10 +102,7 @@ func (m *Mouse) updateDwell(lost bool) {
 		return
 	}
 
-	curX, curY, err := m.controller.CurrentPosition()
-	if err != nil {
-		return
-	}
+	curX, curY := position()
 
 	if !m.dwellRefSet {
 		m.dwellRefX = curX
@@ -151,9 +123,13 @@ func (m *Mouse) updateDwell(lost bool) {
 	dwellTime := time.Duration(m.params.DwellTimeMs) * time.Millisecond
 	if time.Since(m.dwellStart) >= dwellTime {
 		m.dwellStart = time.Now()
-		_ = m.controller.Click(ClickLeft)
+		clickLeft()
 	}
 }
+
+func move(x, y int)        { robotgo.Move(x, y) }
+func clickLeft()            { robotgo.Click("left", false) }
+func position() (int, int) { return robotgo.Location() }
 
 func clampF(v, lo, hi float64) float64 {
 	if v < lo {
@@ -163,35 +139,4 @@ func clampF(v, lo, hi float64) float64 {
 		return hi
 	}
 	return v
-}
-
-type robotController struct{}
-
-func (r *robotController) Move(x, y int) error {
-	robotgo.Move(x, y)
-	return nil
-}
-
-func (r *robotController) Click(button ClickButton) error {
-	switch button {
-	case ClickLeft:
-		robotgo.Click("left", false)
-	case ClickRight:
-		robotgo.Click("right", false)
-	case ClickMiddle:
-		robotgo.Click("center", false)
-	default:
-		return fmt.Errorf("mouse: unsupported button %s", button)
-	}
-	return nil
-}
-
-func (r *robotController) CurrentPosition() (int, int, error) {
-	x, y := robotgo.Location()
-	return x, y, nil
-}
-
-func (r *robotController) ScreenSize() (int, int, error) {
-	w, h := robotgo.GetScreenSize()
-	return w, h, nil
 }

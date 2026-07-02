@@ -48,10 +48,10 @@ Get the latest release for your platform:
 
 | Tab | Options |
 |-----|---------|
-| **Tracking** | Template size, search margin, score threshold, marker shape |
-| **Pointer** | Sensitivity, deadzone, max speed, advanced gain controls |
-| **Clicking** | Dwell time, radius, click type (left/right) |
-| **General** | Hotkey bindings, auto-start, dwell on startup |
+| **Tracking** | Template size |
+| **Pointer** | Sensitivity (gain multiplier), smoothing |
+| **Clicking** | Dwell enable/disable, dwell time |
+| **General** | Auto-start |
 
 ## Tips
 
@@ -65,10 +65,10 @@ Get the latest release for your platform:
 | Problem | Solution |
 |---------|----------|
 | Cursor jumps around | Increase template size, improve lighting |
-| Tracking lost frequently | Lower score threshold, use higher contrast point |
+| Tracking lost frequently | Use a higher contrast point, improve lighting |
 | Cursor too fast/slow | Adjust sensitivity in Pointer settings |
 | Cursor doesn't move | macOS: Grant Accessibility permissions in System Settings → Privacy & Security |
-| Hotkeys don't work | Check hotkey bindings in General settings; ensure no other app claims the same key |
+| Hotkeys don't work | Ensure no other app claims F11/F12 |
 
 ## Platforms
 

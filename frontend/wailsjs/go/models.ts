@@ -7,8 +7,6 @@ export namespace config {
 	    dwellEnabled: boolean;
 	    dwellTimeMs: number;
 	    autoStart: boolean;
-	    startPause: string;
-	    recenter: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Params(source);
@@ -22,8 +20,6 @@ export namespace config {
 	        this.dwellEnabled = source["dwellEnabled"];
 	        this.dwellTimeMs = source["dwellTimeMs"];
 	        this.autoStart = source["autoStart"];
-	        this.startPause = source["startPause"];
-	        this.recenter = source["recenter"];
 	    }
 	}
 

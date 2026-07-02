@@ -7,7 +7,6 @@ import (
 
 	"open-camera-mouse/internal/camera"
 	"open-camera-mouse/internal/config"
-	"open-camera-mouse/internal/hotkeys"
 	"open-camera-mouse/internal/mouse"
 	"open-camera-mouse/internal/preview"
 	"open-camera-mouse/internal/tracking"
@@ -28,7 +27,6 @@ type App struct {
 	camera  *camera.Service
 	tracker *tracking.Tracker
 	mouse   *mouse.Mouse
-	Hotkeys hotkeys.Service
 
 	commands chan command
 
@@ -39,6 +37,7 @@ type App struct {
 	mu      sync.Mutex
 	params  config.Params
 	cancel  context.CancelFunc
+	done    chan struct{}
 	running bool
 
 	// runtime state — only accessed from run goroutine
@@ -57,13 +56,11 @@ func NewApp(cfg *config.Manager) (*App, error) {
 		return nil, err
 	}
 
-	controller := mouse.NewRobotController()
-
 	return &App{
 		cfg:      cfg,
 		camera:   camera.NewService(0),
 		tracker:  tracking.New(tracking.Params{TemplateSizePx: params.TemplateSizePx}),
-		mouse:    mouse.New(controller, mouseParams(params)),
+		mouse:    mouse.New(mouseParams(params)),
 		commands: make(chan command, 8),
 		params:   params,
 	}, nil
@@ -77,6 +74,7 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	runCtx, cancel := context.WithCancel(ctx)
 	a.cancel = cancel
+	a.done = make(chan struct{})
 	a.running = true
 	a.mu.Unlock()
 
@@ -90,10 +88,17 @@ func (a *App) Stop() error {
 		a.mu.Unlock()
 		return ErrNotRunning
 	}
-	a.cancel()
-	a.running = false
+	cancel := a.cancel
+	done := a.done
 	a.mu.Unlock()
+
+	cancel()
+	<-done
 	return nil
+}
+
+func (a *App) Close() {
+	a.tracker.Close()
 }
 
 func (a *App) IsRunning() bool {
@@ -115,34 +120,42 @@ func (a *App) UpdateParams(p config.Params) error {
 	a.mu.Lock()
 	a.params = p
 	a.mu.Unlock()
-	a.sendCommand(command{kind: cmdSetParams, params: p})
-	return nil
+	return a.sendCommand(command{kind: cmdSetParams, params: p})
 }
 
-func (a *App) SendPickPoint(x, y int) {
-	a.sendCommand(command{kind: cmdPickPoint, x: x, y: y})
+func (a *App) SendPickPoint(x, y int) error {
+	return a.sendCommand(command{kind: cmdPickPoint, x: x, y: y})
 }
 
-func (a *App) SendRecenter() {
-	a.sendCommand(command{kind: cmdRecenter})
+func (a *App) SendRecenter() error {
+	return a.sendCommand(command{kind: cmdRecenter})
 }
 
-func (a *App) SendResetMouse() {
-	a.sendCommand(command{kind: cmdResetMouse})
+func (a *App) SendResetMouse() error {
+	return a.sendCommand(command{kind: cmdResetMouse})
 }
 
-func (a *App) SendSetTrackingEnabled(enabled bool) {
-	a.sendCommand(command{kind: cmdSetTrackingEnabled, enabled: enabled})
+func (a *App) SendSetTrackingEnabled(enabled bool) error {
+	return a.sendCommand(command{kind: cmdSetTrackingEnabled, enabled: enabled})
 }
 
-func (a *App) sendCommand(cmd command) {
+func (a *App) sendCommand(cmd command) error {
 	select {
 	case a.commands <- cmd:
+		return nil
 	default:
+		return errors.New("app: command queue full")
 	}
 }
 
 func (a *App) run(ctx context.Context) {
+	defer func() {
+		a.mu.Lock()
+		a.running = false
+		close(a.done)
+		a.mu.Unlock()
+	}()
+
 	frames, err := a.camera.Stream(ctx)
 	if err != nil {
 		if a.EmitRunning != nil {
@@ -155,7 +168,6 @@ func (a *App) run(ctx context.Context) {
 	a.lastLost = true
 	a.trackingEnabled = true
 	a.mouse.Reset()
-	defer a.tracker.Close()
 
 	for {
 		select {

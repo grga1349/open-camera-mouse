@@ -19,11 +19,9 @@ type Params struct {
 }
 
 type Result struct {
-	OK    bool
-	Lost  bool
-	X     int
-	Y     int
-	Score float64
+	Lost bool
+	X    int
+	Y    int
 }
 
 type Tracker struct {
@@ -118,7 +116,7 @@ func (t *Tracker) Update(frame gocv.Mat) Result {
 	}
 	t.templatePoint = center
 
-	return Result{OK: true, X: center.X, Y: center.Y, Score: float64(maxVal)}
+	return Result{X: center.X, Y: center.Y}
 }
 
 func (t *Tracker) Reset() {

@@ -20,8 +20,6 @@ type Params struct {
 	DwellEnabled   bool    `json:"dwellEnabled"`
 	DwellTimeMs    int     `json:"dwellTimeMs"`
 	AutoStart      bool    `json:"autoStart"`
-	StartPause     string  `json:"startPause"`
-	Recenter       string  `json:"recenter"`
 }
 
 func DefaultParams() Params {

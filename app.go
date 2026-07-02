@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
 
 	appsvc "open-camera-mouse/internal/app"
@@ -16,6 +15,7 @@ import (
 type App struct {
 	ctx context.Context
 	app *appsvc.App
+	hk  *hotkeys.Hotkeys
 }
 
 func NewApp() (*App, error) {
@@ -27,14 +27,6 @@ func NewApp() (*App, error) {
 	inner, err := appsvc.NewApp(cfg)
 	if err != nil {
 		return nil, err
-	}
-
-	if hk, err := hotkeys.NewService(); err == nil {
-		inner.Hotkeys = hk
-	} else if errors.Is(err, hotkeys.ErrUnsupported) {
-		log.Printf("global hotkeys not supported on this platform")
-	} else {
-		log.Printf("hotkeys unavailable: %v", err)
 	}
 
 	return &App{app: inner}, nil
@@ -53,9 +45,16 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(ctx, "service:running", running)
 	}
 
-	params := a.app.GetParams()
-	a.applyHotkeys(params)
+	hk, err := hotkeys.Start(
+		a.toggleStartStop,
+		func() { _ = a.app.SendRecenter() },
+	)
+	if err != nil {
+		a.logErrorf("hotkeys unavailable: %v", err)
+	}
+	a.hk = hk
 
+	params := a.app.GetParams()
 	if params.AutoStart {
 		go func() {
 			if err := a.Start(); err != nil {
@@ -81,20 +80,20 @@ func (a *App) Stop() error {
 	return nil
 }
 
-func (a *App) PickPoint(x, y int) {
-	a.app.SendPickPoint(x, y)
+func (a *App) PickPoint(x, y int) error {
+	return a.app.SendPickPoint(x, y)
 }
 
-func (a *App) Recenter() {
-	a.app.SendRecenter()
+func (a *App) Recenter() error {
+	return a.app.SendRecenter()
 }
 
-func (a *App) ResetMouse() {
-	a.app.SendResetMouse()
+func (a *App) ResetMouse() error {
+	return a.app.SendResetMouse()
 }
 
-func (a *App) ToggleTracking(enabled bool) {
-	a.app.SendSetTrackingEnabled(enabled)
+func (a *App) ToggleTracking(enabled bool) error {
+	return a.app.SendSetTrackingEnabled(enabled)
 }
 
 func (a *App) GetParams() config.Params {
@@ -102,29 +101,7 @@ func (a *App) GetParams() config.Params {
 }
 
 func (a *App) UpdateParams(params config.Params) error {
-	if err := a.app.UpdateParams(params); err != nil {
-		return err
-	}
-	a.applyHotkeys(params)
-	return nil
-}
-
-func (a *App) applyHotkeys(params config.Params) {
-	if a.app.Hotkeys == nil {
-		return
-	}
-	actions := map[string]hotkeys.Action{}
-	if params.StartPause != "" {
-		actions[params.StartPause] = a.toggleStartStop
-	}
-	if params.Recenter != "" {
-		actions[params.Recenter] = func() {
-			a.app.SendRecenter()
-		}
-	}
-	if err := a.app.Hotkeys.Update(actions); err != nil {
-		a.logErrorf("hotkey update failed: %v", err)
-	}
+	return a.app.UpdateParams(params)
 }
 
 func (a *App) toggleStartStop() {
@@ -143,9 +120,8 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.app.IsRunning() {
 		_ = a.app.Stop()
 	}
-	if a.app.Hotkeys != nil {
-		a.app.Hotkeys.Close()
-	}
+	a.hk.Stop()
+	a.app.Close()
 }
 
 func (a *App) logErrorf(format string, args ...interface{}) {

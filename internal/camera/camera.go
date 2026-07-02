@@ -11,7 +11,6 @@ type Frame struct {
 	Mat    gocv.Mat
 	Width  int
 	Height int
-	FPS    float64
 }
 
 type Service struct {
@@ -36,10 +35,6 @@ func (s *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 		frame := gocv.NewMat()
 		defer frame.Close()
 
-		const alpha = 0.1
-		last := time.Now()
-		smoothedFPS := 0.0
-
 		for {
 			select {
 			case <-ctx.Done():
@@ -52,23 +47,11 @@ func (s *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 				continue
 			}
 
-			now := time.Now()
-			if d := now.Sub(last); d > 0 {
-				instant := 1.0 / d.Seconds()
-				if smoothedFPS == 0 {
-					smoothedFPS = instant
-				} else {
-					smoothedFPS = alpha*instant + (1-alpha)*smoothedFPS
-				}
-			}
-			last = now
-
 			select {
 			case ch <- Frame{
 				Mat:    frame.Clone(),
 				Width:  frame.Cols(),
 				Height: frame.Rows(),
-				FPS:    smoothedFPS,
 			}:
 			case <-ctx.Done():
 				return
