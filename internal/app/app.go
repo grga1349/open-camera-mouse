@@ -3,199 +3,247 @@ package app
 import (
 	"context"
 	"errors"
-	"image"
 	"sync"
 
 	"open-camera-mouse/internal/camera"
 	"open-camera-mouse/internal/config"
-	"open-camera-mouse/internal/cursor"
+	"open-camera-mouse/internal/hotkeys"
 	"open-camera-mouse/internal/mouse"
-	"open-camera-mouse/internal/stream"
+	"open-camera-mouse/internal/preview"
 	"open-camera-mouse/internal/tracking"
 )
 
 var (
-	ErrAlreadyRunning = errors.New("app: capture already running")
-	ErrNotRunning     = errors.New("app: capture not running")
+	ErrAlreadyRunning = errors.New("app: already running")
+	ErrNotRunning     = errors.New("app: not running")
 )
 
-type Service struct {
-	cfgManager *config.Manager
-	paramsCh   chan config.AllParams
-
-	mu     sync.RWMutex
-	params config.AllParams
-
-	camera  *camera.Service
-	tracker *tracking.Service
-	cursor  *cursor.Service
-
-	cancel context.CancelFunc
-	done   <-chan struct{}
-
-	running bool
+type Status struct {
+	Running bool `json:"running"`
+	Lost    bool `json:"lost"`
 }
 
-func NewService(cfg *config.Manager) (*Service, error) {
+type App struct {
+	cfg     *config.Manager
+	camera  *camera.Service
+	tracker *tracking.Tracker
+	mouse   *mouse.Mouse
+	Hotkeys hotkeys.Service
+
+	commands chan command
+
+	EmitPreview func(preview.Frame)
+	EmitStatus  func(Status)
+	EmitRunning func(bool)
+
+	mu      sync.Mutex
+	params  config.Params
+	cancel  context.CancelFunc
+	running bool
+
+	// runtime state — only accessed from run goroutine
+	trackingEnabled bool
+	lastLost        bool
+	pendingPick     bool
+	pendingPickX    int
+	pendingPickY    int
+	pendingRecenter bool
+	enc             *preview.Encoder
+}
+
+func NewApp(cfg *config.Manager) (*App, error) {
 	params, err := cfg.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	if !params.General.DwellOnStartup {
-		params.Clicking.DwellEnabled = false
-	}
-
 	controller := mouse.NewRobotController()
 
-	svc := &Service{
-		cfgManager: cfg,
-		paramsCh:   make(chan config.AllParams, 1),
-		params:     params,
-		camera:     camera.NewService(0),
-		tracker:    tracking.NewService(buildTrackerParams(params.Tracking)),
-	}
-
-	svc.cursor = cursor.NewService(
-		controller,
-		buildMappingParams(params.Pointer),
-		buildDwellParams(params.Clicking),
-		svc.handleDwellClick,
-	)
-
-	return svc, nil
+	return &App{
+		cfg:      cfg,
+		camera:   camera.NewService(0),
+		tracker:  tracking.New(tracking.Params{TemplateSizePx: params.TemplateSizePx}),
+		mouse:    mouse.New(controller, mouseParams(params)),
+		commands: make(chan command, 8),
+		params:   params,
+	}, nil
 }
 
-func (s *Service) Start(ctx context.Context) (<-chan stream.PreviewFrame, <-chan stream.Telemetry, error) {
-	s.mu.Lock()
-	if s.running {
-		s.mu.Unlock()
-		return nil, nil, ErrAlreadyRunning
+func (a *App) Start(ctx context.Context) error {
+	a.mu.Lock()
+	if a.running {
+		a.mu.Unlock()
+		return ErrAlreadyRunning
 	}
+	runCtx, cancel := context.WithCancel(ctx)
+	a.cancel = cancel
+	a.running = true
+	a.mu.Unlock()
 
-	captureCtx, cancel := context.WithCancel(ctx)
-	s.cancel = cancel
-	s.running = true
-	s.mu.Unlock()
-
-	previewCh, telemCh, err := s.runPipeline(captureCtx)
-	if err != nil {
-		s.mu.Lock()
-		s.running = false
-		s.cancel = nil
-		s.mu.Unlock()
-		cancel()
-		return nil, nil, err
-	}
-
-	return previewCh, telemCh, nil
-}
-
-func (s *Service) runPipeline(ctx context.Context) (<-chan stream.PreviewFrame, <-chan stream.Telemetry, error) {
-	frames, err := s.camera.Stream(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	results := s.tracker.Stream(ctx, frames)
-	previewCh, telemCh, done := s.cursor.Run(ctx, results)
-	s.done = done
-	return previewCh, telemCh, nil
-}
-
-func (s *Service) Stop() error {
-	s.mu.Lock()
-	if !s.running {
-		s.mu.Unlock()
-		return ErrNotRunning
-	}
-	done := s.done
-	if s.cancel != nil {
-		s.cancel()
-	}
-	s.running = false
-	s.mu.Unlock()
-
-	if done != nil {
-		<-done
-	}
-	s.cursor.Reset()
+	go a.run(runCtx)
 	return nil
 }
 
-func (s *Service) IsRunning() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.running
-}
-
-func (s *Service) ParamChanges() <-chan config.AllParams {
-	return s.paramsCh
-}
-
-func (s *Service) handleDwellClick() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.params.Clicking.RightClickToggle {
-		s.params.Clicking.RightClickToggle = false
-		s.applyRuntimeParamsLocked()
-		s.emitParamsLocked()
+func (a *App) Stop() error {
+	a.mu.Lock()
+	if !a.running {
+		a.mu.Unlock()
+		return ErrNotRunning
 	}
+	a.cancel()
+	a.running = false
+	a.mu.Unlock()
+	return nil
 }
 
-func (s *Service) SetPickPoint(point image.Point) error {
-	err := s.tracker.SetPickPoint(point)
-	if err == nil {
-		s.cursor.Reset()
+func (a *App) IsRunning() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.running
+}
+
+func (a *App) GetParams() config.Params {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.params
+}
+
+func (a *App) UpdateParams(p config.Params) error {
+	if err := a.cfg.Save(p); err != nil {
+		return err
 	}
-	return err
+	a.mu.Lock()
+	a.params = p
+	a.mu.Unlock()
+	a.sendCommand(command{kind: cmdSetParams, params: p})
+	return nil
 }
 
-func (s *Service) Recenter() error {
-	err := s.tracker.Recenter()
-	if err == nil {
-		s.cursor.Reset()
-		s.cursor.CenterCursor()
-	}
-	return err
+func (a *App) SendPickPoint(x, y int) {
+	a.sendCommand(command{kind: cmdPickPoint, x: x, y: y})
 }
 
-func (s *Service) ToggleTracking(enabled bool) {
-	s.tracker.SetTrackingEnabled(enabled)
-	if !enabled {
-		s.cursor.Reset()
-	}
+func (a *App) SendRecenter() {
+	a.sendCommand(command{kind: cmdRecenter})
 }
 
-func (s *Service) GetParams() config.AllParams {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.params
+func (a *App) SendResetMouse() {
+	a.sendCommand(command{kind: cmdResetMouse})
 }
 
-func (s *Service) UpdateParams(next config.AllParams) {
-	s.mu.Lock()
-	s.params = next
-	s.applyRuntimeParamsLocked()
-	s.emitParamsLocked()
-	s.mu.Unlock()
+func (a *App) SendSetTrackingEnabled(enabled bool) {
+	a.sendCommand(command{kind: cmdSetTrackingEnabled, enabled: enabled})
 }
 
-func (s *Service) SaveParams(next config.AllParams) error {
-	s.UpdateParams(next)
-	return s.cfgManager.Save(next)
-}
-
-func (s *Service) emitParamsLocked() {
-	p := s.params
+func (a *App) sendCommand(cmd command) {
 	select {
-	case s.paramsCh <- p:
+	case a.commands <- cmd:
 	default:
 	}
 }
 
-func (s *Service) applyRuntimeParamsLocked() {
-	s.tracker.UpdateParams(buildTrackerParams(s.params.Tracking))
-	s.cursor.SetMappingParams(buildMappingParams(s.params.Pointer))
-	s.cursor.SetDwellParams(buildDwellParams(s.params.Clicking))
+func (a *App) run(ctx context.Context) {
+	frames, err := a.camera.Stream(ctx)
+	if err != nil {
+		if a.EmitRunning != nil {
+			a.EmitRunning(false)
+		}
+		return
+	}
+
+	a.enc = preview.NewEncoder()
+	a.lastLost = true
+	a.trackingEnabled = true
+	a.mouse.Reset()
+	defer a.tracker.Close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case cmd := <-a.commands:
+			a.handleCommand(cmd)
+		case frame, ok := <-frames:
+			if !ok {
+				return
+			}
+			a.handleFrame(frame)
+		}
+	}
+}
+
+func (a *App) handleFrame(frame camera.Frame) {
+	defer frame.Mat.Close()
+
+	if a.pendingPick {
+		a.pendingPick = false
+		x := frame.Width - a.pendingPickX
+		_ = a.tracker.Pick(frame.Mat, x, a.pendingPickY)
+		a.mouse.Reset()
+	}
+	if a.pendingRecenter {
+		a.pendingRecenter = false
+		_ = a.tracker.Pick(frame.Mat, frame.Width/2, frame.Height/2)
+		a.mouse.Reset()
+	}
+
+	var result tracking.Result
+	if a.trackingEnabled {
+		result = a.tracker.Update(frame.Mat)
+	} else {
+		result = tracking.Result{Lost: true}
+	}
+
+	a.mouse.Update(result.X, result.Y, result.Lost)
+
+	if result.Lost != a.lastLost {
+		a.lastLost = result.Lost
+		if a.EmitStatus != nil {
+			a.EmitStatus(Status{Running: true, Lost: result.Lost})
+		}
+	}
+
+	var overlay *preview.TrackingOverlay
+	if a.tracker.HasTemplate() {
+		overlay = &preview.TrackingOverlay{
+			X:              frame.Width - result.X,
+			Y:              result.Y,
+			TemplateSizePx: a.params.TemplateSizePx,
+			Lost:           result.Lost,
+		}
+	}
+
+	if f := a.enc.Encode(frame, overlay); f != nil && a.EmitPreview != nil {
+		a.EmitPreview(*f)
+	}
+}
+
+func (a *App) handleCommand(cmd command) {
+	switch cmd.kind {
+	case cmdPickPoint:
+		a.pendingPick = true
+		a.pendingPickX = cmd.x
+		a.pendingPickY = cmd.y
+	case cmdRecenter:
+		a.pendingRecenter = true
+	case cmdSetParams:
+		a.tracker.SetParams(tracking.Params{TemplateSizePx: cmd.params.TemplateSizePx})
+		a.mouse.SetParams(mouseParams(cmd.params))
+	case cmdSetTrackingEnabled:
+		a.trackingEnabled = cmd.enabled
+		if !cmd.enabled {
+			a.mouse.Reset()
+		}
+	case cmdResetMouse:
+		a.mouse.Reset()
+	}
+}
+
+func mouseParams(p config.Params) mouse.Params {
+	return mouse.Params{
+		GainMultiplier: p.GainMultiplier,
+		Smoothing:      p.Smoothing,
+		DwellEnabled:   p.DwellEnabled,
+		DwellTimeMs:    p.DwellTimeMs,
+	}
 }

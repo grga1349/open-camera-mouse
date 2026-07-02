@@ -3,20 +3,19 @@ package main
 import (
 	"context"
 	"errors"
-	"image"
 	"log"
 
 	appsvc "open-camera-mouse/internal/app"
 	"open-camera-mouse/internal/config"
 	"open-camera-mouse/internal/hotkeys"
+	"open-camera-mouse/internal/preview"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
-	ctx     context.Context
-	service *appsvc.Service
-	hotkeys hotkeys.Service
+	ctx context.Context
+	app *appsvc.App
 }
 
 func NewApp() (*App, error) {
@@ -25,33 +24,39 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	svc, err := appsvc.NewService(cfg)
+	inner, err := appsvc.NewApp(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	app := &App{service: svc}
 	if hk, err := hotkeys.NewService(); err == nil {
-		app.hotkeys = hk
+		inner.Hotkeys = hk
 	} else if errors.Is(err, hotkeys.ErrUnsupported) {
 		log.Printf("global hotkeys not supported on this platform")
 	} else {
 		log.Printf("hotkeys unavailable: %v", err)
 	}
 
-	return app, nil
+	return &App{app: inner}, nil
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	go func() {
-		for p := range a.service.ParamChanges() {
-			runtime.EventsEmit(ctx, "params:update", p)
-		}
-	}()
-	params := a.service.GetParams()
-	a.applyHotkeys(params.Hotkeys)
-	if params.General.AutoStart {
+
+	a.app.EmitPreview = func(f preview.Frame) {
+		runtime.EventsEmit(ctx, "preview:frame", f)
+	}
+	a.app.EmitStatus = func(s appsvc.Status) {
+		runtime.EventsEmit(ctx, "status:update", s)
+	}
+	a.app.EmitRunning = func(running bool) {
+		runtime.EventsEmit(ctx, "service:running", running)
+	}
+
+	params := a.app.GetParams()
+	a.applyHotkeys(params)
+
+	if params.AutoStart {
 		go func() {
 			if err := a.Start(); err != nil {
 				a.logErrorf("autostart failed: %v", err)
@@ -61,90 +66,69 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) Start() error {
-	previewCh, telemCh, err := a.service.Start(a.ctx)
-	if err != nil {
+	if err := a.app.Start(a.ctx); err != nil {
 		return err
 	}
-	go func() {
-		for frame := range previewCh {
-			runtime.EventsEmit(a.ctx, "preview:frame", frame)
-		}
-	}()
-	go func() {
-		for t := range telemCh {
-			runtime.EventsEmit(a.ctx, "telemetry:state", t)
-		}
-	}()
-	a.emitRunning(true)
+	runtime.EventsEmit(a.ctx, "service:running", true)
 	return nil
 }
 
 func (a *App) Stop() error {
-	if err := a.service.Stop(); err != nil {
+	if err := a.app.Stop(); err != nil {
 		return err
 	}
-	a.emitRunning(false)
+	runtime.EventsEmit(a.ctx, "service:running", false)
 	return nil
 }
 
-func (a *App) GetParams() config.AllParams {
-	return a.service.GetParams()
+func (a *App) PickPoint(x, y int) {
+	a.app.SendPickPoint(x, y)
 }
 
-func (a *App) UpdateParams(params config.AllParams) {
-	a.service.UpdateParams(params)
-	a.applyHotkeys(params.Hotkeys)
+func (a *App) Recenter() {
+	a.app.SendRecenter()
 }
 
-func (a *App) SaveParams(params config.AllParams) error {
-	if err := a.service.SaveParams(params); err != nil {
-		return err
-	}
-	a.applyHotkeys(params.Hotkeys)
-	return nil
-}
-
-func (a *App) SetPickPoint(x, y int) error {
-	return a.service.SetPickPoint(image.Pt(x, y))
-}
-
-func (a *App) Recenter() error {
-	return a.service.Recenter()
+func (a *App) ResetMouse() {
+	a.app.SendResetMouse()
 }
 
 func (a *App) ToggleTracking(enabled bool) {
-	a.service.ToggleTracking(enabled)
+	a.app.SendSetTrackingEnabled(enabled)
 }
 
-func (a *App) emitRunning(running bool) {
-	if a.ctx == nil {
-		return
+func (a *App) GetParams() config.Params {
+	return a.app.GetParams()
+}
+
+func (a *App) UpdateParams(params config.Params) error {
+	if err := a.app.UpdateParams(params); err != nil {
+		return err
 	}
-	runtime.EventsEmit(a.ctx, "service:running", running)
+	a.applyHotkeys(params)
+	return nil
 }
 
-func (a *App) applyHotkeys(binding config.HotkeysParams) {
-	if a.hotkeys == nil {
+func (a *App) applyHotkeys(params config.Params) {
+	if a.app.Hotkeys == nil {
 		return
 	}
 	actions := map[string]hotkeys.Action{}
-	if binding.StartPause != "" {
-		actions[binding.StartPause] = a.toggleStartStop
+	if params.StartPause != "" {
+		actions[params.StartPause] = a.toggleStartStop
 	}
-	if binding.Recenter != "" {
-		actions[binding.Recenter] = func() {
-			if a.ctx != nil {
-				runtime.EventsEmit(a.ctx, "recenter:hotkey")
-			}
+	if params.Recenter != "" {
+		actions[params.Recenter] = func() {
+			a.app.SendRecenter()
 		}
 	}
-	if err := a.hotkeys.Update(actions); err != nil {
+	if err := a.app.Hotkeys.Update(actions); err != nil {
 		a.logErrorf("hotkey update failed: %v", err)
 	}
 }
 
 func (a *App) toggleStartStop() {
-	if a.service.IsRunning() {
+	if a.app.IsRunning() {
 		if err := a.Stop(); err != nil {
 			a.logErrorf("stop failed: %v", err)
 		}
@@ -156,11 +140,11 @@ func (a *App) toggleStartStop() {
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	if a.service.IsRunning() {
-		_ = a.service.Stop()
+	if a.app.IsRunning() {
+		_ = a.app.Stop()
 	}
-	if a.hotkeys != nil {
-		a.hotkeys.Close()
+	if a.app.Hotkeys != nil {
+		a.app.Hotkeys.Close()
 	}
 }
 

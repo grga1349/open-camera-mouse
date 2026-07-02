@@ -1,27 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AllParams } from "../types/params";
+import { useCallback, useMemo, useState, useEffect } from "react";
+import type { Params } from "../types/params";
 import { useParams } from "./useParams";
 import { deepClone } from "../lib/clone";
 
 export type SettingsDraft = {
-  snapshot: AllParams;
-  draft: AllParams;
+  snapshot: Params;
+  draft: Params;
   dirty: boolean;
-  updateDraft: (updater: (current: AllParams) => AllParams) => void;
+  updateDraft: (updater: (current: Params) => Params) => void;
   resetDraft: () => void;
 };
 
 export const useSettingsDraft = (): SettingsDraft => {
   const { params } = useParams();
-  const [snapshot, setSnapshot] = useState<AllParams>(params);
-  const [draft, setDraft] = useState<AllParams>(params);
+  const [snapshot, setSnapshot] = useState<Params>(params);
+  const [draft, setDraft] = useState<Params>(params);
 
   useEffect(() => {
     setSnapshot(params);
     setDraft(params);
   }, [params]);
 
-  const updateDraft = useCallback((updater: (current: AllParams) => AllParams) => {
+  const updateDraft = useCallback((updater: (current: Params) => Params) => {
     setDraft((prev) => updater(prev));
   }, []);
 

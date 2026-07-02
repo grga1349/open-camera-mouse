@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { MouseEvent } from "react";
-import { SetPickPoint } from "../../../../wailsjs/go/main/App";
+import { PickPoint } from "../../../../wailsjs/go/main/App";
 import { usePreview } from "../../../state/usePreview";
 
 export const usePickPoint = () => {
@@ -17,9 +17,9 @@ export const usePickPoint = () => {
       const x = Math.max(0, Math.min(preview.width, Math.round(relX * xRatio)));
       const y = Math.max(0, Math.min(preview.height, Math.round(relY * yRatio)));
       try {
-        await SetPickPoint(x, y);
+        await PickPoint(x, y);
       } catch (err) {
-        console.error("set pick point failed", err);
+        console.error("pick point failed", err);
       }
     },
     [preview],

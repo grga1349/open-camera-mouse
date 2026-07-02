@@ -1,113 +1,30 @@
 import type { FC } from "react";
-import { Button } from "../../../components/Button";
-import { NumberField } from "../../../components/inputs/NumberField";
 import { SliderField } from "../../../components/inputs/SliderField";
 import type { TabProps } from "./types";
 import { makeUpdater } from "./utils";
 
-const clampSensitivity = (value: number) => Math.min(100, Math.max(1, value));
-const gainFromSensitivity = (value: number, amplification: number) => {
-  const clamped = clampSensitivity(value);
-  const normalized = (clamped - 1) / 99;
-  const baseGain = 1.2 + normalized * (5 - 1.2);
-  return baseGain * amplification;
-};
-const smoothingFromSensitivity = (value: number) => {
-  const clamped = clampSensitivity(value);
-  const normalized = (clamped - 1) / 99;
-  return 0.35 + normalized * (0.15 - 0.35);
-};
-
 export const PointerTab: FC<TabProps> = ({ draft, updateDraft }) => {
-  const pointer = draft.pointer;
-  const updatePointer = makeUpdater(updateDraft, "pointer");
-
-  const autoGain = gainFromSensitivity(pointer.sensitivity, pointer.amplification);
-  const autoSmoothing = smoothingFromSensitivity(pointer.sensitivity);
-  const autoAdvancedDefaults = { gainX: autoGain, gainY: autoGain, smoothing: autoSmoothing };
-
-  const updateAdvanced = (changes: { gainX?: number; gainY?: number; smoothing?: number } | null) => {
-    updatePointer({ advanced: changes ? { ...(pointer.advanced ?? autoAdvancedDefaults), ...changes } : null });
-  };
-
-  const advanced = pointer.advanced;
+  const update = makeUpdater(updateDraft);
 
   return (
     <div className="space-y-4">
       <SliderField
-        label={`Sensitivity (${pointer.sensitivity})`}
+        label={`Gain (${draft.gainMultiplier.toFixed(1)}x)`}
         min={1}
-        max={100}
-        step={1}
-        value={pointer.sensitivity}
-        onChange={(value) => updatePointer({ sensitivity: value })}
+        max={30}
+        step={0.5}
+        value={draft.gainMultiplier}
+        onChange={(value) => update({ gainMultiplier: value })}
       />
 
       <SliderField
-        label={`Amplification (${pointer.amplification}x)`}
-        min={1}
-        max={10}
-        step={1}
-        value={pointer.amplification}
-        onChange={(value) => updatePointer({ amplification: value })}
-      />
-
-      <SliderField
-        label={`Deadzone (${pointer.deadzonePx}px)`}
+        label={`Smoothing (${Math.round(draft.smoothing * 100)}%)`}
         min={0}
-        max={20}
-        step={1}
-        value={pointer.deadzonePx}
-        onChange={(value) => updatePointer({ deadzonePx: value })}
+        max={85}
+        step={5}
+        value={Math.round(draft.smoothing * 100)}
+        onChange={(value) => update({ smoothing: value / 100 })}
       />
-
-      <SliderField
-        label={`Max speed (${pointer.maxSpeedPx}px)`}
-        min={10}
-        max={60}
-        step={1}
-        value={pointer.maxSpeedPx}
-        onChange={(value) => updatePointer({ maxSpeedPx: value })}
-      />
-
-      <div className="rounded-2xl border border-zinc-800 p-3">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <p className="font-semibold text-zinc-200">Advanced gain</p>
-          <Button variant="ghost" onClick={() => updateAdvanced(advanced ? null : autoAdvancedDefaults)}>
-            {advanced ? "Disable" : "Enable"}
-          </Button>
-        </div>
-        {advanced ? (
-          <div className="space-y-3 text-sm">
-            <NumberField
-              label="Gain X"
-              value={advanced.gainX}
-              min={0.5}
-              max={18}
-              step={0.1}
-              onChange={(value) => updateAdvanced({ gainX: value })}
-            />
-            <NumberField
-              label="Gain Y"
-              value={advanced.gainY}
-              min={0.5}
-              max={18}
-              step={0.1}
-              onChange={(value) => updateAdvanced({ gainY: value })}
-            />
-            <NumberField
-              label="Smoothing"
-              value={advanced.smoothing}
-              min={0.05}
-              max={0.9}
-              step={0.05}
-              onChange={(value) => updateAdvanced({ smoothing: value })}
-            />
-          </div>
-        ) : (
-          <p className="text-xs text-zinc-400">Enable to override automatically mapped gain + smoothing.</p>
-        )}
-      </div>
     </div>
   );
 };

@@ -8,9 +8,10 @@ import (
 )
 
 type Frame struct {
-	Mat       gocv.Mat
-	Timestamp time.Time
-	FPS       float64
+	Mat    gocv.Mat
+	Width  int
+	Height int
+	FPS    float64
 }
 
 type Service struct {
@@ -21,8 +22,8 @@ func NewService(deviceID int) *Service {
 	return &Service{deviceID: deviceID}
 }
 
-func (m *Service) Stream(ctx context.Context) (<-chan Frame, error) {
-	vcap, err := gocv.VideoCaptureDevice(m.deviceID)
+func (s *Service) Stream(ctx context.Context) (<-chan Frame, error) {
+	vcap, err := gocv.VideoCaptureDevice(s.deviceID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +39,7 @@ func (m *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 		const alpha = 0.1
 		last := time.Now()
 		smoothedFPS := 0.0
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -62,7 +64,12 @@ func (m *Service) Stream(ctx context.Context) (<-chan Frame, error) {
 			last = now
 
 			select {
-			case ch <- Frame{Mat: frame.Clone(), Timestamp: now, FPS: smoothedFPS}:
+			case ch <- Frame{
+				Mat:    frame.Clone(),
+				Width:  frame.Cols(),
+				Height: frame.Rows(),
+				FPS:    smoothedFPS,
+			}:
 			case <-ctx.Done():
 				return
 			}

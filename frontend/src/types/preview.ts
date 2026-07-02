@@ -1,6 +1,13 @@
+export type TrackingOverlay = {
+  x: number;
+  y: number;
+  templateSizePx: number;
+  lost: boolean;
+};
+
 export type PreviewFrame = {
-  data: string;
+  dataUrl: string;
   width: number;
   height: number;
-  timestamp: string;
+  tracking: TrackingOverlay | null;
 };

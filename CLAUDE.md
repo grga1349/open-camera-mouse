@@ -17,7 +17,7 @@ See [docs/STACK.md](docs/STACK.md) for versions and platform-specific build deps
 ```
 .
 ├── main.go                 # Wails entry point
-├── app.go                  # Wails bindings layer
+├── app.go                  # Wails bindings adapter (App struct)
 ├── frontend/               # React frontend
 │   └── src/
 │       ├── screens/        # Main and Settings screens
@@ -25,74 +25,97 @@ See [docs/STACK.md](docs/STACK.md) for versions and platform-specific build deps
 │       ├── state/          # React state management
 │       └── types/          # TypeScript types
 ├── internal/
-│   ├── app/                # Core application logic
-│   │   ├── app.go          # Service coordinator + runPipeline
-│   │   ├── pipeline.go     # Pipeline stage functions: track(), process()
-│   │   ├── params.go       # Param builder functions
-│   │   └── cursor_mover.go # Cursor movement state machine
-│   ├── camera/             # Webcam capture — Stream(ctx) → chan Frame
-│   ├── tracking/           # Template matching tracker (state machine)
-│   ├── mouse/              # Mouse control abstraction
-│   │   ├── controller.go   # Interface
-│   │   ├── robotgo.go      # Implementation
-│   │   ├── mapping.go      # Gain/smoothing/deadzone mapper
-│   │   └── dwell.go        # Dwell click state machine
-│   ├── config/             # Settings persistence
-│   ├── stream/             # Broker (channel-based pub/sub), preview encoder, telemetry
-│   ├── overlay/            # Marker rendering
-│   └── hotkeys/            # Global hotkey handling (golang.design/x/hotkey)
+│   ├── app/
+│   │   ├── app.go          # Runtime loop + lifecycle (App struct)
+│   │   └── commands.go     # Command types dispatched into the loop
+│   ├── camera/
+│   │   └── camera.go       # Webcam capture — Stream(ctx) → chan Frame
+│   ├── tracking/
+│   │   └── tracking.go     # Template-matching Tracker (no mutex)
+│   ├── mouse/
+│   │   └── mouse.go        # Cursor movement + dwell click (no mutex)
+│   ├── preview/
+│   │   └── preview.go      # JPEG encoder + TrackingOverlay type
+│   ├── config/
+│   │   └── config.go       # Flat Params struct + JSON persistence
+│   └── hotkeys/
+│       └── hotkeys.go      # Global hotkey handling (golang.design/x/hotkey)
 └── .github/workflows/      # CI/CD
 ```
 
 ## Architecture Principles
 
-1. **Channel pipeline** — runtime data flows through channels; goroutines own their state exclusively
-2. **State machines with getters/setters** — only components with control-plane updates carry a mutex; pipeline-owned runtime state needs no synchronization
-3. **Single Responsibility** — each package/struct does one thing well
+1. **Single runtime goroutine owns all state** — tracker, mouse, and dwell state are only mutated from `app.run()`; no mutexes on the hot path
+2. **Command channel for control plane** — Wails methods send commands into the loop; no direct mutation from outside
+3. **Single Responsibility** — each package does one thing; no engine/manager/broker abstractions
 4. **Interface-based abstractions** — use interfaces for testability (e.g., `mouse.Controller`)
 5. **Platform isolation** — platform-specific code uses build tags (`_darwin.go`, `_windows.go`, `_linux.go`)
 6. **Error handling** — wrap errors with context using `fmt.Errorf("context: %w", err)`
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full pipeline diagram and mutex inventory.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the runtime loop diagram and mutex inventory.
 
 ## Data Flow
 
-Three goroutines connected by channels:
+Two goroutines:
 
 ```
-camera.Manager (goroutine)
-     │ chan camera.Frame
+camera.Service (goroutine)
+     │ chan camera.Frame  (buffer: 1)
      ▼
-track() goroutine
-     │ chan FrameResult
-     ▼
-process() goroutine
-     ├── CursorMover → mouse.Controller (robotgo)
-     ├── → broker.PublishPreview → chan → Wails EventsEmit
-     └── → broker.PublishTelemetry → chan → Wails EventsEmit
+app.App.run() goroutine
+     ├── select: ctx.Done | command | frame
+     ├── tracking.Tracker.Update()
+     ├── mouse.Mouse.Update()  →  robotgo Move + dwell Click
+     └── preview.Encoder.Encode()  →  Wails EventsEmit("preview:frame")
 ```
 
-`runPipeline` in `internal/app/app.go` is the readable top-level algorithm.
+The `run` loop in `internal/app/app.go` is the readable top-level algorithm.
 See [docs/ALGORITHM.md](docs/ALGORITHM.md) for algorithm details.
 
 ## Key Components
 
-### Pipeline Stage Functions (`internal/app/pipeline.go`)
-- `track(ctx, frames, tracker)` — consumes camera frames, runs template matching, emits `FrameResult`
-- `process(ctx, results, cursor, broker)` — moves cursor, drives dwell, renders and publishes preview/telemetry
+### App Runtime (`internal/app/app.go`)
+- `App.run(ctx)` — single select loop receiving frames and commands
+- `handleFrame(frame)` — runs tracking, mouse, emits preview/status on change
+- `handleCommand(cmd)` — applies queued control-plane updates between frames
+- Only `app.mu` (lifecycle mutex) exists; all frame-path state is goroutine-local
 
-### Tracker (`internal/tracking/tracker.go`)
-- State machine: template, params, last frame — protected by `sync.RWMutex`
-- Control plane: `SetPickPoint`, `Recenter`, `UpdateParams`, `SetTrackingEnabled`
-- Pipeline: `Update(frame)` always returns a result (uses last known point as fallback when lost)
+### Tracker (`internal/tracking/tracking.go`)
+- `Tracker` type with no mutex — owned exclusively by `app.run()` goroutine
+- `Pick(frame, x, y)` — crops template from frame at given point
+- `Update(frame)` — NCC template match; returns last known point as fallback when lost
+- `HasTemplate() bool` — whether a pick has been made
 
-### CursorMover (`internal/app/cursor_mover.go`)
-- Runtime state (`lastPoint`, `pointSet`, `mapper`, `dwell`) owned by `process()` goroutine — no mutex
-- Control plane uses dirty flags under `mappingMu` to safely pass new params to the pipeline goroutine
+### Mouse (`internal/mouse/mouse.go`)
+- `Mouse` type with no mutex — owned exclusively by `app.run()` goroutine
+- `Update(x, y, lost)` — applies gain/smoothing/deadzone to tracking delta, moves cursor, drives dwell
+- Constants: `DeadzonePx`, `MaxSpeedPx`, `DwellRadiusPx` (not user-configurable)
 
-### Broker (`internal/stream/broker.go`)
-- Channel-based pub/sub; each subscriber gets its own buffered channel
-- `BrokerPolicy` controls buffer depth and drop-on-slow behavior per stream
+### Preview (`internal/preview/preview.go`)
+- `Encoder.Encode(frame, overlay)` — flips frame, encodes JPEG as data URL, rate-limited to ~15 fps
+- Returns `Frame{DataURL, Width, Height, Tracking}` — React draws the tracking rectangle
+
+## Wails API
+
+```go
+func (a *App) Start() error
+func (a *App) Stop() error
+func (a *App) PickPoint(x, y int)
+func (a *App) Recenter()
+func (a *App) ResetMouse()
+func (a *App) ToggleTracking(enabled bool)
+func (a *App) GetParams() config.Params
+func (a *App) UpdateParams(params config.Params) error
+```
+
+## Events
+
+| Event | Direction | Payload |
+|-------|-----------|---------|
+| `preview:frame` | Go → React | `{dataUrl, width, height, tracking}` |
+| `status:update` | Go → React | `{running, lost}` (emitted only on change) |
+| `service:running` | Go → React | `bool` |
+| `recenter:hotkey` | Go → React | (none) |
 
 ## Build Commands
 

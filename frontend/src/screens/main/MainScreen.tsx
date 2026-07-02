@@ -4,7 +4,7 @@ import { config as backendConfig } from "../../../wailsjs/go/models";
 import { ScreenShell } from "../../components/layout/ScreenShell";
 import { useParams } from "../../state/useParams";
 import { useRunning } from "../../state/useRunning";
-import { useTelemetry } from "../../state/useTelemetry";
+import { useStatus } from "../../state/useStatus";
 import { usePreview } from "../../state/usePreview";
 import { CameraPreview } from "./components/CameraPreview";
 import { ClickModeControls } from "./components/ClickModeControls";
@@ -23,7 +23,7 @@ type MainScreenProps = {
 export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onStop }) => {
   const { params, setParams } = useParams();
   const { isRunning } = useRunning();
-  const { telemetry } = useTelemetry();
+  const { status } = useStatus();
   const { preview } = usePreview();
   const { countdown, handleRecenter } = useRecenter();
   const { onHoverStart, onHoverEnd } = useDwellHover();
@@ -41,30 +41,19 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
     }
   };
 
-  const updateClicking = useCallback(
-    async (updates: Partial<typeof params.clicking>) => {
-      const next = { ...params, clicking: { ...params.clicking, ...updates } };
-      setParams(next);
-      try {
-        await UpdateParams(next as unknown as backendConfig.AllParams);
-      } catch (err) {
-        console.error("update params failed", err);
-      }
-    },
-    [params, setParams],
-  );
-
-  const toggleDwell = () => {
-    void updateClicking({ dwellEnabled: !params.clicking.dwellEnabled });
-  };
-
-  const toggleRightClick = () => {
-    void updateClicking({ rightClickToggle: !params.clicking.rightClickToggle });
-  };
+  const toggleDwell = useCallback(async () => {
+    const next = { ...params, dwellEnabled: !params.dwellEnabled };
+    setParams(next);
+    try {
+      await UpdateParams(next as unknown as backendConfig.Params);
+    } catch (err) {
+      console.error("update params failed", err);
+    }
+  }, [params, setParams]);
 
   return (
     <ScreenShell
-      header={<StatusHeader lost={telemetry.lost} fps={telemetry.fps} onOpenSettings={onOpenSettings} />}
+      header={<StatusHeader lost={status.lost} onOpenSettings={onOpenSettings} />}
       mainClassName="gap-4"
     >
       <CameraPreview preview={preview} onSelectPoint={onSelectPoint} />
@@ -76,12 +65,10 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
           onRecenter={handleRecenter}
         />
         <ClickModeControls
-          dwellEnabled={params.clicking.dwellEnabled}
-          rightClickEnabled={params.clicking.rightClickToggle}
+          dwellEnabled={params.dwellEnabled}
           onToggleDwell={toggleDwell}
           onEnableDwellHoverStart={onHoverStart}
           onEnableDwellHoverEnd={onHoverEnd}
-          onToggleRightClick={toggleRightClick}
         />
       </div>
     </ScreenShell>

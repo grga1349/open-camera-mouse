@@ -2,14 +2,36 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 )
 
-const fileName = "config.json"
+const (
+	DefaultTemplateSizePx = 45
+	DefaultGainMultiplier = 8.0
+	DefaultSmoothing      = 0.30
+	DefaultDwellTimeMs    = 500
+)
 
-var ErrInvalidDir = errors.New("config: could not determine user config dir")
+type Params struct {
+	TemplateSizePx int     `json:"templateSizePx"`
+	GainMultiplier float64 `json:"gainMultiplier"`
+	Smoothing      float64 `json:"smoothing"`
+	DwellEnabled   bool    `json:"dwellEnabled"`
+	DwellTimeMs    int     `json:"dwellTimeMs"`
+	AutoStart      bool    `json:"autoStart"`
+	StartPause     string  `json:"startPause"`
+	Recenter       string  `json:"recenter"`
+}
+
+func DefaultParams() Params {
+	return Params{
+		TemplateSizePx: DefaultTemplateSizePx,
+		GainMultiplier: DefaultGainMultiplier,
+		Smoothing:      DefaultSmoothing,
+		DwellTimeMs:    DefaultDwellTimeMs,
+	}
+}
 
 type Manager struct {
 	path string
@@ -18,45 +40,42 @@ type Manager struct {
 func NewManager(appName string) (*Manager, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
-		return nil, ErrInvalidDir
-	}
-
-	configDir := filepath.Join(dir, appName)
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return nil, err
 	}
-
-	return &Manager{path: filepath.Join(configDir, fileName)}, nil
+	return &Manager{path: filepath.Join(dir, appName, "config.json")}, nil
 }
 
-func (m *Manager) Path() string {
-	return m.path
-}
-
-func (m *Manager) Load() (AllParams, error) {
-	if _, err := os.Stat(m.path); errors.Is(err, os.ErrNotExist) {
-		return DefaultParams(), nil
-	}
-
+func (m *Manager) Load() (Params, error) {
 	data, err := os.ReadFile(m.path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return DefaultParams(), nil
+		}
 		return DefaultParams(), err
 	}
-
-	var params AllParams
-	if err := json.Unmarshal(data, &params); err != nil {
-		return DefaultParams(), err
+	p := DefaultParams()
+	if err := json.Unmarshal(data, &p); err != nil {
+		return DefaultParams(), nil
 	}
-	params.ensureDefaults()
-
-	return params, nil
+	if p.TemplateSizePx <= 0 {
+		p.TemplateSizePx = DefaultTemplateSizePx
+	}
+	if p.GainMultiplier <= 0 {
+		p.GainMultiplier = DefaultGainMultiplier
+	}
+	if p.DwellTimeMs <= 0 {
+		p.DwellTimeMs = DefaultDwellTimeMs
+	}
+	return p, nil
 }
 
-func (m *Manager) Save(params AllParams) error {
-	data, err := json.MarshalIndent(params, "", "  ")
+func (m *Manager) Save(p Params) error {
+	if err := os.MkdirAll(filepath.Dir(m.path), 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return err
 	}
-
-	return os.WriteFile(m.path, data, 0o644)
+	return os.WriteFile(m.path, data, 0644)
 }

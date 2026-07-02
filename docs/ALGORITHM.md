@@ -2,97 +2,109 @@
 
 ## Top-Level Loop
 
-The application runs a per-frame pipeline. Each camera frame passes through three goroutines in sequence:
+The application runs a per-frame pipeline inside a single goroutine. Each camera frame passes through tracking, cursor movement, and preview encoding.
 
 ```
-[camera goroutine] → frames chan → [track goroutine] → results chan → [process goroutine]
+[camera goroutine] → frames chan → [app.run goroutine]
+                                        │
+                                        ├─ tracking.Tracker.Update()
+                                        ├─ mouse.Mouse.Update()
+                                        └─ preview.Encoder.Encode()
 ```
 
 **Per frame:**
 1. **Capture** — read frame from webcam
-2. **Track marker** — template match to locate the tracking point
-3. **Move cursor** — translate tracking delta to cursor movement
-4. **Dwell click** — click if cursor held still long enough
-5. **Render preview** — draw overlay, encode JPEG, publish to UI
-6. **Publish telemetry** — send FPS, score, position to UI
+2. **Apply pending commands** — pick point, recenter, set params (queued between frames)
+3. **Track marker** — template match to locate the tracking point
+4. **Move cursor** — translate tracking delta to cursor movement
+5. **Dwell click** — click if cursor held still long enough
+6. **Render preview** — flip frame, emit tracking overlay coords, encode JPEG, publish to UI
 
 ---
 
 ## Sub-Algorithms
 
-### 1. Template Matching (`internal/tracking/tracker.go`)
+### 1. Template Matching (`internal/tracking/tracking.go`)
 
-Called once per frame by the `track` goroutine. Uses OpenCV normalized cross-correlation.
+Called once per frame. Uses OpenCV normalized cross-correlation.
 
 ```
 INPUT:  grayscale frame, stored template patch (NxN pixels), last known templatePoint
-OUTPUT: Result{Point, Score, Lost}
+OUTPUT: Result{OK, Lost, X, Y, Score}
 
 1. Convert frame to grayscale
 2. Compute search region:
-     x = clamp(templatePoint.X ± SearchMargin, 0, frameWidth)
-     y = clamp(templatePoint.Y ± SearchMargin, 0, frameHeight)
+     margin = templateSizePx * SearchMarginMultiplier (constant: 2)
+     x = clamp(templatePoint.X ± margin, 0, frameWidth)
+     y = clamp(templatePoint.Y ± margin, 0, frameHeight)
 3. Run NCC template match on search region:
      gocv.MatchTemplate(searchRegion, template, TmCcoeffNormed)
 4. Find peak (MinMaxLoc → maxVal, maxLoc)
-5. If maxVal < ScoreThreshold → return Lost=true, Point=templatePoint (fallback)
+5. If maxVal < ScoreThreshold (constant: 0.68) → return Lost=true, X/Y=last known point
 6. Compute center = searchRect.Min + maxLoc + template.Size/2
-7. If AdaptiveTemplate:
-     blend current patch into template:
-     template = alpha*currentPatch + (1-alpha)*template
-8. Update templatePoint = center
-9. Return Result{Point=center, Score=maxVal, Lost=false}
+7. Update templatePoint = center
+8. Return Result{OK=true, X=center.X, Y=center.Y, Score=maxVal}
 ```
 
-**Fallback on loss:** the tracker always returns the last known `templatePoint` when tracking is lost, so downstream stages always have a valid position reference.
+**Fallback on loss:** the tracker returns the last known `templatePoint` when lost,
+so downstream always has a valid position reference.
+
+**Constants (not user-configurable):**
+- `SearchMarginMultiplier = 2` — search region = templateSize × 2 in each direction
+- `ScoreThreshold = 0.68` — minimum match quality to accept
 
 ---
 
-### 2. Cursor Mapping (`internal/mouse/mapping.go`, `internal/app/cursor_mover.go`)
+### 2. Cursor Mapping (`internal/mouse/mouse.go`)
 
-Called once per frame by the `process` goroutine. Converts tracking pixel delta to cursor displacement.
+Called once per frame. Converts tracking pixel delta to cursor displacement.
 
 ```
-INPUT:  tracking point (x, y), last tracking point
+INPUT:  tracking point (x, y), last tracking point, lost bool
 OUTPUT: cursor moved by (moveX, moveY)
 
-1. Compute delta:
+1. If lost or no previous point: record current point, return (no movement)
+2. Compute delta:
      dx = lastPoint.X - point.X   (inverted: head right → cursor right)
      dy = point.Y - lastPoint.Y   (normal: head down → cursor down)
-2. Apply deadzone (nullify sub-threshold movement):
+3. Apply deadzone (constant: 1px):
      if |dx| < DeadzonePx → dx = 0
      if |dy| < DeadzonePx → dy = 0
-3. Clamp to max speed:
+4. Clamp to max speed (constant: 35px):
      dx = clamp(dx, -MaxSpeedPx, +MaxSpeedPx)
      dy = clamp(dy, -MaxSpeedPx, +MaxSpeedPx)
-4. Apply gain:
-     targetX = dx * GainX
-     targetY = dy * GainY
-5. Apply smoothing (exponential moving average):
-     smoothedX = prevX + (targetX - prevX) * Smoothing
-     smoothedY = prevY + (targetY - prevY) * Smoothing
-     prevX, prevY = smoothedX, smoothedY
-6. Move cursor:
-     newX = round(cursorX + smoothedX)
-     newY = round(cursorY + smoothedY)
+5. Apply gain:
+     targetX = dx * GainMultiplier
+     targetY = dy * GainMultiplier
+6. Apply smoothing (EMA):
+     smoothX += (targetX - smoothX) * Smoothing
+     smoothY += (targetY - smoothY) * Smoothing
+7. Move cursor:
+     newX = round(cursorX + smoothX)
+     newY = round(cursorY + smoothY)
      controller.Move(newX, newY)
 ```
 
-**GainX / GainY** scale is derived from the `Sensitivity` setting (1–100 → gain 4.8–20).
-**Smoothing** is the lerp coefficient (0.15–0.35): lower = more smoothing, higher = more responsive.
+**Constants (not user-configurable):**
+- `DeadzonePx = 1.0` — sub-pixel movements are ignored
+- `MaxSpeedPx = 35.0` — per-frame displacement cap
+
+**User-configurable:**
+- `GainMultiplier` (1–30, default 8) — scales raw pixel delta to cursor displacement
+- `Smoothing` (0–0.85, default 0.30) — EMA lerp coefficient; higher = more responsive
 
 ---
 
-### 3. Dwell Click (`internal/mouse/dwell.go`)
+### 3. Dwell Click (`internal/mouse/mouse.go`)
 
-Called once per frame by the `process` goroutine. Implements hover-to-click.
+Called once per frame (after cursor movement). Implements hover-to-click.
 
 ```
-INPUT:  current cursor position (x, y), trackingLost bool
-STATE:  refX, refY (reference position), dwellStart (timer), refSet bool
+INPUT:  current cursor position (x, y) [post-move], lost bool
+STATE:  dwellRefX/Y, dwellStart, dwellRefSet
 
-1. If dwell disabled OR trackingLost:
-     reset(refX=x, refY=y, refSet=false)
+1. If dwell disabled OR lost:
+     dwellRefSet = false
      return
 
 2. If ref not set:
@@ -100,43 +112,38 @@ STATE:  refX, refY (reference position), dwellStart (timer), refSet bool
      return
 
 3. dist = hypot(x-refX, y-refY)
-   If dist > RadiusPx:
+   If dist > DwellRadiusPx (constant: 30px):
      refX=x, refY=y, dwellStart=now   (cursor moved — restart)
      return
 
 4. If time.Since(dwellStart) >= DwellTime:
-     controller.Click(ClickButton)     (trigger click)
-     dwellStart = now                  (restart timer for repeat)
+     controller.Click(ClickLeft)
+     dwellStart = now                  (restart timer)
 ```
 
-**RadiusPx** is the pixel radius within which cursor must stay. Default: 30px.
-**DwellTime** is the hold duration before click. Default: 500ms.
+**Constants (not user-configurable):**
+- `DwellRadiusPx = 30` — cursor must stay within this radius
+
+**User-configurable:**
+- `DwellTimeMs` (200–1500ms, default 500ms)
 
 ---
 
-### 4. Preview Rendering (`internal/app/pipeline.go`)
+### 4. Preview Rendering (`internal/preview/preview.go`)
 
-Called once per frame (rate-limited to ~15 fps) by the `process` goroutine.
+Called once per frame, rate-limited to ~15 fps.
 
 ```
-INPUT:  raw camera frame, TrackingResult, Params (MarkerShape, TemplateSize)
-OUTPUT: base64 JPEG published to broker → Wails EventsEmit → frontend
+INPUT:  raw camera frame, TrackingOverlay{X, Y, TemplateSizePx, Lost}
+OUTPUT: Frame{DataURL, Width, Height, Tracking} published via "preview:frame" Wails event
 
-1. Clone frame mat
-2. Flip horizontally (mirror for natural webcam UX):
-     gocv.Flip(display, &display, 1)
-3. Mirror marker x-coordinate to match flipped display:
-     mirroredX = frame.Cols - point.X
-4. Choose marker color:
-     tracking disabled → white
-     lost              → red
-     tracking OK       → green
-5. Draw marker overlay (circle or square) + score text
-6. Encode to JPEG:
-     gocv.IMEncode(JPEGFileExt, display)
-7. Base64-encode bytes
-8. Publish PreviewFrame{Data, Width, Height, Timestamp} to broker channel
-9. Publish Telemetry{FPS, Score, Lost, Tracking, PosX, PosY} to broker channel
+1. If less than 66ms since last encode: skip (rate limit)
+2. Flip frame horizontally (mirror for natural webcam UX):
+     gocv.Flip(frame, &display, 1)
+3. Encode to JPEG (quality 80):
+     gocv.IMEncodeWithParams(JPEGFileExt, display, quality=80)
+4. Wrap as data URL: "data:image/jpeg;base64,<base64>"
+5. Emit Frame{DataURL, Width, Height, Tracking} — React draws the rectangle overlay
 ```
 
-**Rate limiting:** the `PreviewEncoder` skips encoding if the previous frame was sent less than 66ms ago (~15 fps ceiling), decoupling preview cadence from the camera frame rate.
+**Overlay:** Go sends the tracking point coordinates (mirrored for display) and template size. React draws the bounding rectangle using CSS positioning over the `<img>` element.

@@ -4,8 +4,8 @@ import "./style.css";
 import App from "./App";
 import { ParamsProvider } from "./state/useParams";
 import { RunningProvider } from "./state/useRunning";
-import { TelemetryProvider } from "./state/useTelemetry";
 import { PreviewProvider } from "./state/usePreview";
+import { StatusProvider } from "./state/useStatus";
 
 const container = document.getElementById("root");
 
@@ -15,11 +15,11 @@ root.render(
   <React.StrictMode>
     <ParamsProvider>
       <RunningProvider>
-        <TelemetryProvider>
+        <StatusProvider>
           <PreviewProvider>
             <App />
           </PreviewProvider>
-        </TelemetryProvider>
+        </StatusProvider>
       </RunningProvider>
     </ParamsProvider>
   </React.StrictMode>,

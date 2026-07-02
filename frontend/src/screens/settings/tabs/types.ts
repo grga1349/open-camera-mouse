@@ -1,6 +1,6 @@
-import type { AllParams } from "../../../types/params";
+import type { Params } from "../../../types/params";
 
 export type TabProps = {
-  draft: AllParams;
-  updateDraft: (updater: (current: AllParams) => AllParams) => void;
+  draft: Params;
+  updateDraft: (updater: (current: Params) => Params) => void;
 };

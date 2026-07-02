@@ -6,16 +6,16 @@ export function GetParams() {
   return window['go']['main']['App']['GetParams']();
 }
 
+export function PickPoint(arg1, arg2) {
+  return window['go']['main']['App']['PickPoint'](arg1, arg2);
+}
+
 export function Recenter() {
   return window['go']['main']['App']['Recenter']();
 }
 
-export function SaveParams(arg1) {
-  return window['go']['main']['App']['SaveParams'](arg1);
-}
-
-export function SetPickPoint(arg1, arg2) {
-  return window['go']['main']['App']['SetPickPoint'](arg1, arg2);
+export function ResetMouse() {
+  return window['go']['main']['App']['ResetMouse']();
 }
 
 export function Start() {

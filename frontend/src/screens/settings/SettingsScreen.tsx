@@ -4,7 +4,7 @@ import { ScreenShell } from "../../components/layout/ScreenShell";
 import { SettingsTabs } from "../../components/settings/SettingsTabs";
 import { defaultParams } from "../../state/useParams";
 import { useSettingsDraft } from "../../state/useSettingsDraft";
-import type { AllParams } from "../../types/params";
+import type { Params } from "../../types/params";
 import { deepClone } from "../../lib/clone";
 import { ClickingTab } from "./tabs/ClickingTab";
 import { GeneralTab } from "./tabs/GeneralTab";
@@ -23,7 +23,7 @@ const TAB_COMPONENTS: Record<SettingsTab, FC<TabProps>> = {
 };
 
 type SettingsScreenProps = {
-  onSave: (params: AllParams) => void | Promise<void>;
+  onSave: (params: Params) => void | Promise<void>;
   onCancel: () => void;
 };
 
