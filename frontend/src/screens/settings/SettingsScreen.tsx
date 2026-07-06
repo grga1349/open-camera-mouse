@@ -1,8 +1,7 @@
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { Button } from "../../components/Button";
 import { ScreenShell } from "../../components/ScreenShell";
 import { ChoiceButton } from "../../components/ChoiceButton";
-import { HotkeyField } from "../../components/HotkeyField";
 import { SliderField } from "../../components/SliderField";
 import { defaultParams } from "../../state/useParams";
 import { useSettingsDraft } from "../../state/useSettingsDraft";
@@ -12,12 +11,13 @@ import { deepClone } from "../../lib/clone";
 const TEMPLATE_SIZES = [30, 45, 60];
 
 type SettingsScreenProps = {
-  onSave: (params: Params) => void | Promise<void>;
+  onSave: (params: Params) => Promise<void>;
   onCancel: () => void;
 };
 
 export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) => {
   const { draft, dirty, update, updateDraft, resetDraft } = useSettingsDraft();
+  const [saving, setSaving] = useState(false);
 
   const handleCancel = () => {
     resetDraft();
@@ -25,8 +25,16 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
   };
 
   const handleSave = async () => {
-    await onSave(draft);
-    resetDraft();
+    setSaving(true);
+    try {
+      await onSave(draft);
+      resetDraft();
+    } catch {
+      // failure is already surfaced via the shared app-level error banner;
+      // draft stays dirty so the user's edits aren't lost.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleResetDefaults = () => {
@@ -46,10 +54,14 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
       }
       footer={
         <footer className="flex items-center justify-end gap-3 rounded-2xl border border-zinc-900 bg-zinc-900 px-4 py-3">
-          <Button onClick={handleResetDefaults}>Reset</Button>
-          <Button onClick={handleCancel}>Cancel</Button>
-          <Button variant="action" disabled={!dirty} onClick={handleSave}>
-            Save
+          <Button onClick={handleResetDefaults} disabled={saving}>
+            Reset
+          </Button>
+          <Button onClick={handleCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="action" disabled={!dirty || saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Save"}
           </Button>
         </footer>
       }
@@ -97,19 +109,6 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
             step={50}
             value={draft.dwellTimeMs}
             onChange={(value) => update({ dwellTimeMs: value })}
-          />
-
-          <HotkeyField
-            label="Start / Pause hotkey"
-            description="Runs even when the app is in the background"
-            value={draft.startPause}
-            onChange={(value) => update({ startPause: value })}
-          />
-          <HotkeyField
-            label="Recenter hotkey"
-            description="Recenters the tracker without pausing the camera"
-            value={draft.recenter}
-            onChange={(value) => update({ recenter: value })}
           />
 
           <label className="block text-sm text-zinc-300">

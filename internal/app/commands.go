@@ -6,7 +6,8 @@ type commandKind int
 
 const (
 	cmdPickPoint commandKind = iota
-	cmdRecenter
+	cmdBeginRecenter
+	cmdConfirmRecenter
 	cmdSetParams
 	cmdSetTrackingEnabled
 	cmdResetMouse

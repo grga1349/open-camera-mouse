@@ -7,7 +7,13 @@ const listeners = new Set<Listener>();
 
 export const publishPreview = (frame: PreviewFrame) => {
   latest = frame;
-  listeners.forEach((listener) => listener(frame));
+  listeners.forEach((listener) => {
+    try {
+      listener(frame);
+    } catch (err) {
+      console.error("previewBus: listener threw", err);
+    }
+  });
 };
 
 export const subscribePreview = (listener: Listener): (() => void) => {

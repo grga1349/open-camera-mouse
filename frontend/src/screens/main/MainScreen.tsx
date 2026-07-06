@@ -1,8 +1,7 @@
-import { useCallback, type FC } from "react";
-import { UpdateParams } from "../../../wailsjs/go/main/App";
-import { config as backendConfig } from "../../../wailsjs/go/models";
+import { useCallback, useState, type FC } from "react";
 import { ScreenShell } from "../../components/ScreenShell";
 import { useParams } from "../../state/useParams";
+import { useParamsSync } from "../../state/useParamsSync";
 import { useRunning } from "../../state/useRunning";
 import { useStatus } from "../../state/useStatus";
 import { CameraPreview } from "./components/CameraPreview";
@@ -10,7 +9,6 @@ import { ClickModeControls } from "./components/ClickModeControls";
 import { PrimaryActions } from "./components/PrimaryActions";
 import { StatusHeader } from "./components/StatusHeader";
 import { useRecenter } from "./hooks/useRecenter";
-import { useDwellHover } from "./hooks/useDwellHover";
 
 type MainScreenProps = {
   onOpenSettings: () => void;
@@ -19,13 +17,16 @@ type MainScreenProps = {
 };
 
 export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onStop }) => {
-  const { params, setParams } = useParams();
+  const { params } = useParams();
+  const { setParamsOptimistic } = useParamsSync();
   const { isRunning } = useRunning();
   const { status } = useStatus();
-  const { countdown, handleRecenter } = useRecenter();
-  const { onHoverStart, onHoverEnd } = useDwellHover();
+  const { countdown, isRecentering, handleRecenter } = useRecenter();
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const handleStartStop = async () => {
+  const handleStartStop = useCallback(async () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
     try {
       if (isRunning) {
         await onStop();
@@ -34,25 +35,36 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
       }
     } catch (err) {
       console.error("start/stop failed", err);
+    } finally {
+      setIsTransitioning(false);
     }
-  };
+  }, [isTransitioning, isRunning, onStart, onStop]);
 
   const toggleDwell = useCallback(async () => {
     const next = { ...params, dwellEnabled: !params.dwellEnabled };
-    setParams(next);
     try {
-      await UpdateParams(next as unknown as backendConfig.Params);
+      await setParamsOptimistic(next, "Could not update dwell clicking.");
     } catch (err) {
       console.error("update params failed", err);
     }
-  }, [params, setParams]);
+  }, [params, setParamsOptimistic]);
+
+  const toggleRightClick = useCallback(async () => {
+    const next = { ...params, rightClickEnabled: !params.rightClickEnabled };
+    try {
+      await setParamsOptimistic(next, "Could not update click button.");
+    } catch (err) {
+      console.error("update params failed", err);
+    }
+  }, [params, setParamsOptimistic]);
 
   return (
     <ScreenShell header={<StatusHeader lost={status.lost} onOpenSettings={onOpenSettings} />} mainClassName="gap-4">
-      <CameraPreview />
+      <CameraPreview isRecentering={isRecentering} />
       <div className="grid gap-3 text-sm">
         <PrimaryActions
           isRunning={isRunning}
+          isTransitioning={isTransitioning}
           recenterCountdown={countdown}
           onToggleRun={handleStartStop}
           onRecenter={handleRecenter}
@@ -60,8 +72,8 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
         <ClickModeControls
           dwellEnabled={params.dwellEnabled}
           onToggleDwell={toggleDwell}
-          onEnableDwellHoverStart={onHoverStart}
-          onEnableDwellHoverEnd={onHoverEnd}
+          rightClickEnabled={params.rightClickEnabled}
+          onToggleRightClick={toggleRightClick}
         />
       </div>
     </ScreenShell>

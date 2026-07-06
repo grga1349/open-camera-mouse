@@ -16,10 +16,16 @@ export const useSettingsDraft = (): SettingsDraft => {
   const [snapshot, setSnapshot] = useState<Params>(params);
   const [draft, setDraft] = useState<Params>(params);
 
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(snapshot), [draft, snapshot]);
+
   useEffect(() => {
+    // Skip syncing while the user has unsaved edits open — an unrelated
+    // params change (e.g. a background param refresh) must not clobber
+    // in-progress draft edits.
+    if (dirty) return;
     setSnapshot(params);
     setDraft(params);
-  }, [params]);
+  }, [params, dirty]);
 
   const updateDraft = useCallback((updater: (current: Params) => Params) => {
     setDraft((prev) => updater(prev));
@@ -35,8 +41,6 @@ export const useSettingsDraft = (): SettingsDraft => {
   const resetDraft = useCallback(() => {
     setDraft(deepClone(snapshot));
   }, [snapshot]);
-
-  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(snapshot), [draft, snapshot]);
 
   return {
     draft,

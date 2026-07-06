@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState, type FC } from "react";
 import type { PreviewFrame, TrackingOverlay } from "../../../types/preview";
 import { getLatestPreview, subscribePreview } from "../../../lib/previewBus";
 import { computeCoverTransform, sourceToContainerPoint, type CoverTransform } from "../../../lib/coverTransform";
+import { useParams } from "../../../state/useParams";
 import { usePickPoint } from "../hooks/usePickPoint";
+import { PREVIEW_WIDTH_PX, PREVIEW_HEIGHT_PX } from "../previewLayout";
 
-const PREVIEW_WIDTH_PX = 360;
-const PREVIEW_HEIGHT_PX = 270;
+type CameraPreviewProps = {
+  isRecentering: boolean;
+};
 
 const applyOverlay = (el: HTMLDivElement, transform: CoverTransform | null, tracking: TrackingOverlay | null) => {
   if (!transform || !tracking) {
@@ -26,13 +29,15 @@ const applyOverlay = (el: HTMLDivElement, transform: CoverTransform | null, trac
   el.style.borderColor = tracking.lost ? "#f87171" : "#34d399";
 };
 
-export const CameraPreview: FC = () => {
+export const CameraPreview: FC<CameraPreviewProps> = ({ isRecentering }) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const recenterBoxRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
   const hasFrameRef = useRef(false);
   const sourceSizeRef = useRef({ width: 0, height: 0 });
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
+  const { params } = useParams();
   const { onSelectPoint } = usePickPoint();
 
   const transform = useMemo(
@@ -64,6 +69,29 @@ export const CameraPreview: FC = () => {
     return subscribePreview(applyFrame);
   }, [transform]);
 
+  useEffect(() => {
+    if (isRecentering && overlayRef.current) {
+      overlayRef.current.style.display = "none";
+    }
+
+    const box = recenterBoxRef.current;
+    if (!box) return;
+
+    if (!isRecentering || !transform || sourceSize.width <= 0 || sourceSize.height <= 0) {
+      box.style.display = "none";
+      return;
+    }
+
+    const half = params.templateSizePx / 2;
+    const topLeft = sourceToContainerPoint(transform, sourceSize.width / 2 - half, sourceSize.height / 2 - half);
+    const boxSize = params.templateSizePx * transform.scale;
+    box.style.display = "block";
+    box.style.left = `${topLeft.x}px`;
+    box.style.top = `${topLeft.y}px`;
+    box.style.width = `${boxSize}px`;
+    box.style.height = `${boxSize}px`;
+  }, [isRecentering, transform, sourceSize, params.templateSizePx]);
+
   return (
     <div className="flex justify-center">
       <div
@@ -73,6 +101,11 @@ export const CameraPreview: FC = () => {
       >
         <img ref={imgRef} alt="camera preview" className="absolute inset-0 h-full w-full object-cover" />
         <div ref={overlayRef} className="pointer-events-none absolute border-2" style={{ display: "none" }} />
+        <div
+          ref={recenterBoxRef}
+          className="pointer-events-none absolute border-2 border-white"
+          style={{ display: "none" }}
+        />
         <div
           ref={placeholderRef}
           className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-sm text-zinc-500"

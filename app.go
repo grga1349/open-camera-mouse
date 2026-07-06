@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	appsvc "open-camera-mouse/internal/app"
@@ -46,19 +45,16 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(ctx, "service:running", running)
 	}
 
-	params := a.app.GetParams()
-
 	hk, err := hotkeys.Start(
-		params.StartPause,
-		params.Recenter,
 		a.toggleStartStop,
-		func() { _ = a.app.SendRecenter() },
+		func() { runtime.EventsEmit(ctx, "recenter:hotkey") },
 	)
 	if err != nil {
 		a.logErrorf("hotkeys unavailable: %v", err)
 	}
 	a.hk = hk
 
+	params := a.app.GetParams()
 	if params.AutoStart {
 		go func() {
 			if err := a.Start(); err != nil {
@@ -88,8 +84,12 @@ func (a *App) PickPoint(x, y int) error {
 	return a.app.SendPickPoint(x, y)
 }
 
-func (a *App) Recenter() error {
-	return a.app.SendRecenter()
+func (a *App) BeginRecenter() error {
+	return a.app.SendBeginRecenter()
+}
+
+func (a *App) ConfirmRecenter() error {
+	return a.app.SendConfirmRecenter()
 }
 
 func (a *App) ResetMouse() error {
@@ -105,16 +105,7 @@ func (a *App) GetParams() config.Params {
 }
 
 func (a *App) UpdateParams(params config.Params) error {
-	prev := a.app.GetParams()
-	if err := a.app.UpdateParams(params); err != nil {
-		return err
-	}
-	if a.hk != nil && (params.StartPause != prev.StartPause || params.Recenter != prev.Recenter) {
-		if err := a.hk.SetKeys(params.StartPause, params.Recenter); err != nil {
-			return fmt.Errorf("update hotkeys: %w", err)
-		}
-	}
-	return nil
+	return a.app.UpdateParams(params)
 }
 
 func (a *App) toggleStartStop() {

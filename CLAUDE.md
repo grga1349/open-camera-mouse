@@ -100,13 +100,16 @@ See [docs/ALGORITHM.md](docs/ALGORITHM.md) for algorithm details.
 ```go
 func (a *App) Start() error
 func (a *App) Stop() error
-func (a *App) PickPoint(x, y int)
-func (a *App) Recenter()
-func (a *App) ResetMouse()
-func (a *App) ToggleTracking(enabled bool)
+func (a *App) PickPoint(x, y int) error
+func (a *App) BeginRecenter() error
+func (a *App) ConfirmRecenter() error
+func (a *App) ResetMouse() error
+func (a *App) ToggleTracking(enabled bool) error
 func (a *App) GetParams() config.Params
 func (a *App) UpdateParams(params config.Params) error
 ```
+
+Recenter is two-phase: `BeginRecenter` pauses tracking/cursor movement so the frontend can show a guided countdown; `ConfirmRecenter` picks the frame center and resumes. Both the UI button and the `F12` hotkey (via the `recenter:hotkey` event) drive the same frontend flow (`useRecenter`).
 
 ## Events
 

@@ -8,8 +8,7 @@ export const defaultParams: Params = {
   dwellEnabled: false,
   dwellTimeMs: 500,
   autoStart: false,
-  startPause: "F11",
-  recenter: "F12",
+  rightClickEnabled: false,
 };
 
 type ParamsContextValue = {

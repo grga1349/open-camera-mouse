@@ -5,8 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-
-	"open-camera-mouse/internal/hotkeys"
 )
 
 const (
@@ -14,19 +12,19 @@ const (
 	DefaultGainMultiplier = 8.0
 	DefaultSmoothing      = 0.30
 	DefaultDwellTimeMs    = 500
-	DefaultStartPause     = "F11"
-	DefaultRecenter       = "F12"
 )
 
+// Params is persisted as JSON. Fields removed from this struct (e.g. the
+// short-lived configurable-hotkey experiment) are simply ignored by
+// json.Unmarshal in older config.json files — no migration needed.
 type Params struct {
-	TemplateSizePx int     `json:"templateSizePx"`
-	GainMultiplier float64 `json:"gainMultiplier"`
-	Smoothing      float64 `json:"smoothing"`
-	DwellEnabled   bool    `json:"dwellEnabled"`
-	DwellTimeMs    int     `json:"dwellTimeMs"`
-	AutoStart      bool    `json:"autoStart"`
-	StartPause     string  `json:"startPause"`
-	Recenter       string  `json:"recenter"`
+	TemplateSizePx    int     `json:"templateSizePx"`
+	GainMultiplier    float64 `json:"gainMultiplier"`
+	Smoothing         float64 `json:"smoothing"`
+	DwellEnabled      bool    `json:"dwellEnabled"`
+	DwellTimeMs       int     `json:"dwellTimeMs"`
+	AutoStart         bool    `json:"autoStart"`
+	RightClickEnabled bool    `json:"rightClickEnabled"`
 }
 
 func DefaultParams() Params {
@@ -35,8 +33,6 @@ func DefaultParams() Params {
 		GainMultiplier: DefaultGainMultiplier,
 		Smoothing:      DefaultSmoothing,
 		DwellTimeMs:    DefaultDwellTimeMs,
-		StartPause:     DefaultStartPause,
-		Recenter:       DefaultRecenter,
 	}
 }
 
@@ -76,16 +72,6 @@ func (m *Manager) Load() (Params, error) {
 	}
 	if p.DwellTimeMs <= 0 {
 		p.DwellTimeMs = DefaultDwellTimeMs
-	}
-	if _, ok := hotkeys.ParseKey(p.StartPause); !ok {
-		p.StartPause = DefaultStartPause
-	}
-	if _, ok := hotkeys.ParseKey(p.Recenter); !ok {
-		p.Recenter = DefaultRecenter
-	}
-	if p.StartPause == p.Recenter {
-		p.StartPause = DefaultStartPause
-		p.Recenter = DefaultRecenter
 	}
 	return p, nil
 }

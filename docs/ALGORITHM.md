@@ -14,8 +14,8 @@ The application runs a per-frame pipeline inside a single goroutine. Each camera
 
 **Per frame:**
 1. **Capture** — read frame from webcam
-2. **Apply pending commands** — pick point, recenter, set params (queued between frames)
-3. **Track marker** — template match to locate the tracking point
+2. **Apply pending commands** — pick point, recenter, set params (queued between frames). Recenter is two-phase: `BeginRecenter` pauses tracking/cursor movement and hides the overlay immediately; `ConfirmRecenter` (sent after the frontend's countdown) picks the frame center and resumes.
+3. **Track marker** — template match to locate the tracking point (skipped while a recenter is pending confirmation)
 4. **Move cursor** — translate tracking delta to cursor movement
 5. **Dwell click** — click if cursor held still long enough
 6. **Render preview** — flip frame, emit tracking overlay coords, encode JPEG, publish to UI

@@ -5,6 +5,5 @@ export type Params = {
   dwellEnabled: boolean;
   dwellTimeMs: number;
   autoStart: boolean;
-  startPause: string;
-  recenter: string;
+  rightClickEnabled: boolean;
 };

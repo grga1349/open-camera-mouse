@@ -46,6 +46,10 @@ func (t *Tracker) HasTemplate() bool {
 	return t.hasTemplate
 }
 
+// Pick selects (x, y) as the center of a new templateSizePx-square tracking
+// template. The center is clamped so the full template fits inside the
+// frame; if the frame is smaller than the template, the template is cropped
+// to the frame bounds instead of failing.
 func (t *Tracker) Pick(frame gocv.Mat, x, y int) error {
 	size := t.params.TemplateSizePx
 	if size <= 0 {
@@ -55,16 +59,22 @@ func (t *Tracker) Pick(frame gocv.Mat, x, y int) error {
 	gray := toGray(frame)
 	defer gray.Close()
 
-	cx := clamp(x-size/2, 0, gray.Cols()-size)
-	cy := clamp(y-size/2, 0, gray.Rows()-size)
-	rect := image.Rect(cx, cy, cx+size, cy+size)
+	half := size / 2
+	cx := clampCenter(x, half, gray.Cols())
+	cy := clampCenter(y, half, gray.Rows())
+
+	rect := image.Rect(cx-half, cy-half, cx-half+size, cy-half+size).
+		Intersect(image.Rect(0, 0, gray.Cols(), gray.Rows()))
+	if rect.Empty() {
+		return errInvalidPick
+	}
 
 	roi := gray.Region(rect)
 	t.template.Close()
 	t.template = roi.Clone()
 	roi.Close()
 
-	t.templatePoint = image.Point{X: cx + size/2, Y: cy + size/2}
+	t.templatePoint = image.Point{X: cx, Y: cy}
 	t.hasTemplate = true
 	return nil
 }
@@ -149,4 +159,16 @@ func clamp(v, lo, hi int) int {
 		return hi
 	}
 	return v
+}
+
+// clampCenter clamps a proposed template center so the full [dim-half, dim+half]
+// template fits inside [0, dim). If the template can't fit at all (frame
+// smaller than the template), it falls back to the frame's own center.
+func clampCenter(v, half, dim int) int {
+	lo := half
+	hi := dim - half - 1
+	if hi < lo {
+		return dim / 2
+	}
+	return clamp(v, lo, hi)
 }

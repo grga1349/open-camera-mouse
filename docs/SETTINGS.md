@@ -9,14 +9,10 @@ All settings are persisted to `config.json` in the platform config directory (se
 | Setting | Key | Default | Description |
 |---------|-----|---------|-------------|
 | Auto-start | `autoStart` | `false` | Start tracking automatically when the app launches. |
-| Start/Pause hotkey | `startPause` | `F11` | Global hotkey that toggles tracking on/off, even while the app is in the background. |
-| Recenter hotkey | `recenter` | `F12` | Global hotkey that recenters the tracker without pausing the camera. |
 
-**Hotkey constraints:**
-- Must be one of `F1`–`F20` — no modifier keys (Ctrl/Alt/Shift/Cmd) are supported, matching the `golang.design/x/hotkey` backend.
-- `startPause` and `recenter` must be different keys.
-- An invalid or duplicate value is rejected on save; a corrupted value in `config.json` falls back to the default (`F11`/`F12`) on load.
-- Hotkeys are re-registered live when changed from Settings — no app restart required.
+**Fixed shortcuts (not configurable):**
+- `F11` — toggle start/stop
+- `F12` — recenter tracker and reset cursor position (see [Recenter flow](#recenter-flow) below)
 
 ---
 
@@ -52,6 +48,20 @@ All settings are persisted to `config.json` in the platform config directory (se
 |---------|-----|---------|-------|-------------|
 | Dwell enabled | `dwellEnabled` | `false` | on/off | Enable hover-to-click. Toggled from the main screen. |
 | Dwell time | `dwellTimeMs` | `500` | 200–1500ms | How long the cursor must stay still before a click fires. |
+| Right click | `rightClickEnabled` | `false` | on/off | When on, dwell fires a right click instead of a left click. Toggled from the main screen. |
 
 **Constants (not user-configurable):**
 - Dwell radius = `30px` — cursor must stay within this radius while dwelling
+
+---
+
+## Recenter flow
+
+Triggered from the main screen's **Recenter** button or the `F12` hotkey — both go through the same guided flow:
+
+1. Tracking and cursor movement pause immediately; the tracking overlay hides.
+2. The camera preview stays live. A **white** square (sized to `templateSizePx`) appears at the exact center of the frame — position the desired tracking point (e.g. your nose) inside it.
+3. After a 3-second countdown, the frame's center pixel is picked as the new tracking target.
+4. Tracking resumes and the normal green/red overlay returns.
+
+Recenter requires tracking to already be running (`Start`/`F11` first) — otherwise it fails visibly rather than silently no-op-ing.

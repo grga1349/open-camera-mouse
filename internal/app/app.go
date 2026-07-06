@@ -44,6 +44,7 @@ type App struct {
 
 	// runtime state — only accessed from run goroutine
 	trackingEnabled bool
+	recentering     bool
 	lastLost        bool
 	pendingPick     bool
 	pendingPickX    int
@@ -131,11 +132,29 @@ func (a *App) UpdateParams(p config.Params) error {
 }
 
 func (a *App) SendPickPoint(x, y int) error {
+	if !a.IsRunning() {
+		return ErrNotRunning
+	}
 	return a.sendCommand(command{kind: cmdPickPoint, x: x, y: y})
 }
 
-func (a *App) SendRecenter() error {
-	return a.sendCommand(command{kind: cmdRecenter})
+// SendBeginRecenter pauses tracking/cursor movement and tracking overlay so
+// the frontend can guide the user into position before SendConfirmRecenter
+// picks the frame center as the new tracking target.
+func (a *App) SendBeginRecenter() error {
+	if !a.IsRunning() {
+		return ErrNotRunning
+	}
+	return a.sendCommand(command{kind: cmdBeginRecenter})
+}
+
+// SendConfirmRecenter picks the current frame's center as the new tracking
+// target and resumes tracking. Must follow a SendBeginRecenter call.
+func (a *App) SendConfirmRecenter() error {
+	if !a.IsRunning() {
+		return ErrNotRunning
+	}
+	return a.sendCommand(command{kind: cmdConfirmRecenter})
 }
 
 func (a *App) SendResetMouse() error {
@@ -180,6 +199,7 @@ func (a *App) run(ctx context.Context) {
 	a.enc = preview.NewEncoder()
 	a.lastLost = true
 	a.trackingEnabled = true
+	a.recentering = false
 	a.mouse.Reset()
 
 	for {
@@ -202,26 +222,36 @@ func (a *App) handleFrame(frame camera.Frame) {
 
 	if a.pendingPick {
 		a.pendingPick = false
-		x := frame.Width - a.pendingPickX
-		_ = a.tracker.Pick(frame.Mat, x, a.pendingPickY)
+		// pendingPickX/Y arrive in mirrored (display) coordinates — convert
+		// to raw-frame space to match frame.Mat, which is never flipped.
+		displayX := clampToFrame(a.pendingPickX, frame.Width)
+		displayY := clampToFrame(a.pendingPickY, frame.Height)
+		rawX := frame.Width - 1 - displayX
+		_ = a.tracker.Pick(frame.Mat, rawX, displayY)
 		a.mouse.Reset()
 	}
 	if a.pendingRecenter {
 		a.pendingRecenter = false
+		a.recentering = false
 		_ = a.tracker.Pick(frame.Mat, frame.Width/2, frame.Height/2)
 		a.mouse.Reset()
 	}
 
 	var result tracking.Result
-	if a.trackingEnabled {
+	switch {
+	case a.recentering:
+		result = tracking.Result{Lost: true}
+	case a.trackingEnabled:
 		result = a.tracker.Update(frame.Mat)
-	} else {
+	default:
 		result = tracking.Result{Lost: true}
 	}
 
-	a.mouse.Update(result.X, result.Y, result.Lost)
+	if !a.recentering {
+		a.mouse.Update(result.X, result.Y, result.Lost)
+	}
 
-	if result.Lost != a.lastLost {
+	if !a.recentering && result.Lost != a.lastLost {
 		a.lastLost = result.Lost
 		if a.EmitStatus != nil {
 			a.EmitStatus(Status{Running: true, Lost: result.Lost})
@@ -229,9 +259,9 @@ func (a *App) handleFrame(frame camera.Frame) {
 	}
 
 	var overlay *preview.TrackingOverlay
-	if a.tracker.HasTemplate() {
+	if !a.recentering && a.tracker.HasTemplate() {
 		overlay = &preview.TrackingOverlay{
-			X:              frame.Width - result.X,
+			X:              frame.Width - 1 - result.X,
 			Y:              result.Y,
 			TemplateSizePx: a.params.TemplateSizePx,
 			Lost:           result.Lost,
@@ -249,7 +279,9 @@ func (a *App) handleCommand(cmd command) {
 		a.pendingPick = true
 		a.pendingPickX = cmd.x
 		a.pendingPickY = cmd.y
-	case cmdRecenter:
+	case cmdBeginRecenter:
+		a.recentering = true
+	case cmdConfirmRecenter:
 		a.pendingRecenter = true
 	case cmdSetParams:
 		a.tracker.SetParams(tracking.Params{TemplateSizePx: cmd.params.TemplateSizePx})
@@ -264,11 +296,24 @@ func (a *App) handleCommand(cmd command) {
 	}
 }
 
+// clampToFrame keeps a coordinate within the valid pixel index range
+// [0, dim-1] for a frame of the given dimension.
+func clampToFrame(v, dim int) int {
+	if v < 0 {
+		return 0
+	}
+	if v > dim-1 {
+		return dim - 1
+	}
+	return v
+}
+
 func mouseParams(p config.Params) mouse.Params {
 	return mouse.Params{
-		GainMultiplier: p.GainMultiplier,
-		Smoothing:      p.Smoothing,
-		DwellEnabled:   p.DwellEnabled,
-		DwellTimeMs:    p.DwellTimeMs,
+		GainMultiplier:    p.GainMultiplier,
+		Smoothing:         p.Smoothing,
+		DwellEnabled:      p.DwellEnabled,
+		DwellTimeMs:       p.DwellTimeMs,
+		RightClickEnabled: p.RightClickEnabled,
 	}
 }

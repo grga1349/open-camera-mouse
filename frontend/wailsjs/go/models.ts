@@ -7,6 +7,7 @@ export namespace config {
 	    dwellEnabled: boolean;
 	    dwellTimeMs: number;
 	    autoStart: boolean;
+	    rightClickEnabled: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Params(source);
@@ -20,6 +21,7 @@ export namespace config {
 	        this.dwellEnabled = source["dwellEnabled"];
 	        this.dwellTimeMs = source["dwellTimeMs"];
 	        this.autoStart = source["autoStart"];
+	        this.rightClickEnabled = source["rightClickEnabled"];
 	    }
 	}
 

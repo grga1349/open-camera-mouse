@@ -14,10 +14,11 @@ const (
 )
 
 type Params struct {
-	GainMultiplier float64
-	Smoothing      float64
-	DwellEnabled   bool
-	DwellTimeMs    int
+	GainMultiplier    float64
+	Smoothing         float64
+	DwellEnabled      bool
+	DwellTimeMs       int
+	RightClickEnabled bool
 }
 
 type Mouse struct {
@@ -123,13 +124,19 @@ func (m *Mouse) updateDwell(lost bool) {
 	dwellTime := time.Duration(m.params.DwellTimeMs) * time.Millisecond
 	if time.Since(m.dwellStart) >= dwellTime {
 		m.dwellStart = time.Now()
-		clickLeft()
+		click(m.params.RightClickEnabled)
 	}
 }
 
 func move(x, y int) { robotgo.Move(x, y) }
 
-func clickLeft() { robotgo.Click("left", false) }
+func click(rightClick bool) {
+	if rightClick {
+		robotgo.Click("right", false)
+		return
+	}
+	robotgo.Click("left", false)
+}
 
 func position() (int, int) { return robotgo.Location() }
 

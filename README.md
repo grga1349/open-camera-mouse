@@ -46,18 +46,22 @@ Get the latest release for your platform:
 
 ## Settings
 
-| Tab | Options |
-|-----|---------|
-| **Tracking** | Template size |
-| **Pointer** | Sensitivity (gain multiplier), smoothing |
-| **Clicking** | Dwell enable/disable, dwell time |
-| **General** | Auto-start |
+One screen, no tabs:
+
+| Setting | Options |
+|---------|---------|
+| Template size | Tracking template patch size |
+| Sensitivity | Gain multiplier, smoothing |
+| Dwell time | How long to hold still before a dwell click fires |
+| Auto-start | Start tracking automatically on launch |
+
+See [docs/SETTINGS.md](docs/SETTINGS.md) for full details, ranges, and the recenter flow.
 
 ## Tips
 
 - **Good lighting** helps tracking accuracy
 - **Marker turns red** when tracking is lost — try a larger template size
-- **Press F12** to recenter both the tracker and cursor
+- **Press F12** to recenter — tracking pauses, position the tracked point in the white box, and it locks in after a short countdown
 - **Increase sensitivity** for less head movement, decrease for more precision
 
 ## Troubleshooting
