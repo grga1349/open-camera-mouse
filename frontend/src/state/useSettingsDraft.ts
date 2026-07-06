@@ -4,9 +4,9 @@ import { useParams } from "./useParams";
 import { deepClone } from "../lib/clone";
 
 export type SettingsDraft = {
-  snapshot: Params;
   draft: Params;
   dirty: boolean;
+  update: (changes: Partial<Params>) => void;
   updateDraft: (updater: (current: Params) => Params) => void;
   resetDraft: () => void;
 };
@@ -25,6 +25,13 @@ export const useSettingsDraft = (): SettingsDraft => {
     setDraft((prev) => updater(prev));
   }, []);
 
+  const update = useCallback(
+    (changes: Partial<Params>) => {
+      updateDraft((curr) => ({ ...curr, ...changes }));
+    },
+    [updateDraft],
+  );
+
   const resetDraft = useCallback(() => {
     setDraft(deepClone(snapshot));
   }, [snapshot]);
@@ -32,9 +39,9 @@ export const useSettingsDraft = (): SettingsDraft => {
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(snapshot), [draft, snapshot]);
 
   return {
-    snapshot,
     draft,
     dirty,
+    update,
     updateDraft,
     resetDraft,
   };

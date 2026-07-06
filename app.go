@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	appsvc "open-camera-mouse/internal/app"
@@ -45,7 +46,11 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(ctx, "service:running", running)
 	}
 
+	params := a.app.GetParams()
+
 	hk, err := hotkeys.Start(
+		params.StartPause,
+		params.Recenter,
 		a.toggleStartStop,
 		func() { _ = a.app.SendRecenter() },
 	)
@@ -54,7 +59,6 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.hk = hk
 
-	params := a.app.GetParams()
 	if params.AutoStart {
 		go func() {
 			if err := a.Start(); err != nil {
@@ -101,7 +105,16 @@ func (a *App) GetParams() config.Params {
 }
 
 func (a *App) UpdateParams(params config.Params) error {
-	return a.app.UpdateParams(params)
+	prev := a.app.GetParams()
+	if err := a.app.UpdateParams(params); err != nil {
+		return err
+	}
+	if a.hk != nil && (params.StartPause != prev.StartPause || params.Recenter != prev.Recenter) {
+		if err := a.hk.SetKeys(params.StartPause, params.Recenter); err != nil {
+			return fmt.Errorf("update hotkeys: %w", err)
+		}
+	}
+	return nil
 }
 
 func (a *App) toggleStartStop() {

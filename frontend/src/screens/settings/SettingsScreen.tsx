@@ -1,26 +1,15 @@
-import { useState, type FC } from "react";
+import type { FC } from "react";
 import { Button } from "../../components/Button";
-import { ScreenShell } from "../../components/layout/ScreenShell";
-import { SettingsTabs } from "../../components/settings/SettingsTabs";
+import { ScreenShell } from "../../components/ScreenShell";
+import { ChoiceButton } from "../../components/ChoiceButton";
+import { HotkeyField } from "../../components/HotkeyField";
+import { SliderField } from "../../components/SliderField";
 import { defaultParams } from "../../state/useParams";
 import { useSettingsDraft } from "../../state/useSettingsDraft";
 import type { Params } from "../../types/params";
 import { deepClone } from "../../lib/clone";
-import { ClickingTab } from "./tabs/ClickingTab";
-import { GeneralTab } from "./tabs/GeneralTab";
-import { PointerTab } from "./tabs/PointerTab";
-import { TrackingTab } from "./tabs/TrackingTab";
-import type { TabProps } from "./tabs/types";
 
-const SETTINGS_TABS = ["Tracking", "Pointer", "Clicking", "General"] as const;
-type SettingsTab = (typeof SETTINGS_TABS)[number];
-
-const TAB_COMPONENTS: Record<SettingsTab, FC<TabProps>> = {
-  Tracking: TrackingTab,
-  Pointer: PointerTab,
-  Clicking: ClickingTab,
-  General: GeneralTab,
-};
+const TEMPLATE_SIZES = [30, 45, 60];
 
 type SettingsScreenProps = {
   onSave: (params: Params) => void | Promise<void>;
@@ -28,8 +17,7 @@ type SettingsScreenProps = {
 };
 
 export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("Tracking");
-  const { draft, dirty, resetDraft, updateDraft } = useSettingsDraft();
+  const { draft, dirty, update, updateDraft, resetDraft } = useSettingsDraft();
 
   const handleCancel = () => {
     resetDraft();
@@ -44,8 +32,6 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
   const handleResetDefaults = () => {
     updateDraft(() => deepClone(defaultParams));
   };
-
-  const Component = TAB_COMPONENTS[activeTab];
 
   return (
     <ScreenShell
@@ -69,11 +55,76 @@ export const SettingsScreen: FC<SettingsScreenProps> = ({ onSave, onCancel }) =>
       }
       mainClassName="gap-4"
     >
-      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950">
-        <SettingsTabs tabs={SETTINGS_TABS} activeTab={activeTab} onChange={setActiveTab} />
-        <section className="flex-1 overflow-auto px-4 py-4 text-sm text-zinc-300">
-          <Component draft={draft} updateDraft={updateDraft} />
-        </section>
+      <div className="flex-1 overflow-auto rounded-2xl border border-zinc-900 bg-zinc-950 px-4 py-4">
+        <div className="space-y-6 text-sm text-zinc-300">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Template size</p>
+            <div className="flex gap-2">
+              {TEMPLATE_SIZES.map((size) => (
+                <ChoiceButton
+                  key={size}
+                  selected={draft.templateSizePx === size}
+                  onClick={() => update({ templateSizePx: size })}
+                >
+                  {size}px
+                </ChoiceButton>
+              ))}
+            </div>
+          </div>
+
+          <SliderField
+            label={`Gain (${draft.gainMultiplier.toFixed(1)}x)`}
+            min={1}
+            max={30}
+            step={0.5}
+            value={draft.gainMultiplier}
+            onChange={(value) => update({ gainMultiplier: value })}
+          />
+
+          <SliderField
+            label={`Smoothing (${Math.round(draft.smoothing * 100)}%)`}
+            min={0}
+            max={85}
+            step={5}
+            value={Math.round(draft.smoothing * 100)}
+            onChange={(value) => update({ smoothing: value / 100 })}
+          />
+
+          <SliderField
+            label={`Dwell time (${draft.dwellTimeMs} ms)`}
+            min={200}
+            max={1500}
+            step={50}
+            value={draft.dwellTimeMs}
+            onChange={(value) => update({ dwellTimeMs: value })}
+          />
+
+          <HotkeyField
+            label="Start / Pause hotkey"
+            description="Runs even when the app is in the background"
+            value={draft.startPause}
+            onChange={(value) => update({ startPause: value })}
+          />
+          <HotkeyField
+            label="Recenter hotkey"
+            description="Recenters the tracker without pausing the camera"
+            value={draft.recenter}
+            onChange={(value) => update({ recenter: value })}
+          />
+
+          <label className="block text-sm text-zinc-300">
+            <div className="flex items-center gap-3 uppercase tracking-wide">
+              <input
+                type="checkbox"
+                className="h-5 w-5 rounded border border-zinc-700 bg-zinc-900 text-emerald-400 accent-emerald-400 focus:ring-emerald-400"
+                checked={draft.autoStart}
+                onChange={(event) => update({ autoStart: event.target.checked })}
+              />
+              Autostart camera
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">Begin capturing automatically when the app launches.</p>
+          </label>
+        </div>
       </div>
     </ScreenShell>
   );

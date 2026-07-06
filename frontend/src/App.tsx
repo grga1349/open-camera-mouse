@@ -6,7 +6,7 @@ import { MainScreen } from "./screens/main/MainScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { useParams } from "./state/useParams";
 import { useRunning } from "./state/useRunning";
-import { usePreview } from "./state/usePreview";
+import { publishPreview } from "./lib/previewBus";
 import { useStatus } from "./state/useStatus";
 import type { Params } from "./types/params";
 import { deepClone } from "./lib/clone";
@@ -17,7 +17,6 @@ function App() {
   const [screen, setScreen] = useState<Screen>("main");
   const { setParams } = useParams();
   const { setRunning } = useRunning();
-  const { setPreview } = usePreview();
   const { setStatus } = useStatus();
 
   useEffect(() => {
@@ -31,7 +30,7 @@ function App() {
 
     offPreview = EventsOn("preview:frame", (frame) => {
       if (!frame?.dataUrl) return;
-      setPreview({
+      publishPreview({
         dataUrl: frame.dataUrl,
         width: frame.width ?? 0,
         height: frame.height ?? 0,
@@ -52,15 +51,19 @@ function App() {
       offStatus?.();
       offRunning?.();
     };
-  }, [setParams, setPreview, setStatus, setRunning]);
+  }, [setParams, setStatus, setRunning]);
 
   const openSettings = () => setScreen("settings");
   const closeSettings = () => setScreen("main");
 
   const handleSettingsSave = async (next: Params) => {
-    await UpdateParams(next as unknown as backendConfig.Params);
-    setParams(next);
-    closeSettings();
+    try {
+      await UpdateParams(next as unknown as backendConfig.Params);
+      setParams(next);
+      closeSettings();
+    } catch (err) {
+      console.error("update params failed", err);
+    }
   };
 
   const handleStart = async () => {

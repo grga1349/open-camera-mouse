@@ -4,7 +4,6 @@ import "./style.css";
 import App from "./App";
 import { ParamsProvider } from "./state/useParams";
 import { RunningProvider } from "./state/useRunning";
-import { PreviewProvider } from "./state/usePreview";
 import { StatusProvider } from "./state/useStatus";
 
 const container = document.getElementById("root");
@@ -16,9 +15,7 @@ root.render(
     <ParamsProvider>
       <RunningProvider>
         <StatusProvider>
-          <PreviewProvider>
-            <App />
-          </PreviewProvider>
+          <App />
         </StatusProvider>
       </RunningProvider>
     </ParamsProvider>

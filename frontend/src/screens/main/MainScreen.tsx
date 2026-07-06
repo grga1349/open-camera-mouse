@@ -1,18 +1,16 @@
 import { useCallback, type FC } from "react";
 import { UpdateParams } from "../../../wailsjs/go/main/App";
 import { config as backendConfig } from "../../../wailsjs/go/models";
-import { ScreenShell } from "../../components/layout/ScreenShell";
+import { ScreenShell } from "../../components/ScreenShell";
 import { useParams } from "../../state/useParams";
 import { useRunning } from "../../state/useRunning";
 import { useStatus } from "../../state/useStatus";
-import { usePreview } from "../../state/usePreview";
 import { CameraPreview } from "./components/CameraPreview";
 import { ClickModeControls } from "./components/ClickModeControls";
 import { PrimaryActions } from "./components/PrimaryActions";
 import { StatusHeader } from "./components/StatusHeader";
 import { useRecenter } from "./hooks/useRecenter";
 import { useDwellHover } from "./hooks/useDwellHover";
-import { usePickPoint } from "./hooks/usePickPoint";
 
 type MainScreenProps = {
   onOpenSettings: () => void;
@@ -24,10 +22,8 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
   const { params, setParams } = useParams();
   const { isRunning } = useRunning();
   const { status } = useStatus();
-  const { preview } = usePreview();
   const { countdown, handleRecenter } = useRecenter();
   const { onHoverStart, onHoverEnd } = useDwellHover();
-  const { onSelectPoint } = usePickPoint();
 
   const handleStartStop = async () => {
     try {
@@ -53,7 +49,7 @@ export const MainScreen: FC<MainScreenProps> = ({ onOpenSettings, onStart, onSto
 
   return (
     <ScreenShell header={<StatusHeader lost={status.lost} onOpenSettings={onOpenSettings} />} mainClassName="gap-4">
-      <CameraPreview preview={preview} onSelectPoint={onSelectPoint} />
+      <CameraPreview />
       <div className="grid gap-3 text-sm">
         <PrimaryActions
           isRunning={isRunning}

@@ -9,10 +9,14 @@ All settings are persisted to `config.json` in the platform config directory (se
 | Setting | Key | Default | Description |
 |---------|-----|---------|-------------|
 | Auto-start | `autoStart` | `false` | Start tracking automatically when the app launches. |
+| Start/Pause hotkey | `startPause` | `F11` | Global hotkey that toggles tracking on/off, even while the app is in the background. |
+| Recenter hotkey | `recenter` | `F12` | Global hotkey that recenters the tracker without pausing the camera. |
 
-**Fixed shortcuts (not configurable):**
-- `F11` — toggle start/stop
-- `F12` — recenter tracker and reset cursor position
+**Hotkey constraints:**
+- Must be one of `F1`–`F20` — no modifier keys (Ctrl/Alt/Shift/Cmd) are supported, matching the `golang.design/x/hotkey` backend.
+- `startPause` and `recenter` must be different keys.
+- An invalid or duplicate value is rejected on save; a corrupted value in `config.json` falls back to the default (`F11`/`F12`) on load.
+- Hotkeys are re-registered live when changed from Settings — no app restart required.
 
 ---
 
