@@ -11,7 +11,7 @@ v0.3.0 Go app). Phase 0 is committed as `a1e4f4e` and pushed to `origin/rewrite/
 
 Phase 0 (foundation) is DONE — `tasks/done/0001-phase-0-foundation.md`. Task 0002 (AI-tooling
 discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Task 0003 (Phase 1 behavior spec) is in
-REVIEW: `docs/research/BEHAVIOR_SPEC.md` (uncommitted). Next: task 0004 (Phase 2), TRIAGE.
+REVIEW: `docs/research/BEHAVIOR_SPEC.md` (committed `9fcde6b`). Next: task 0004 (Phase 2), TRIAGE.
 
 Task 0002 changes (committed and pushed, `ed48e49`): `CLAUDE.md` now imports `@AGENTS.md`; AGENTS.md skills and
 compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.

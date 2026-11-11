@@ -5,12 +5,12 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 
 ## As of 2026-11-11 (task 0003 session)
 
-**Branch/commit:** `rewrite/rust` at `856ff4f` + uncommitted task 0003 work (see below).
+**Branch/commit:** `rewrite/rust`, task 0003 + ADR-0006 committed and pushed (`9fcde6b`).
 
 **Task:** 0003 (Phase 1 behavior spec) — REVIEW. Deliverable written; needs an independent
 read-through before DONE (criteria at the bottom of `tasks/active/0003-...md`).
 
-**Changed files (uncommitted):** new `docs/research/BEHAVIOR_SPEC.md`, new
+**Changed files (in `9fcde6b`):** new `docs/research/BEHAVIOR_SPEC.md`, new
 `docs/research/tools/dump_il.py`, edited `docs/research/RE_EVIDENCE.md` (smoothing-polarity
 correction + superseded note), `tasks/BACKLOG.md` (0003 → REVIEW, 0004 added as TRIAGE),
 `tasks/active/0003-...md` (outcome section), `agent/*`.
