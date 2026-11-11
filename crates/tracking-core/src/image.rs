@@ -67,15 +67,21 @@ impl ImageF32 {
         let b = self.at_clamped(xi + 1, yi);
         let c = self.at_clamped(xi, yi + 1);
         let d = self.at_clamped(xi + 1, yi + 1);
-        let top = a + (b - a) * fx;
-        let bottom = c + (d - c) * fx;
-        top + (bottom - top) * fy
+        bilerp(fx, fy, a, b, c, d)
     }
 
     /// True if `(x, y)` lies within the pixel-centre hull `[0, w−1] × [0, h−1]`.
     pub fn contains(&self, x: f32, y: f32) -> bool {
         x >= 0.0 && y >= 0.0 && x <= (self.width - 1) as f32 && y <= (self.height - 1) as f32
     }
+}
+
+/// Bilinear blend shared by every sampler, so they round identically.
+#[inline]
+fn bilerp(fx: f32, fy: f32, a: f32, b: f32, c: f32, d: f32) -> f32 {
+    let top = a + (b - a) * fx;
+    let bottom = c + (d - c) * fx;
+    top + (bottom - top) * fy
 }
 
 /// Converts an 8-bit frame into `dst` (resized as needed).
@@ -109,28 +115,39 @@ pub fn pyr_down_into(src: &ImageF32, dst: &mut ImageF32, tmp: &mut ImageF32) {
     let (w, h) = (src.width, src.height);
     let (dw, dh) = (w.div_ceil(2), h.div_ceil(2));
     // Horizontal pass at decimated columns, all rows: tmp is dw × h.
+    // Interior samples (all 5 taps in range) skip the border logic; the summation order is
+    // the same either way, so results are bit-identical.
     tmp.resize(dw, h);
     for y in 0..h {
         let row = &src.data[y * w..(y + 1) * w];
-        for x in 0..dw {
-            let cx = (2 * x) as isize;
+        let out = &mut tmp.data[y * dw..(y + 1) * dw];
+        for (x, o) in out.iter_mut().enumerate() {
+            let cx = 2 * x;
             let mut acc = 0.0;
-            for (k, wk) in BINOMIAL5.iter().enumerate() {
-                acc += wk * row[reflect101(cx + k as isize - 2, w)];
+            if cx >= 2 && cx + 2 < w {
+                for (wk, v) in BINOMIAL5.iter().zip(&row[cx - 2..cx + 3]) {
+                    acc += wk * v;
+                }
+            } else {
+                for (k, wk) in BINOMIAL5.iter().enumerate() {
+                    acc += wk * row[reflect101(cx as isize + k as isize - 2, w)];
+                }
             }
-            tmp.data[y * dw + x] = acc;
+            *o = acc;
         }
     }
-    // Vertical pass at decimated rows.
+    // Vertical pass at decimated rows: five source rows, combined column-wise.
     dst.resize(dw, dh);
     for y in 0..dh {
-        let cy = (2 * y) as isize;
-        for x in 0..dw {
+        let cy = 2 * y as isize;
+        let r: [usize; 5] = std::array::from_fn(|k| reflect101(cy + k as isize - 2, h) * dw);
+        let out = &mut dst.data[y * dw..(y + 1) * dw];
+        for (x, o) in out.iter_mut().enumerate() {
             let mut acc = 0.0;
-            for (k, wk) in BINOMIAL5.iter().enumerate() {
-                acc += wk * tmp.data[reflect101(cy + k as isize - 2, h) * dw + x];
+            for (wk, rk) in BINOMIAL5.iter().zip(r) {
+                acc += wk * tmp.data[rk + x];
             }
-            dst.data[y * dw + x] = acc;
+            *o = acc;
         }
     }
 }
@@ -151,6 +168,97 @@ pub fn scharr_into(src: &ImageF32, gx: &mut ImageF32, gy: &mut ImageF32) {
             gx.data[i] = (3.0 * dx(y - 1) + 10.0 * dx(y) + 3.0 * dx(y + 1)) / 32.0;
             gy.data[i] = (3.0 * dy(x - 1) + 10.0 * dy(x) + 3.0 * dy(x + 1)) / 32.0;
         }
+    }
+}
+
+/// Scharr derivatives at one pixel; exactly the value [`scharr_into`] writes there.
+#[inline]
+pub fn scharr_at(src: &ImageF32, x: usize, y: usize) -> (f32, f32) {
+    let (w, h) = (src.width, src.height);
+    let d = &src.data;
+    if x >= 1 && y >= 1 && x + 1 < w && y + 1 < h {
+        let p = |x: usize, y: usize| d[y * w + x];
+        let dx = |r: usize| p(x + 1, r) - p(x - 1, r);
+        let dy = |c: usize| p(c, y + 1) - p(c, y - 1);
+        (
+            (3.0 * dx(y - 1) + 10.0 * dx(y) + 3.0 * dx(y + 1)) / 32.0,
+            (3.0 * dy(x - 1) + 10.0 * dy(x) + 3.0 * dy(x + 1)) / 32.0,
+        )
+    } else {
+        let p = |x: isize, y: isize| d[reflect101(y, h) * w + reflect101(x, w)];
+        let (x, y) = (x as isize, y as isize);
+        let dx = |r: isize| p(x + 1, r) - p(x - 1, r);
+        let dy = |c: isize| p(c, y + 1) - p(c, y - 1);
+        (
+            (3.0 * dx(y - 1) + 10.0 * dx(y) + 3.0 * dx(y + 1)) / 32.0,
+            (3.0 * dy(x - 1) + 10.0 * dy(x) + 3.0 * dy(x + 1)) / 32.0,
+        )
+    }
+}
+
+/// Scharr gradients of a rectangular patch of an image, sampled like the full-image
+/// gradient maps would be (bilinear, clamp-to-edge) — bit-identical to sampling
+/// [`scharr_into`]'s output, for any point whose four bilinear neighbours (after clamping)
+/// lie inside the patch. LK only reads gradients in its window, so this replaces full-image
+/// gradient maps (Phase 4 E0). Buffers are reused across [`GradPatch::fill`] calls.
+#[derive(Debug, Clone, Default)]
+pub struct GradPatch {
+    x0: usize,
+    y0: usize,
+    pw: usize,
+    ph: usize,
+    img_w: usize,
+    img_h: usize,
+    gx: Vec<f32>,
+    gy: Vec<f32>,
+}
+
+impl GradPatch {
+    /// Computes gradients for every pixel in `[x_lo, x_hi] × [y_lo, y_hi]` (inclusive, clamped
+    /// to the image).
+    pub fn fill(&mut self, src: &ImageF32, x_lo: isize, x_hi: isize, y_lo: isize, y_hi: isize) {
+        let cx = |v: isize| v.clamp(0, src.width as isize - 1) as usize;
+        let cy = |v: isize| v.clamp(0, src.height as isize - 1) as usize;
+        let (x0, x1, y0, y1) = (cx(x_lo), cx(x_hi), cy(y_lo), cy(y_hi));
+        self.x0 = x0;
+        self.y0 = y0;
+        self.pw = x1 + 1 - x0;
+        self.ph = y1 + 1 - y0;
+        self.img_w = src.width;
+        self.img_h = src.height;
+        let n = self.pw * self.ph;
+        self.gx.resize(n, 0.0);
+        self.gy.resize(n, 0.0);
+        let mut i = 0;
+        for y in y0..=y1 {
+            for x in x0..=x1 {
+                (self.gx[i], self.gy[i]) = scharr_at(src, x, y);
+                i += 1;
+            }
+        }
+    }
+
+    #[inline]
+    fn index(&self, x: isize, y: isize) -> usize {
+        let x = x.clamp(0, self.img_w as isize - 1) as usize;
+        let y = y.clamp(0, self.img_h as isize - 1) as usize;
+        debug_assert!(x >= self.x0 && x < self.x0 + self.pw, "x {x} outside patch");
+        debug_assert!(y >= self.y0 && y < self.y0 + self.ph, "y {y} outside patch");
+        (y - self.y0) * self.pw + (x - self.x0)
+    }
+
+    /// Bilinear `(gx, gy)` at a continuous image point, clamp-to-edge like [`ImageF32::sample`].
+    #[inline]
+    pub fn sample(&self, x: f32, y: f32) -> (f32, f32) {
+        let x0 = x.floor();
+        let y0 = y.floor();
+        let fx = x - x0;
+        let fy = y - y0;
+        let (xi, yi) = (x0 as isize, y0 as isize);
+        let (ia, ib) = (self.index(xi, yi), self.index(xi + 1, yi));
+        let (ic, id) = (self.index(xi, yi + 1), self.index(xi + 1, yi + 1));
+        let s = |g: &[f32]| bilerp(fx, fy, g[ia], g[ib], g[ic], g[id]);
+        (s(&self.gx), s(&self.gy))
     }
 }
 
@@ -236,6 +344,85 @@ mod tests {
         let (mut gx, mut gy) = (ImageF32::default(), ImageF32::default());
         scharr_into(&src, &mut gx, &mut gy);
         assert!(gx.as_slice().iter().chain(gy.as_slice()).all(|&v| v == 0.0));
+    }
+
+    /// Irregular image so border and interior paths both see non-trivial values.
+    fn bumpy(w: usize, h: usize) -> ImageF32 {
+        img(w, h, |x, y| {
+            ((x * 7919 + y * 104_729) % 251) as f32 + 0.37 * (x as f32 * 0.7).sin()
+        })
+    }
+
+    #[test]
+    fn scharr_at_matches_full_image_everywhere() {
+        for (w, h) in [(9, 7), (2, 3), (1, 1), (16, 5)] {
+            let src = bumpy(w, h);
+            let (mut gx, mut gy) = (ImageF32::default(), ImageF32::default());
+            scharr_into(&src, &mut gx, &mut gy);
+            for y in 0..h {
+                for x in 0..w {
+                    let (a, b) = scharr_at(&src, x, y);
+                    assert_eq!(a.to_bits(), gx.at(x, y).to_bits(), "{w}x{h} gx@{x},{y}");
+                    assert_eq!(b.to_bits(), gy.at(x, y).to_bits(), "{w}x{h} gy@{x},{y}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn grad_patch_sampling_is_bit_identical_to_full_maps() {
+        let src = bumpy(20, 14);
+        let (mut gx, mut gy) = (ImageF32::default(), ImageF32::default());
+        scharr_into(&src, &mut gx, &mut gy);
+        let mut patch = GradPatch::default();
+        // Includes a window hanging off the top-left corner (clamped sampling).
+        for (cx, cy) in [(10.3f32, 6.8f32), (-2.6, -1.2), (18.9, 13.4), (0.0, 0.0)] {
+            let hw = 3.0;
+            patch.fill(
+                &src,
+                (cx - hw - 1.0).floor() as isize,
+                (cx + hw + 1.0).floor() as isize + 1,
+                (cy - hw - 1.0).floor() as isize,
+                (cy + hw + 1.0).floor() as isize + 1,
+            );
+            for dy in -3..=3 {
+                for dx in -3..=3 {
+                    let (x, y) = (cx + dx as f32, cy + dy as f32);
+                    let (a, b) = patch.sample(x, y);
+                    assert_eq!(a.to_bits(), gx.sample(x, y).to_bits(), "gx@{x},{y}");
+                    assert_eq!(b.to_bits(), gy.sample(x, y).to_bits(), "gy@{x},{y}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pyr_down_fast_path_matches_reflect_reference() {
+        let src = bumpy(23, 17);
+        let (mut dst, mut tmp) = (ImageF32::default(), ImageF32::default());
+        pyr_down_into(&src, &mut dst, &mut tmp);
+        // Straightforward reference: every tap through reflect101, same summation order.
+        let (w, h) = (23usize, 17usize);
+        let (dw, dh) = (w.div_ceil(2), h.div_ceil(2));
+        let mut t = vec![0.0f32; dw * h];
+        for y in 0..h {
+            for x in 0..dw {
+                let mut acc = 0.0;
+                for (k, wk) in BINOMIAL5.iter().enumerate() {
+                    acc += wk * src.at(reflect101((2 * x) as isize + k as isize - 2, w), y);
+                }
+                t[y * dw + x] = acc;
+            }
+        }
+        for y in 0..dh {
+            for x in 0..dw {
+                let mut acc = 0.0;
+                for (k, wk) in BINOMIAL5.iter().enumerate() {
+                    acc += wk * t[reflect101((2 * y) as isize + k as isize - 2, h) * dw + x];
+                }
+                assert_eq!(acc.to_bits(), dst.at(x, y).to_bits(), "@{x},{y}");
+            }
+        }
     }
 
     #[test]

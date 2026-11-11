@@ -14,8 +14,8 @@ the phase.
 | 0 | Foundation / safe migration | DONE | tasks 0001, 0002; ADR-0001, -0002, -0005 |
 | 1 | Research and specifications | DONE | task 0003; `docs/research/BEHAVIOR_SPEC.md`; ADR-0006 |
 | 2 | Rust architecture | DONE | task 0004; ADR-0007, -0008; `docs/architecture/DEPENDENCIES.md`, `PLATFORM_RISKS.md`; CI green |
-| 3 | Tracking baseline | **ACTIVE** | task 0005 |
-| 4 | Tracking improvements | — | |
+| 3 | Tracking baseline | DONE | task 0005; ADR-0009; `docs/research/TRACKING_BASELINE.md`; CI green |
+| 4 | Tracking improvements | **ACTIVE** | task 0006 |
 | 5 | Design system | — | |
 | 6 | Desktop app | — | |
 | 7 | Multiplatform / release | — | |

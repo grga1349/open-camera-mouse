@@ -1,6 +1,6 @@
 # 0005 — Phase 3: tracking baseline
 
-Status: ACTIVE (started 2026-11-12)
+Status: DONE (2026-11-12)
 Owner/branch: `rewrite/rust`
 Depends on: 0004 (done)
 
@@ -77,3 +77,10 @@ Done locally, uncommitted:
 
 Gate status: met except "CI green on 3 OS" (needs push). Not met (recorded, not a gate):
 LK p95 < 2 ms at 640 (4.1 ms, pyramid-bound) — PROPOSED target, carried to Phase 4.
+
+## Outcome
+
+DONE. Commit `4038fce`; CI run 43119858155 green on macOS/Windows/Linux + cargo-deny
+(https://github.com/grga1349/open-camera-mouse/actions/runs/43119858155). Evidence:
+`docs/research/TRACKING_BASELINE.md`, ADR-0009. Carried to Phase 4: LK perf (4.1 ms vs
+PROPOSED 2 ms) and findings 2–5, 7.

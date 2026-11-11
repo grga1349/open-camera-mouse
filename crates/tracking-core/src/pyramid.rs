@@ -1,7 +1,8 @@
-//! Gaussian image pyramid with per-level Scharr gradients.
+//! Gaussian image pyramid. Gradients are not stored: LK computes them for its window only
+//! ([`crate::image::GradPatch`], Phase 4 E0).
 
 use crate::GrayFrame;
-use crate::image::{ImageF32, gray_to_f32_into, pyr_down_into, scharr_into};
+use crate::image::{ImageF32, gray_to_f32_into, pyr_down_into};
 
 /// Smallest level side kept. Coarser levels than this carry too little signal for a window.
 const MIN_LEVEL_SIDE: usize = 8;
@@ -9,8 +10,6 @@ const MIN_LEVEL_SIDE: usize = 8;
 #[derive(Debug, Clone, Default)]
 pub struct Level {
     pub img: ImageF32,
-    pub gx: ImageF32,
-    pub gy: ImageF32,
 }
 
 /// Levels `0..=max_level` (OpenCV semantics: `max_level = 3` means four levels). Fewer levels
@@ -39,9 +38,6 @@ impl Pyramid {
             }
             pyr_down_into(src, &mut rest[0].img, &mut self.tmp);
             self.len += 1;
-        }
-        for level in &mut self.levels[..self.len] {
-            scharr_into(&level.img, &mut level.gx, &mut level.gy);
         }
     }
 

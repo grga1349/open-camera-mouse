@@ -63,3 +63,29 @@ fn baseline_tables() {
         }
     }
 }
+
+/// Exact fingerprint of every B-LK18 output (positions as f32 bits + status) per scene and
+/// resolution. Refactors that claim "no behavior change" (Phase 4 E0) must leave this output
+/// unchanged; the markdown table's 2-decimal rounding could hide a drift.
+///
+/// Run: `cargo test -p tracking-core --release --test baseline lk_fingerprint -- --ignored --nocapture`
+#[test]
+#[ignore = "full corpus; run explicitly in --release"]
+fn lk_fingerprint() {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    for scene in corpus() {
+        for res in RESOLUTIONS {
+            if scene.name == "static_60s" && res != (640, 480) {
+                continue;
+            }
+            let seq = scene.render(res.0, res.1);
+            let mut h = DefaultHasher::new();
+            for s in run(&mut LkTracker::default(), &seq) {
+                s.position.x.to_bits().hash(&mut h);
+                s.position.y.to_bits().hash(&mut h);
+                format!("{:?}", s.status).hash(&mut h);
+            }
+            println!("{} {}x{} {:016x}", scene.name, res.0, res.1, h.finish());
+        }
+    }
+}

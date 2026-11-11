@@ -9,12 +9,13 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0005 | Phase 3 — tracking baseline | ACTIVE — `tasks/active/0005-phase-3-tracking-baseline.md` |
+| 0006 | Phase 4 — tracking improvements | ACTIVE — `tasks/active/0006-phase-4-tracking-improvements.md` |
 
 ## Done
 
 | ID | Title | Status |
 |---|---|---|
+| 0005 | Phase 3 — tracking baseline | DONE — `4038fce`, CI run 43119858155 green on 3 OS + cargo-deny; ADR-0009, `docs/research/TRACKING_BASELINE.md` |
 | 0004 | Phase 2 — Rust architecture | DONE — `ff0d1ab`, CI run 43116199528 green on macOS/Windows/Linux + cargo-deny; ADR-0007, -0008 |
 | 0001 | Phase 0 — repository foundation | DONE — commit `a1e4f4e`, pushed to `origin/rewrite/rust` |
 | 0003 | Phase 1 — research and behavior specification | DONE — `docs/research/BEHAVIOR_SPEC.md`, ADR-0006 |

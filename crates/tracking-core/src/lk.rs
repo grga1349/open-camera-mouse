@@ -12,6 +12,7 @@
 //! A degenerate window at a coarse level skips that level's refinement and keeps the guess
 //! (as OpenCV does); at level 0 it is a failure. No NaN/Inf leaves this module.
 
+use crate::image::GradPatch;
 use crate::pyramid::Pyramid;
 use crate::{
     Diagnostics, GrayFrame, HoldReason, LossReason, Point2, TrackError, TrackOutput, TrackStatus,
@@ -72,6 +73,7 @@ pub struct FlowScratch {
     i: Vec<f32>,
     ix: Vec<f32>,
     iy: Vec<f32>,
+    grad: GradPatch,
 }
 
 /// Tracks one point from `prev` to `curr`. Both pyramids must come from same-sized frames.
@@ -115,12 +117,21 @@ pub fn track_point(
             continue;
         }
 
+        // Gradients for the window only, one pixel of slack for bilinear neighbours.
+        let reach = hw as f32 + 1.0;
+        scratch.grad.fill(
+            &pl.img,
+            (u.x - reach).floor() as isize,
+            (u.x + reach).floor() as isize + 1,
+            (u.y - reach).floor() as isize,
+            (u.y + reach).floor() as isize + 1,
+        );
         let (mut gxx, mut gxy, mut gyy) = (0.0f32, 0.0f32, 0.0f32);
         let mut k = 0;
         for dy in -hw..=hw {
             for dx in -hw..=hw {
                 let (sx, sy) = (u.x + dx as f32, u.y + dy as f32);
-                let (ix, iy) = (pl.gx.sample(sx, sy), pl.gy.sample(sx, sy));
+                let (ix, iy) = scratch.grad.sample(sx, sy);
                 scratch.i[k] = pl.img.sample(sx, sy);
                 scratch.ix[k] = ix;
                 scratch.iy[k] = iy;

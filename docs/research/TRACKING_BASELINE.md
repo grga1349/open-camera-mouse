@@ -249,7 +249,8 @@ Apple M1, 8 GB, macOS 14.7.3, rustc 1.99.1, `cargo bench` (divan 0.1.21, release
 - **Steady-state heap allocations: zero** for `lk_step`, `ncc_step`, `pyramid_build`,
   `track_point` (divan AllocProfiler reports no allocations after the first iteration).
   Meets the §8 target.
-- **LK p95 < 2 ms at 640×480: not met** (4.1 ms). The profile is unambiguous: ~98 % is the
+- **LK p95 < 2 ms at 640×480: not met** (4.1 ms). *Met in Phase 4 E0 (0.30 ms, identical
+  outputs). See `TRACKING_IMPROVEMENTS.md`. The rest of this bullet is the Phase 3 analysis.* The profile is unambiguous: ~98 % is the
   pyramid build, which computes full-image Scharr gradients on every level with a
   per-pixel reflect-101 border, while LK reads a 21×21 window. Only the reference
   pyramid's gradients are ever used. Fix candidates for Phase 4: gradients only for the
