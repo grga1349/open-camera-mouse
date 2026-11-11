@@ -85,7 +85,7 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
 
 ## Progress
 
-- 2026-11-12 **E0 KEPT** (uncommitted). Patch gradients (`image::GradPatch`, `scharr_at`),
+- 2026-11-12 **E0 KEPT** (`f68f042`, CI 43121280464 green). Patch gradients (`image::GradPatch`, `scharr_at`),
   pyramid without gradient maps, `pyr_down_into` interior fast paths. `lk_step` at 640
   4.13 → 0.30 ms. `lk_fingerprint` (new ignored test in `tests/baseline.rs`) identical on all
   61 runs. fmt/clippy/`cargo test --workspace --locked` (46 passed, 0 failed, 2 ignored)/

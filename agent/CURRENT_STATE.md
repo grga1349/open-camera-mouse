@@ -1,12 +1,12 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 3 closed; Phase 4 E0 done, uncommitted)
+Last updated: 2026-11-12 (Phase 3 closed; Phase 4 E0 done, pushed, CI green)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last commit `4038fce` (Phase 3), pushed. CI run 43119858155 is green
-on all 3 OS + cargo-deny. Working tree: task 0005 close-out, task 0006 file, E0 code + docs.
-All uncommitted.
+Branch: `rewrite/rust`. Phase 3 = `4038fce` (CI 43119858155 green). Task 0005 close-out + E0 =
+`f68f042`, plus `ad25a34` (task 0006 progress notes). Pushed; CI run 43121280464 green on 3 OS
++ cargo-deny.
 
 ## Milestone
 
