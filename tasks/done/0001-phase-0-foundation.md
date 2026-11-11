@@ -1,8 +1,10 @@
 # 0001 — Phase 0: repository foundation
 
-Status: ACTIVE
+Status: DONE
 Owner/branch: `rewrite/rust`
 Depends on: none
+Commit: `a1e4f4e` — "Phase 0: foundation for Rust rewrite on rewrite/rust", pushed to
+`origin/rewrite/rust`
 
 ## Context
 
@@ -20,7 +22,7 @@ planning seed; and a verified final git state.
 ## Non-goals
 
 No `Cargo.toml`, no crates, no tracking algorithm code, no egui app. No deletion of `legacy/`
-or the seed archive. No commit (left for explicit user review/approval).
+or the seed archive.
 
 ## Files/scope
 

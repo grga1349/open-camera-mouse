@@ -9,13 +9,14 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0001 | Phase 0 — repository foundation | ACTIVE (this session) |
 | 0002 | Verify AI-tooling instruction/skill discovery in Claude Code and Codex | READY |
-| 0003 | Phase 1 — research and behavior specification | TRIAGE (unblocks after 0001, 0002) |
+| 0003 | Phase 1 — research and behavior specification | TRIAGE (unblocks after 0002) |
 
 ## Done
 
-(none yet)
+| ID | Title | Status |
+|---|---|---|
+| 0001 | Phase 0 — repository foundation | DONE — commit `a1e4f4e`, pushed to `origin/rewrite/rust` |
 
 ## Blocked
 

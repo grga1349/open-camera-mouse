@@ -5,14 +5,12 @@ Last updated: 2026-11-11 (Phase 0 session)
 ## Branch / commit
 
 Branch: `rewrite/rust` (created from `main`, which is untouched and still builds the shipping
-v0.3.0 Go app). **Nothing in this session has been committed yet** — all moves/new files are
-in the working tree / git index, pending explicit user review and commit approval.
+v0.3.0 Go app). Phase 0 is committed as `a1e4f4e` and pushed to `origin/rewrite/rust`.
 
 ## Milestone
 
-Phase 0 (foundation) — see `docs/archive/rust-rewrite-seed/02-roadmap-nine-phases.md` for all
-nine phases. Phase 0 deliverables are essentially complete as of this note; not yet verified
-by a fresh CLI session (task 0002) or committed.
+Phase 0 (foundation) is DONE — see `tasks/done/0001-phase-0-foundation.md`. Not yet verified
+by a fresh CLI session (task 0002, still open). Next up: task 0002, then task 0003 (Phase 1).
 
 ## What exists now that didn't before this session
 
@@ -33,9 +31,8 @@ Phase 0 explicitly excludes all of this.
 
 ## Immediate next action
 
-Run `git status --short` and `git diff --stat main...rewrite/rust`, confirm nothing
-unexpected, then it's the user's call whether to commit this Phase 0 work. After that: task
-0002 (verify AI-tooling discovery in a fresh session) and task 0003 (Phase 1 research spec).
+Task 0002 (verify AI-tooling discovery in a fresh session) and task 0003 (Phase 1 research
+spec) are both unblocked and still open.
 
 ## Open risks not yet resolved
 

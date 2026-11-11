@@ -5,10 +5,10 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 
 ## As of 2026-11-11 (end of Phase 0 session)
 
-**Branch/commit:** `rewrite/rust`, created from `main`. Uncommitted — everything described
-here is in the working tree, not yet committed.
+**Branch/commit:** `rewrite/rust`, created from `main`. Phase 0 committed as `a1e4f4e` and
+pushed to `origin/rewrite/rust`.
 
-**Task:** 0001 (Phase 0 foundation) — functionally complete, pending verification and commit.
+**Task:** 0001 (Phase 0 foundation) — DONE (`tasks/done/0001-phase-0-foundation.md`).
 
 **Changed files:** see `git status --short` / `git diff --stat main...rewrite/rust`. Summary:
 old app moved to `legacy/`; new root `AGENTS.md`/`CLAUDE.md`/`README.md`/`.gitignore`; new
