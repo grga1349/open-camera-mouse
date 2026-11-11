@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [rewrite/rust]
+  pull_request:
+    branches: [rewrite/rust]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux system libraries for eframe/winit
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libx11-dev \
+            libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+      # rustup on the runner image reads rust-toolchain.toml and installs the pinned version.
+      - name: Toolchain
+        run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: test (no webcam)
+        run: cargo test --workspace --locked
+      - name: core crate boundary
+        if: runner.os == 'Linux'
+        shell: bash
+        run: scripts/check-core-deps.sh
+
+  deny:
+    name: licenses and bans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses bans sources

@@ -10,7 +10,7 @@ from-scratch Rust desktop app. The old app is fully preserved under `legacy/` wi
 instructions, history and its own former `CLAUDE.md`. **It is archived, not active policy.**
 
 The live phase plan is **`docs/ROADMAP.md`** (nine phases, current status, per-phase gates).
-Phases 0–1 are done; the next phase is listed there as NEXT. When a phase starts, its
+Phases 0–1 are done; Phase 2 is in progress (task 0004). When a phase starts, its
 coordinator writes that phase's task file(s) in `tasks/` from the roadmap. See
 `agent/CURRENT_STATE.md` for exactly where things stand.
 
@@ -39,7 +39,7 @@ coordinator writes that phase's task file(s) in `tasks/` from the roadmap. See
 ## Principles (carried from product decisions, see ADRs for detail)
 
 - No OpenCV in the new tracking engine; write and test our own pure-Rust implementation.
-- Rust workspace boundary (proposed, Phase 2): `tracking-core` (pure algorithm, no I/O),
+- Rust workspace boundary (ADR-0007; ports live in `app-core`): `tracking-core` (pure algorithm, no I/O),
   `pointer-core` (mapping/smoothing/dwell, pure), `app-core` (commands/state/controller),
   `platform` (camera/cursor/permissions, OS-specific), one `apps/desktop` (egui/eframe).
 - Deterministic, offline-testable pipeline is a first-class requirement — no standalone
@@ -81,8 +81,9 @@ startup (ADR-0005). Codex reads this `AGENTS.md` directly per its own convention
 ## Quality gates (once Rust workspace exists, from Phase 2 onward)
 
 `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
-`cargo test --workspace`. The workspace is created in Phase 2 — don't invent a `Cargo.toml`
-as a side effect of unrelated work.
+`cargo test --workspace`, plus `scripts/check-core-deps.sh` when touching core crate deps.
+CI (`.github/workflows/ci.yml`) runs these on macOS, Windows and Linux, plus `cargo deny`.
+Add a crate or cross-layer dependency only via ADR (see `rust-architecture` skill).
 
 ## Never
 

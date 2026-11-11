@@ -6,8 +6,8 @@ description: Cargo workspace boundaries, dependency direction, public API surfac
 ## Objective
 
 Keep `tracking-core`/`pointer-core` free of I/O, GUI and OS imports; keep dependency direction
-one-way (`apps/desktop` → `app-core` → `{tracking-core, pointer-core, platform}`, never
-reversed); decide crate splits on demonstrated need, not speculative future-proofing.
+one-way per ADR-0007 (`apps/desktop` → `{app-core, platform}`, `platform` → `app-core` (implements
+its ports), `app-core` → `pointer-core` → `tracking-core`; never reversed); decide crate splits on demonstrated need, not speculative future-proofing.
 
 ## When to use
 

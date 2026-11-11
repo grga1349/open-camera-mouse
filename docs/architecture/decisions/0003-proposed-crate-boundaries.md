@@ -1,6 +1,6 @@
 # ADR-0003: Proposed Rust workspace crate boundaries
 
-Status: Proposed — implement and validate in Phase 2, not before
+Status: Superseded by ADR-0007 (crate set kept; dependency direction changed: ports live in app-core)
 Date: 2026-11-11
 
 ## Context

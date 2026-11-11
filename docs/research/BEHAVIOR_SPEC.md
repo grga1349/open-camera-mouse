@@ -399,7 +399,7 @@ source system.
 **Coordinates**
 - R-C1 One canonical "display space" end to end (mirrored if mirroring is on). Selection,
   overlay, tracking and pointer mapping all use it, so there is no per-call `W−1−x` juggling
-  (legacy §3.3). **DECIDE (Phase 2)**: mirror at ingest vs. track raw and mirror the output.
+  (legacy §3.3). *→ ADR-0008:* mirror at ingest, default on. Original framing: mirror at ingest vs. track raw and mirror the output.
   Not settled by ADR-0006 (2018 evidence unresolved, Q-2018-7). Constraint: head-right moves
   the cursor right.
 - R-C2 Preview click → frame coordinate MUST use the exact transform used to draw (legacy got
@@ -509,8 +509,8 @@ virtual camera, and it is not on the critical path. Record as Q-2018-6.
 - ~~Q-R2~~ Resolved: absolute (ADR-0006).
 - ~~Q-R3~~ Resolved: 2018 handover (ADR-0006).
 - Q-R4 Dwell: provisional 2018 defaults (ADR-0006). Final rule waits on Q-2018-4.
-- Q-R5 Mirror at ingest vs. output (R-C1). (Phase 2)
-- Q-R6 Camera resolution/FPS policy: request a fixed size (e.g. 640×480@30), or take the
+- ~~Q-R5~~ Resolved: mirror at ingest, default on (ADR-0008).
+- ~~Q-R6~~ Resolved: request 640×480 @ 30 fps nearest, downsample to ≤ 640 wide (ADR-0008). Original: Camera resolution/FPS policy: request a fixed size (e.g. 640×480@30), or take the
   device default? This interacts with Q-R1 and the benchmark resolutions. (Phase 2)
 - ~~Q-R8~~ Resolved: F11 start/stop, F12 recenter, fixed (user, ADR-0006).
 - Q-R7 Is a 2018 runtime comparison (Q-2018-6) worth a Windows setup? (user decision)

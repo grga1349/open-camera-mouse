@@ -1,0 +1,34 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/tracking-core",
+    "crates/pointer-core",
+    "crates/app-core",
+    "crates/platform",
+    "apps/desktop",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+repository = "https://github.com/grga1349/open-camera-mouse"
+publish = false
+
+[workspace.dependencies]
+tracking-core = { path = "crates/tracking-core" }
+pointer-core = { path = "crates/pointer-core" }
+app-core = { path = "crates/app-core" }
+platform = { path = "crates/platform" }
+thiserror = "2.0.21"
+eframe = "0.37.0"
+egui = "0.37.0"
+egui_kittest = "0.37.0"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

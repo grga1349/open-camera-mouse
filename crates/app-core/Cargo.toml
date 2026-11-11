@@ -1,0 +1,17 @@
+[package]
+name = "app-core"
+description = "UI-less app controller: commands in, state/events out; owns the port traits platform adapters implement."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No GUI framework and no OS crates here (ADR-0007). Adapters live in `platform`.
+[dependencies]
+tracking-core.workspace = true
+pointer-core.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

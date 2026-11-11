@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-(none. Next phase is in `docs/ROADMAP.md`, whose coordinator writes its task file.)
+| 0004 | Phase 2 — Rust architecture | ACTIVE — `tasks/active/0004-phase-2-rust-architecture.md` |
 
 ## Done
 

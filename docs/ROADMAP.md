@@ -13,7 +13,7 @@ the phase.
 |---|---|---|---|
 | 0 | Foundation / safe migration | DONE | tasks 0001, 0002; ADR-0001, -0002, -0005 |
 | 1 | Research and specifications | DONE | task 0003; `docs/research/BEHAVIOR_SPEC.md`; ADR-0006 |
-| 2 | Rust architecture | **NEXT** | — |
+| 2 | Rust architecture | **ACTIVE** | task 0004 |
 | 3 | Tracking baseline | — | |
 | 4 | Tracking improvements | — | |
 | 5 | Design system | — | |

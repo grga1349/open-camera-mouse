@@ -1,50 +1,44 @@
 # Current state
 
-Last updated: 2026-11-11 (task 0003 wrap-up)
+Last updated: 2026-11-11 (task 0004 in progress)
 
 ## Branch / commit
 
-Branch: `rewrite/rust` (created from `main`, which is untouched and still builds the shipping
-v0.3.0 Go app). Phase 0 is committed as `a1e4f4e` and pushed to `origin/rewrite/rust`.
+Branch: `rewrite/rust`. Last commit `d5dc02d` (task 0003 close). All Phase 2 work below is
+**uncommitted** in the working tree.
 
 ## Milestone
 
-Phase 0 (foundation) is DONE — `tasks/done/0001-phase-0-foundation.md`. Task 0002 (AI-tooling
-discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Task 0003 (Phase 1 behavior spec) is DONE:
-`docs/research/BEHAVIOR_SPEC.md`, ADR-0006. Phase status lives in `docs/ROADMAP.md`; next is
-Phase 2 (Rust architecture), no task file yet by design.
+Phases 0–1 DONE. Phase 2 (Rust architecture) ACTIVE — `tasks/active/0004-phase-2-rust-architecture.md`.
+Everything except the CI gate is done locally; see the task's Progress section for evidence.
 
-Task 0002 changes (committed and pushed, `ed48e49`): `CLAUDE.md` now imports `@AGENTS.md`; AGENTS.md skills and
-compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.
+## What exists now
 
-## What exists now that didn't before this session
+- Cargo workspace (ADR-0007): `crates/{tracking-core,pointer-core,app-core,platform}`,
+  `apps/desktop` (package `open-camera-mouse`, eframe 0.37). Toolchain pinned 1.99.1.
+- `tracking-core`: `GrayFrame`, `ingest` (mirror at ingest, ADR-0008), algorithm-neutral
+  `Tracker` trait + status/diagnostics types. No algorithm.
+- `pointer-core`: ADR-0006 absolute mapping with virtual-desktop clamp.
+- `app-core`: R-A1 `AppState`, `Command`, `Event`, `Controller` skeleton; `ports`
+  (`CameraSource`, `PointerSink`, `CaptureRequest` 640×480@30).
+- `platform`: per-OS cfg modules, placeholders only, no OS crates.
+- CI `.github/workflows/ci.yml`, `deny.toml`, `scripts/check-core-deps.sh`.
+- Docs: ADR-0007, ADR-0008, `docs/architecture/DEPENDENCIES.md`, `PLATFORM_RISKS.md`.
 
-- `legacy/` — the entire old Go/Wails/GoCV app, moved via `git mv` (history preserved).
-- `AGENTS.md`, `CLAUDE.md` (plain pointer file, see ADR-0002) at repo root.
-- `docs/ROADMAP.md` (live phase plan), `docs/product/PRODUCT.md`,
-  `docs/research/RE_EVIDENCE.md`, `docs/research/BEHAVIOR_SPEC.md` (+ `tools/dump_il.py`),
-  `docs/architecture/decisions/0000`–`0006`, `docs/design/DESIGN_PLAN.md`.
-- `tasks/BACKLOG.md`; tasks 0001–0003 in `tasks/done/`.
-- `agent/CURRENT_STATE.md` (this file), `agent/HANDOFF.md`, `agent/WORKFLOW.md`.
-- `.agents/skills/` — 10 skill stubs (see task 0002 for discovery-verification status).
-- New root `README.md`, extended `.gitignore`.
-- `docs/archive/rust-rewrite-seed/` (ex-`dump/`) + `SEED_CONSUMPTION_REPORT.md`.
+## Machine setup done this session
 
-## What does NOT exist yet (by design)
-
-No `Cargo.toml`, no crates, no tracking algorithm code, no egui app, no `design-lab.html`.
-Workspace creation is Phase 2 scope.
+rustup installed to `~/.cargo` / `~/.rustup` with `--no-modify-path` (shell PATH not changed;
+use `export PATH="$HOME/.cargo/bin:$PATH"` or `. "$HOME/.cargo/env"`). Targets
+`x86_64-pc-windows-msvc`, `x86_64-unknown-linux-gnu` added for cross `cargo check`.
 
 ## Immediate next action
 
-Start Phase 2 per `docs/ROADMAP.md`: write its task file (0004), then research and ADRs before
-creating the workspace. See `agent/HANDOFF.md`.
+Ask the user to commit + push, then watch the CI run. Fix any Windows/Linux/cargo-deny
+failure. When all jobs are green: close task 0004, mark Phase 2 DONE in `docs/ROADMAP.md`.
 
-## Open risks not yet resolved
+## Open risks
 
-- Claude Code does not auto-load `.agents/skills/` (Codex does); relies on the AGENTS.md
-  table telling Claude to read the SKILL.md on demand (ADR-0005).
-- No Windows checkout has been tested.
-- Crate boundaries (ADR-0003) and tracking-algorithm choice (ADR-0004) are proposals only.
-- 2018 dwell (`MouseClicker`), `CenterDetect` and native LK internals remain UNRESOLVED
-  (BEHAVIOR_SPEC §9); no runtime measurement of either reference system exists.
+- CI has never run; native Windows/Linux builds and `cargo deny` are unverified.
+- Camera crate (nokhwa) has open macOS panics (PLATFORM_RISKS P1) — Phase 6 spike.
+- Wayland pointer injection/position (P10/P11) may force X11-only on Linux for v1.
+- Carried: 2018 dwell / CenterDetect / native LK internals UNRESOLVED (BEHAVIOR_SPEC §9).
