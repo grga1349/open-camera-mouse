@@ -45,7 +45,7 @@ Applied to the current open items (BEHAVIOR_SPEC section refs):
 | Pause | Adopt: release control, invalidate tracking, cursor to desktop centre | — |
 | Camera disconnect | Adopt detection + message (500 ms poll or OS event) | (c) mechanism per OS |
 | Mirroring (R-C1, Q-R5) | **Not decided by this ADR.** 2018's `RevHoriz` default is off, but whether the 2018 tracking space is mirrored (and whether DirectShow drivers pre-mirror) is unresolved (Q-2018-7). Head-right must move the cursor right; Phase 2 decides with that as the constraint | (b) |
-| Hotkeys | **Ask the user.** 2018 uses F9 start/stop, F5 5-4-3-2-1, Ctrl start/stop; legacy uses F11/F12. The user explicitly asked earlier to keep F11/F12 fixed | (d) |
+| Hotkeys | **F11 start/stop, F12 recenter, fixed** (user decision 2026-11-11). Not 2018's F9/F5/Ctrl | (d) |
 | Pointer update rate | Per camera frame with the dt-aware filter, not a 70 ms loop | (a)/(c), see Smoothing |
 
 ## Consequences

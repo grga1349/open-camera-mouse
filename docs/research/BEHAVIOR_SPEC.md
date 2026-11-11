@@ -438,8 +438,8 @@ source system.
 - R-A3 Guided recenter (legacy 3 s countdown → pick centre) is the baseline. 2018's
   `CenterDetect` is not reproducible without more evidence.
 - R-A4 Hotkeys: keep legacy's fixed F11 start/stop + F12 recenter unless the user decides
-  otherwise. **Open with the user**: ADR-0006 favors 2018 (F9/F5/Ctrl) but conflicts with the
-  earlier fixed-F11/F12 decision. Per the existing project decision, do not make them configurable without asking.
+  otherwise. **Decided (user, 2026-11-11): F11 + F12, fixed**. This deviates from 2018's F9/F5,
+  see ADR-0006. Per the existing project decision, do not make them configurable without asking.
 - R-A5 Settings are validated at the API boundary on every update and on load, with schema
   versioning for the persisted file.
 - R-A6 Shared state is never read across threads without synchronisation (fixes L-7). Param
@@ -512,5 +512,5 @@ virtual camera, and it is not on the critical path. Record as Q-2018-6.
 - Q-R5 Mirror at ingest vs. output (R-C1). (Phase 2)
 - Q-R6 Camera resolution/FPS policy: request a fixed size (e.g. 640×480@30), or take the
   device default? This interacts with Q-R1 and the benchmark resolutions. (Phase 2)
-- Q-R8 Hotkeys: 2018 (F9 start/stop, F5 recenter, Ctrl) or the earlier fixed F11/F12? (user)
+- ~~Q-R8~~ Resolved: F11 start/stop, F12 recenter, fixed (user, ADR-0006).
 - Q-R7 Is a 2018 runtime comparison (Q-2018-6) worth a Windows setup? (user decision)

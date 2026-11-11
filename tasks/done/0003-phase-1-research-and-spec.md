@@ -1,6 +1,6 @@
 # 0003 — Phase 1: research and behavior specification
 
-Status: REVIEW — deliverable written 2026-11-11, awaiting independent read-through review
+Status: DONE (2026-11-11)
 Owner/branch: `rewrite/rust`
 Depends on: 0001 (done), 0002 (done)
 
@@ -65,5 +65,6 @@ ran successfully (outlier guard `0x0600010a`, `DefaultConfig`, inactivity delay)
 Not done: no new REA runs against the binary (dwell `MouseClicker`, `CenterDetect`, native
 LK internals stay UNRESOLVED, §9); no runtime measurement of either system.
 
-To close (REVIEW → DONE): an independent reviewer re-runs a sample of `dump_il.py` citations
-and legacy line refs against §2–§3 and confirms §6 corrections.
+Closed on: a mechanical check that all 41 legacy line refs are in range and all 32 cited 2018
+method tokens exist in the export, plus the author's read-through. No independent reviewer
+pass was done (the user accepted this). Product direction from review: ADR-0006.

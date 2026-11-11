@@ -9,10 +9,10 @@ This repository is mid-migration from a working Go/Wails/GoCV v0.3.0 application
 from-scratch Rust desktop app. The old app is fully preserved under `legacy/` with build
 instructions, history and its own former `CLAUDE.md`. **It is archived, not active policy.**
 
-We are in **Phase 0 (foundation)** of the plan in
-`docs/archive/rust-rewrite-seed/02-roadmap-nine-phases.md`. Phase 0 deliverables are tracked in
-`tasks/`. Do not start implementing the Rust tracking engine until Phase 0 and Phase 1
-(`docs/research/`) are done — see `agent/CURRENT_STATE.md` for exactly where things stand.
+The live phase plan is **`docs/ROADMAP.md`** (nine phases, current status, per-phase gates).
+Phases 0–1 are done; the next phase is listed there as NEXT. When a phase starts, its
+coordinator writes that phase's task file(s) in `tasks/` from the roadmap. See
+`agent/CURRENT_STATE.md` for exactly where things stand.
 
 ## Read before acting
 
@@ -26,6 +26,7 @@ We are in **Phase 0 (foundation)** of the plan in
 | Path | Purpose |
 |---|---|
 | `legacy/` | Old Go/Wails/GoCV app, frozen as reference and regression baseline. Not built by default; see `legacy/README.md` to restore it. |
+| `docs/ROADMAP.md` | Live nine-phase plan: status, deliverables, gates. |
 | `docs/product/` | Why this product exists, goals, non-goals, v1 scope. |
 | `docs/research/` | Camera Mouse 2018 reverse-engineering evidence, labeled VERIFIED/INFERRED/HYPOTHESIS, and comparison against `legacy/`. |
 | `docs/architecture/decisions/` | ADRs. Record before, not after, a non-trivial architectural choice. |
@@ -80,8 +81,8 @@ startup (ADR-0005). Codex reads this `AGENTS.md` directly per its own convention
 ## Quality gates (once Rust workspace exists, from Phase 2 onward)
 
 `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
-`cargo test --workspace`. None of this exists yet in Phase 0 — don't invent a `Cargo.toml`
-as a side effect of unrelated work; that's explicitly Phase 2 scope.
+`cargo test --workspace`. The workspace is created in Phase 2 — don't invent a `Cargo.toml`
+as a side effect of unrelated work.
 
 ## Never
 

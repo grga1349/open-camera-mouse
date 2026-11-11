@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-11 (task 0003 session)
+Last updated: 2026-11-11 (task 0003 wrap-up)
 
 ## Branch / commit
 
@@ -10,8 +10,9 @@ v0.3.0 Go app). Phase 0 is committed as `a1e4f4e` and pushed to `origin/rewrite/
 ## Milestone
 
 Phase 0 (foundation) is DONE — `tasks/done/0001-phase-0-foundation.md`. Task 0002 (AI-tooling
-discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Task 0003 (Phase 1 behavior spec) is in
-REVIEW: `docs/research/BEHAVIOR_SPEC.md` (committed `9fcde6b`). Next: task 0004 (Phase 2), TRIAGE.
+discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Task 0003 (Phase 1 behavior spec) is DONE:
+`docs/research/BEHAVIOR_SPEC.md`, ADR-0006. Phase status lives in `docs/ROADMAP.md`; next is
+Phase 2 (Rust architecture), no task file yet by design.
 
 Task 0002 changes (committed and pushed, `ed48e49`): `CLAUDE.md` now imports `@AGENTS.md`; AGENTS.md skills and
 compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.
@@ -20,9 +21,10 @@ compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.
 
 - `legacy/` — the entire old Go/Wails/GoCV app, moved via `git mv` (history preserved).
 - `AGENTS.md`, `CLAUDE.md` (plain pointer file, see ADR-0002) at repo root.
-- `docs/product/PRODUCT.md`, `docs/research/RE_EVIDENCE.md`,
-  `docs/architecture/decisions/0000`–`0004`, `docs/design/DESIGN_PLAN.md`.
-- `tasks/BACKLOG.md` + `tasks/active/0001`-`0003` (+ empty `done/`, `blocked/`).
+- `docs/ROADMAP.md` (live phase plan), `docs/product/PRODUCT.md`,
+  `docs/research/RE_EVIDENCE.md`, `docs/research/BEHAVIOR_SPEC.md` (+ `tools/dump_il.py`),
+  `docs/architecture/decisions/0000`–`0006`, `docs/design/DESIGN_PLAN.md`.
+- `tasks/BACKLOG.md`; tasks 0001–0003 in `tasks/done/`.
 - `agent/CURRENT_STATE.md` (this file), `agent/HANDOFF.md`, `agent/WORKFLOW.md`.
 - `.agents/skills/` — 10 skill stubs (see task 0002 for discovery-verification status).
 - New root `README.md`, extended `.gitignore`.
@@ -31,12 +33,12 @@ compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.
 ## What does NOT exist yet (by design)
 
 No `Cargo.toml`, no crates, no tracking algorithm code, no egui app, no `design-lab.html`.
-Phase 0 explicitly excludes all of this.
+Workspace creation is Phase 2 scope.
 
 ## Immediate next action
 
-Independent review of `docs/research/BEHAVIOR_SPEC.md` → mark 0003 DONE → write the task 0004
-(Phase 2) file, starting from spec §7 DECIDE items and §9 Q-R*.
+Start Phase 2 per `docs/ROADMAP.md`: write its task file (0004), then research and ADRs before
+creating the workspace. See `agent/HANDOFF.md`.
 
 ## Open risks not yet resolved
 
