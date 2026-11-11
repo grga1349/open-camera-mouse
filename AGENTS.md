@@ -54,9 +54,9 @@ We are in **Phase 0 (foundation)** of the plan in
 
 ## Skills
 
-Project-local skills live in `.agents/skills/<name>/SKILL.md`. Discovery compatibility with
-the CLI you're running in is **not yet verified for either client** — see
-`tasks/active/0002-verify-ai-tooling-discovery.md` before assuming a skill auto-loads.
+Project-local skills live in `.agents/skills/<name>/SKILL.md` (verified in task 0002, see
+ADR-0005). **Codex** auto-discovers them. **Claude Code does not** — when a task matches a row
+below, `Read` that skill's `SKILL.md` before starting.
 
 | Skill | Use for |
 |---|---|
@@ -73,10 +73,9 @@ the CLI you're running in is **not yet verified for either client** — see
 
 ## Instruction file compatibility
 
-`CLAUDE.md` at repo root is a **plain pointer file, not a symlink**, specifically to avoid
-Windows git-checkout symlink failures (see
-`docs/architecture/decisions/0002-claude-md-wrapper-not-symlink.md`). Codex reads this
-`AGENTS.md` directly per its own convention; no wrapper needed for Codex.
+`CLAUDE.md` at repo root is a **plain file, not a symlink** (Windows git-checkout symlink
+failures, ADR-0002) that imports this file with `@AGENTS.md`, so Claude Code loads it at
+startup (ADR-0005). Codex reads this `AGENTS.md` directly per its own convention.
 
 ## Quality gates (once Rust workspace exists, from Phase 2 onward)
 
@@ -90,5 +89,6 @@ as a side effect of unrelated work; that's explicitly Phase 2 scope.
 - Don't resurrect a standalone `tracking-cli`; it was explicitly rejected.
 - Don't add OpenCV (or GoCV) to the new engine.
 - Don't silently renumber the nine phases; propose changes via ADR.
-- Don't commit without being asked; don't force-push; don't delete `legacy/` or the seed
+- Don't commit without being asked — but on every task completion, ask whether to commit
+  (see `agent/WORKFLOW.md`); don't force-push; don't delete `legacy/` or the seed
   archive without an explicit, separately reviewed decision.

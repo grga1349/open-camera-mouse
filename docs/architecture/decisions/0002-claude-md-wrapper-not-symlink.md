@@ -1,6 +1,6 @@
 # ADR-0002: `CLAUDE.md` is a plain pointer file, not a symlink to `AGENTS.md`
 
-Status: Accepted
+Status: Accepted — amended by ADR-0005 (pointer is now an `@AGENTS.md` import)
 Date: 2026-11-11
 
 ## Context
@@ -38,6 +38,6 @@ directly at the repo root by its own convention.
   that isn't equally true as a one-line fact.
 - This does not yet verify that Claude Code actually reads project-local
   `.agents/skills/<name>/SKILL.md` the same way it reads root `CLAUDE.md`/`AGENTS.md` — that's
-  a separate, still-open question tracked in `tasks/active/0002-verify-ai-tooling-discovery.md`.
+  a separate question — resolved in task 0002 (`tasks/done/`), see ADR-0005.
 - If a future Claude Code/Codex release changes root-instruction-file discovery conventions,
   revisit this ADR rather than assuming the wrapper pattern is permanent.

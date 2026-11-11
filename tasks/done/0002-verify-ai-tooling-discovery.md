@@ -1,6 +1,6 @@
 # 0002 — Verify AI-tooling instruction/skill discovery
 
-Status: READY
+Status: DONE (2026-11-11)
 Owner/branch: `rewrite/rust`
 Depends on: 0001
 
@@ -47,3 +47,17 @@ what each actually shows, not what the docs claim they should show.
 
 Feed the result back into ADR-0002/0003 (new ADR if behavior differs from what was assumed)
 and into `.agents/skills/` wiring before relying on skill auto-load in later phases.
+
+## Result (2026-11-11)
+
+- **Claude Code, fresh session:** system reminder showed only the pointer `CLAUDE.md`, not
+  `AGENTS.md` content — the pointer pattern worked only via agent compliance. No
+  `.agents/skills/*` in the available-skills list. Docs confirm both (CLAUDE.md shadows
+  AGENTS.md unless imported; skills only from `.claude/skills/`).
+- **Codex 0.166.0, fresh `codex exec -s read-only --ephemeral`:** loaded `AGENTS.md`
+  (quoted its H1) and listed all ten `.agents/skills/*` as repository skills.
+- **Fix:** `CLAUDE.md` now imports `@AGENTS.md` (still a plain file, no symlink); skills stay
+  single-sourced in `.agents/skills/`, Claude Code reads them on demand per the AGENTS.md
+  table. Recorded in ADR-0005 (amends ADR-0002).
+- **Still unverified:** that the `@AGENTS.md` import expands — needs one more fresh Claude
+  Code session (this one can't reload its own CLAUDE.md). Windows checkout not tested.

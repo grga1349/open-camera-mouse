@@ -1,14 +1,13 @@
-# Read AGENTS.md first
+<!--
+Maintainer note (stripped before Claude Code injects this file, so it costs no context):
+This is a plain file, NOT a symlink — a symlink breaks on a naive Windows `git clone`
+without Developer Mode / `core.symlinks` (ADR-0002). The `@AGENTS.md` line below is Claude
+Code's documented import syntax: it inlines AGENTS.md into context at session start, so the
+canonical instructions load without relying on the agent choosing to read them (ADR-0005).
+Codex reads AGENTS.md directly and ignores this file.
+-->
 
-This file is intentionally not the canonical instructions and is **not a symlink** — a real
-symlink here breaks on a naive Windows `git clone` without Developer Mode / `core.symlinks`,
-which this project's cross-platform goal rules out. See
-`docs/architecture/decisions/0002-claude-md-wrapper-not-symlink.md` for the reasoning.
+@AGENTS.md
 
-**Your first action in this repository must be to read `AGENTS.md`.** It is the real,
-canonical, kept-up-to-date instruction file. Everything below is a redundant summary only in
-case that read is somehow skipped — `AGENTS.md` wins on any conflict.
-
-Quick orientation: this repo is mid-migration from a working Go app (now in `legacy/`) to a
-Rust rewrite, currently in Phase 0 (foundation, no tracking-engine implementation yet). Current
-state lives in `agent/CURRENT_STATE.md`; active work lives in `tasks/active/`.
+If the import above did not expand (you see only this file), read `AGENTS.md` before doing
+anything else — it is the canonical instruction file and wins on any conflict.

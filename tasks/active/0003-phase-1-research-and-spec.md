@@ -1,8 +1,8 @@
 # 0003 — Phase 1: research and behavior specification
 
-Status: TRIAGE (not started)
+Status: READY (not started)
 Owner/branch: `rewrite/rust`
-Depends on: 0001 (done), 0002 (should run first but doesn't hard-block reading/writing docs)
+Depends on: 0001 (done), 0002 (done)
 
 ## Context
 

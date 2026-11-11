@@ -33,6 +33,9 @@ an explicit integration review before merging — don't rely on timing to avoid 
 - Update `agent/CURRENT_STATE.md` and `agent/HANDOFF.md` — overwrite, don't let them drift
   into a changelog. Chat compaction is not durable storage; these files are.
 - Leave an explicit, concrete next action — not "continue the rewrite."
+- On every task completion, **ask the user whether to commit** (and separately whether to
+  push). Never commit or push without that explicit yes; never leave it unmentioned either —
+  the completion report must say the work is uncommitted and ask.
 
 ## Never
 
