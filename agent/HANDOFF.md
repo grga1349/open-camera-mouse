@@ -5,7 +5,7 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 
 ## As of 2026-11-11 (task 0002 session)
 
-**Branch/commit:** `rewrite/rust`, task 0002 committed (not pushed).
+**Branch/commit:** `rewrite/rust`, task 0002 committed and pushed (`ed48e49`).
 
 **Task:** 0002 (verify AI-tooling discovery) — DONE (`tasks/done/0002-...md`).
 

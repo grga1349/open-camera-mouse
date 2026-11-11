@@ -12,7 +12,7 @@ v0.3.0 Go app). Phase 0 is committed as `a1e4f4e` and pushed to `origin/rewrite/
 Phase 0 (foundation) is DONE — `tasks/done/0001-phase-0-foundation.md`. Task 0002 (AI-tooling
 discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Next up: task 0003 (Phase 1).
 
-Task 0002 changes (committed, not pushed): `CLAUDE.md` now imports `@AGENTS.md`; AGENTS.md skills and
+Task 0002 changes (committed and pushed, `ed48e49`): `CLAUDE.md` now imports `@AGENTS.md`; AGENTS.md skills and
 compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.
 
 ## What exists now that didn't before this session
