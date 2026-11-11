@@ -1,11 +1,22 @@
+# Rust
+/target/
+**/target/
+# Cargo.lock is committed for apps/binaries; nothing to ignore there.
+
+# Legacy Go/Wails app. Patterns with an internal slash (e.g. "build/bin/") are anchored to
+# this .gitignore's own directory and do NOT match the same path under legacy/ — list both.
 # Wails build output
 build/bin/
 build/windows/
 build/darwin/
+legacy/build/bin/
+legacy/build/windows/
+legacy/build/darwin/
 
 # Frontend
 node_modules/
 frontend/dist/
+legacy/frontend/dist/
 
 # Go
 *.exe
@@ -16,6 +27,7 @@ frontend/dist/
 *.test
 *.out
 /vendor/
+legacy/vendor/
 
 # GoCV / OpenCV build artifacts
 *.a
