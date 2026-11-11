@@ -86,6 +86,40 @@ pub fn ingest(mut frame: GrayFrame, mirror: bool) -> GrayFrame {
     frame
 }
 
+/// Integer box downsample so the width is at most `max_width` (ADR-0008). Returns the frame
+/// unchanged if it already fits. Factor `k = ceil(width / max_width)`; output is
+/// `(width / k, height / k)` and pixel `(i, j)` averages source `[k·i, k·i + k) × [k·j, k·j + k)`
+/// with rounding, so a source point `p` maps to `(p + 0.5) / k − 0.5`.
+pub fn downsample_to_width(frame: GrayFrame, max_width: u32) -> GrayFrame {
+    let max_width = max_width.max(1);
+    if frame.width <= max_width {
+        return frame;
+    }
+    let k = frame.width.div_ceil(max_width);
+    let (w, h) = (frame.width / k, (frame.height / k).max(1));
+    let (k, sw) = (k as usize, frame.width as usize);
+    let area = (k * k) as u32;
+    let mut data = Vec::with_capacity(w as usize * h as usize);
+    for y in 0..h as usize {
+        for x in 0..w as usize {
+            let mut acc = 0u32;
+            for dy in 0..k {
+                let row = (y * k + dy) * sw + x * k;
+                acc += frame.data[row..row + k]
+                    .iter()
+                    .map(|&b| u32::from(b))
+                    .sum::<u32>();
+            }
+            data.push(((acc + area / 2) / area) as u8);
+        }
+    }
+    GrayFrame {
+        width: w,
+        height: h,
+        data,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,6 +158,19 @@ mod tests {
         let mirrored = ingest(original.clone(), true);
         assert_eq!(mirrored.as_bytes(), &[2, 1, 0, 5, 4, 3]);
         assert_eq!(ingest(mirrored, true), original);
+    }
+
+    #[test]
+    fn downsample_halves_1280_and_averages_blocks() {
+        let f = GrayFrame::from_vec(4, 2, vec![0, 2, 10, 20, 4, 6, 30, 40]).unwrap();
+        let d = downsample_to_width(f, 2);
+        assert_eq!((d.width(), d.height()), (2, 1));
+        assert_eq!(d.as_bytes(), &[3, 25]);
+        let big = GrayFrame::filled(1280, 720, 9).unwrap();
+        let d = downsample_to_width(big, 640);
+        assert_eq!((d.width(), d.height()), (640, 360));
+        let same = GrayFrame::filled(640, 480, 1).unwrap();
+        assert_eq!(downsample_to_width(same.clone(), 640), same);
     }
 
     #[test]

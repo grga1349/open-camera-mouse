@@ -1,6 +1,6 @@
 # 0004 — Phase 2: Rust architecture
 
-Status: ACTIVE (started 2026-11-11)
+Status: DONE (2026-11-12)
 Owner/branch: `rewrite/rust`
 Depends on: 0003 (done)
 
@@ -67,6 +67,11 @@ Done locally, not yet committed:
   `check-core-deps.sh` ok; `cargo check --all-targets` ok for `x86_64-pc-windows-msvc`
   and `x86_64-unknown-linux-gnu`.
 
-Remaining for the gate:
-- Push and get a green CI run on all three OS jobs + `cargo deny` (not run locally:
-  installing cargo-deny was blocked by the permission classifier).
+Committed as `ff0d1ab`, pushed to `origin/rewrite/rust`.
+
+## Outcome (2026-11-12)
+
+Gate met. CI run 1 (https://github.com/grga1349/open-camera-mouse/actions/runs/43116199528)
+on `ff0d1ab`: `test (macos-latest)`, `test (windows-latest)`, `test (ubuntu-latest)` and
+`licenses and bans` (cargo-deny) all success. That is the first native Windows/Linux build
+and the first cargo-deny run.

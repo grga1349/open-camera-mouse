@@ -448,7 +448,8 @@ source system.
 
 ## 8. Benchmark and fixture baselines
 
-**No numeric baseline exists today for either system.** Every number Phase 3 produces is the
+**First measured baseline: `docs/research/TRACKING_BASELINE.md` (Phase 3, synthetic only).**
+Original note: no numeric baseline existed for either system. Every number Phase 3 produces is the
 first measurement. Baselines are therefore defined as *procedures* here. Numbers marked
 PROPOSED are targets to validate, not facts.
 
@@ -504,8 +505,8 @@ virtual camera, and it is not on the critical path. Record as Q-2018-6.
 - Q-2018-8 `MainForm.a(PointF)→PointF`: confirm it is the inverse mapping (ResetOffset mode 1).
 
 **For the rewrite** (owner: named phase)
-- Q-R1 Units for motion bounds/outlier guard: px at a canonical resolution, or a fraction of
-  frame size? (Phase 3)
+- ~~Q-R1~~ Resolved: fraction of frame width, preset 35/640 and 10/640 (ADR-0009). Original: units
+  for motion bounds/outlier guard: px at a canonical resolution, or a fraction of frame size?
 - ~~Q-R2~~ Resolved: absolute (ADR-0006).
 - ~~Q-R3~~ Resolved: 2018 handover (ADR-0006).
 - Q-R4 Dwell: provisional 2018 defaults (ADR-0006). Final rule waits on Q-2018-4.

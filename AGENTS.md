@@ -10,7 +10,7 @@ from-scratch Rust desktop app. The old app is fully preserved under `legacy/` wi
 instructions, history and its own former `CLAUDE.md`. **It is archived, not active policy.**
 
 The live phase plan is **`docs/ROADMAP.md`** (nine phases, current status, per-phase gates).
-Phases 0–1 are done; Phase 2 is in progress (task 0004). When a phase starts, its
+Phases 0–2 are done; the next phase is listed there as NEXT. When a phase starts, its
 coordinator writes that phase's task file(s) in `tasks/` from the roadmap. See
 `agent/CURRENT_STATE.md` for exactly where things stand.
 

@@ -14,6 +14,7 @@ in the phase that needs it, after a spike · **rejected**.
 |---|---|---|---|---|
 | `eframe` / `egui` | 0.37.0 (2026-10-15) | MIT OR Apache-2.0 | apps/desktop | Product decision (egui). Default features: wgpu renderer, winit with x11 + wayland, AccessKit. MSRV 1.95 sets the workspace MSRV. |
 | `egui_kittest` | 0.37.0 | MIT OR Apache-2.0 | apps/desktop (dev) | Headless UI interaction tests by label. Needs no GPU unless the `wgpu` snapshot feature is enabled, which it isn't. |
+| `divan` | 0.1.21 (2025-04-10) | MIT OR Apache-2.0 | tracking-core (dev) | Benchmarks with a built-in allocation profiler, which the §8 zero-allocation target needs; Criterion has none. Chosen over criterion 0.8.2 in Phase 3 despite no release since 2025-04. Swap if it stops building. |
 | `thiserror` | 2.0.21 | MIT OR Apache-2.0 | tracking-core, app-core | Typed errors. Proc-macro only, adds nothing at runtime. The single external crate allowed in the pure cores. |
 
 The full transitive graph (~240 packages, nearly all from eframe) is permissive. It also
@@ -45,7 +46,6 @@ frame (RGBA) for the UI is an adapter → desktop concern (Phase 6).
 | Global hotkeys F11/F12 | `global-hotkey` (Tauri) | 0.10.0 (2026-11-09), Apache-2.0 OR MIT | macOS uses Carbon hotkeys (no Accessibility needed, INFERRED). Windows works. Linux supports X11 only. | Wayland: portal GlobalShortcuts via `ashpd`, or in-app keys only |
 | Settings persistence | `serde` 1.0.229 + `toml` 1.2.1 + `directories` 6.0.0 | MIT OR Apache-2.0 | Schema-versioned file (R-A5). | — |
 | Property tests | `proptest` 1.12.0 | MIT OR Apache-2.0 | Phase 3 tracker invariants. | — |
-| Benchmarks | `divan` 0.1.21 or `criterion` 0.8.2 | MIT OR Apache-2.0 | `divan` hasn't released since 2025-04. The Phase 3 benchmarking task picks one. | — |
 | Snapshot tests | `insta` 1.49.0 | Apache-2.0 | Optional, for diagnostics/golden outputs. | — |
 
 ## Rejected

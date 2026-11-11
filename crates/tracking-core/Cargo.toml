@@ -11,5 +11,12 @@ publish.workspace = true
 [dependencies]
 thiserror.workspace = true
 
+[dev-dependencies]
+divan.workspace = true
+
+[[bench]]
+name = "tracking"
+harness = false
+
 [lints]
 workspace = true

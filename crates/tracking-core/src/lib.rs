@@ -2,11 +2,16 @@
 //!
 //! Frames in, position + status + diagnostics out. No camera, OS, GUI, clock or I/O
 //! (BEHAVIOR_SPEC R-T1). The API is deliberately algorithm-neutral so pyramidal LK and NCC
-//! (ADR-0004) both fit behind [`Tracker`]. Algorithms land in Phase 3.
+//! (ADR-0004) both fit behind [`Tracker`]: [`lk::LkTracker`] (B-LK18) and
+//! [`ncc::NccTracker`] (B-NCC).
 
 pub mod frame;
+pub mod image;
+pub mod lk;
+pub mod ncc;
+pub mod pyramid;
 
-pub use frame::{FrameError, GrayFrame, ingest};
+pub use frame::{FrameError, GrayFrame, downsample_to_width, ingest};
 
 /// A sub-pixel position in canonical display-space frame coordinates (ADR-0008).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -30,7 +35,8 @@ pub enum HoldReason {
     MotionOutlier,
 }
 
-/// Why tracking stopped. The user must re-select (or recenter) to resume.
+/// Why this frame has no valid estimate. Whether the reference survives is per-algorithm and
+/// documented on each tracker (2018 LK drops it; legacy NCC keeps its template and retries).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LossReason {
     OutOfFrame,
@@ -52,8 +58,10 @@ pub enum TrackStatus {
 pub struct Diagnostics {
     /// Photometric residual (e.g. LK mean absolute error).
     pub residual: Option<f32>,
-    /// Match score (e.g. NCC correlation).
+    /// Match score (NCC correlation in [−1, 1]).
     pub score: Option<f32>,
+    /// Window texture: LK `λ_min(G) / |W|` (intensity² per px²).
+    pub min_eigen: Option<f32>,
     /// Solver iterations used, if iterative.
     pub iterations: Option<u32>,
 }
