@@ -1,6 +1,6 @@
 # 0003 — Phase 1: research and behavior specification
 
-Status: READY (not started)
+Status: REVIEW — deliverable written 2026-11-11, awaiting independent read-through review
 Owner/branch: `rewrite/rust`
 Depends on: 0001 (done), 0002 (done)
 
@@ -47,3 +47,23 @@ tokens/REA evidence IDs must trace back, not be restated from memory) and agains
 Unblocks Phase 2 (`docs/architecture/decisions/0003-proposed-crate-boundaries.md`,
 `0004-proposed-tracking-baseline-candidates.md`) — Phase 2 should either ratify or revise
 those ADRs once the Phase 1 spec exists.
+
+## Outcome (2026-11-11)
+
+- `docs/research/BEHAVIOR_SPEC.md` — full behavior spec: 2018 (§2), legacy (§3), discrepancy
+  matrix (§4), corrections to prior research (§6), Rust expected behavior R-* (§7), benchmark
+  baselines as procedures (§8), open questions Q-2018-*/Q-R* (§9).
+- `docs/research/tools/dump_il.py` — stdlib script that reprints the CIL anchors behind any
+  2018 citation from `../camera-mouse-reverse/research/rea-evidence.json`.
+- `docs/research/RE_EVIDENCE.md` — smoothing-polarity error corrected; superseded-in-part note.
+
+What was actually verified: every 2018 constant/branch cited was decoded from the REA export
+(EV-FT/EV-MF/EV-CFG/EV-M/EV-CALL, see spec §1), not restated from the prose research; every
+legacy claim was read from source with line refs. Spot-check reproduction via `dump_il.py`
+ran successfully (outlier guard `0x0600010a`, `DefaultConfig`, inactivity delay).
+
+Not done: no new REA runs against the binary (dwell `MouseClicker`, `CenterDetect`, native
+LK internals stay UNRESOLVED, §9); no runtime measurement of either system.
+
+To close (REVIEW → DONE): an independent reviewer re-runs a sample of `dump_il.py` citations
+and legacy line refs against §2–§3 and confirms §6 corrections.

@@ -5,6 +5,12 @@ Windows binary, not produced in this repository) and this repository's own `lega
 read directly on 2026-11-11. This is a synthesis for the Rust rewrite's Phase 1 spec, not a
 replacement for the original research files — go there for addresses/tokens/REA evidence IDs.
 
+> **Superseded in part by `BEHAVIOR_SPEC.md` (Phase 1, 2026-11-11)**, which re-verified every
+> 2018 claim against the CIL in `rea-evidence.json`, resolved several items listed below as
+> unresolved (loss policy, offset evolution, config defaults), and corrected two errors here
+> (smoothing polarity, fixed below; the "dwell timing" method, which is mouse-inactivity
+> auto-start). Use `BEHAVIOR_SPEC.md` §6 for the correction list.
+
 **Labels** (carried from the source research, which already distinguishes these):
 `VERIFIED` = direct binary/managed-code evidence. `STRONGLY INFERRED` = behavior pattern
 implied by verified call sites, not independently reconstructed. `HYPOTHESIS` = plausible but
@@ -48,7 +54,7 @@ This is a **materially different algorithm**, not a port of the above:
 | Match acceptance | NCC score ≥ 0.68, else reported lost (falls back to last template point) | same |
 | Loss handling | Any frame below threshold → `Result{Lost: true}` at last known point; no countdown/hysteresis | same |
 | Cursor gain | Single scalar `GainMultiplier`, default 8.0 (not separate x/y) | `legacy/internal/config/config.go` |
-| Cursor smoothing | Exponential: `smooth += (target - smooth) * Smoothing`, default 0.30 — **lower is smoother here**, opposite convention from the 2018 app's damping (where higher damping ≈ less smoothing) | `legacy/internal/mouse/mouse.go` |
+| Cursor smoothing | Exponential on *velocity*: `smooth += (target - smooth) * Smoothing`, default 0.30 — lower is smoother, i.e. `Smoothing` is the EMA α. **Same polarity as the 2018 app's damping** (also α on the new value); only legacy's UI label ("Smoothing %") reads inverted. (Corrected 2026-11-11; an earlier version of this row claimed opposite conventions.) | `legacy/internal/mouse/mouse.go` |
 | Deadzone / max step | `DeadzonePx = 1.0`, `MaxSpeedPx = 35.0` per-frame delta clamp (coincidentally the same numeral as the 2018 app's 35px outlier guard, but a different mechanism — a per-frame pointer-delta clamp, not an image-space tracking-outlier rejection) | `legacy/internal/mouse/mouse.go` |
 | Dwell click | Reference point + radius (`DwellRadiusPx = 30.0`) + configurable duration (default 500ms); resets on drift beyond radius | same |
 | Cursor output | Relative `robotgo.Move` from current OS cursor position, not absolute 0..65535 | same |
@@ -63,9 +69,10 @@ This is a **materially different algorithm**, not a port of the above:
 3. The "35 pixels" appearing in both systems for different reasons is a trap: don't assume
    shared lineage or copy the number across mechanisms without re-deriving it for whichever
    algorithm Phase 3 actually implements.
-4. Cursor-smoothing conventions are inverted between the two systems (2018: damping↑ = less
-   smoothing; `legacy/`: smoothing↑ = more smoothing). Pick one convention explicitly in the
-   Rust `pointer-core` design and document it — don't silently inherit either name's polarity.
+4. Both systems use α-on-new-value smoothing (2018 `Damping` 0.95 on position; legacy
+   `Smoothing` 0.30 on velocity) — higher = more responsive in both. The *names* mislead:
+   legacy's "Smoothing" label suggests the opposite. Pick a parameter name that matches its
+   polarity in the Rust `pointer-core` design (BEHAVIOR_SPEC R-P2).
 5. Default gain values are not comparable as-is (2018: per-axis gain ≈6 combined with a
    desktop/image-size ratio multiply; `legacy/`: single scalar 8.0 applied to a raw pixel
    delta already clamped to ±35px). Any claim that one "feels more sensitive" needs a measured

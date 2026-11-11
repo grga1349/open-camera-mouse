@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-11 (task 0002 session)
+Last updated: 2026-11-11 (task 0003 session)
 
 ## Branch / commit
 
@@ -10,7 +10,8 @@ v0.3.0 Go app). Phase 0 is committed as `a1e4f4e` and pushed to `origin/rewrite/
 ## Milestone
 
 Phase 0 (foundation) is DONE — `tasks/done/0001-phase-0-foundation.md`. Task 0002 (AI-tooling
-discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Next up: task 0003 (Phase 1).
+discovery) is DONE — `tasks/done/0002-...md`, ADR-0005. Task 0003 (Phase 1 behavior spec) is in
+REVIEW: `docs/research/BEHAVIOR_SPEC.md` (uncommitted). Next: task 0004 (Phase 2), TRIAGE.
 
 Task 0002 changes (committed and pushed, `ed48e49`): `CLAUDE.md` now imports `@AGENTS.md`; AGENTS.md skills and
 compatibility sections updated; ADR-0005 added; ADR-0002 marked amended.
@@ -34,13 +35,14 @@ Phase 0 explicitly excludes all of this.
 
 ## Immediate next action
 
-Start task 0003 (Phase 1 research spec) in a fresh Claude Code session — which also confirms
-the `@AGENTS.md` import expands (AGENTS.md content should appear in the startup reminder).
+Independent review of `docs/research/BEHAVIOR_SPEC.md` → mark 0003 DONE → write the task 0004
+(Phase 2) file, starting from spec §7 DECIDE items and §9 Q-R*.
 
 ## Open risks not yet resolved
 
-- `@AGENTS.md` import in `CLAUDE.md` not yet observed expanding in a fresh session.
 - Claude Code does not auto-load `.agents/skills/` (Codex does); relies on the AGENTS.md
   table telling Claude to read the SKILL.md on demand (ADR-0005).
 - No Windows checkout has been tested.
 - Crate boundaries (ADR-0003) and tracking-algorithm choice (ADR-0004) are proposals only.
+- 2018 dwell (`MouseClicker`), `CenterDetect` and native LK internals remain UNRESOLVED
+  (BEHAVIOR_SPEC §9); no runtime measurement of either reference system exists.
