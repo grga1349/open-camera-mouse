@@ -6,7 +6,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 ## As of 2026-11-12 (Phase 6 ACTIVE, D0 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D0 done** (uncommitted unless the user said commit), gates green locally.
+slices D0–D7. **D0 done and committed** (`918dcca`, not pushed), gates green locally.
+Work rhythm (user): **one slice per session**, then hand off.
 
 **Done this session (D0):**
 - `crates/app-core/src/controller.rs`: full R-A1 state machine + `Error`; `PointerOwner`
@@ -23,7 +24,7 @@ slices D0–D7. **D0 done** (uncommitted unless the user said commit), gates gre
 2. Design-lab Smoothing slider "0.95, higher is steadier" contradicts 2018 polarity (L-2).
    Code uses `smoothing = 1 − d`, default 0.05. Lab wording needs a decision.
 
-**Next session:** D1 (`pointer-core`): dt-aware EMA smoothing (α 0.95 per 70 ms equivalent,
+**Next session:** `git log -1` should show the D0 handoff commit. Then D1 (`pointer-core`): dt-aware EMA smoothing (α 0.95 per 70 ms equivalent,
 FPS-independence test), W/E/N/S limits with E/S origin fix, offset drift as a rate, dwell
 (fires once, never while lost / not in control). Then compose them in `Controller::map` /
 `track_step` (currently plain `map_absolute`). Handover + jump bound already exist.
