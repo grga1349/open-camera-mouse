@@ -104,5 +104,13 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
   offset after a guard hold, i.e. finding 5. Also a thin margin on `rotate_15` at 320 (min ZNCC 0.74;
   ≥ 0.8 drops it to 18 %). E2 dominates E1. Enable decision after E3. `lk_fingerprint` identical.
   fmt/clippy/`cargo test --workspace --locked` (50 passed)/check-core-deps ok.
-- Next: E3 (gain/bias-compensated LK). Re-measure E1 and E2 on top of it (`contrast_drop`,
-  `brightness_step`).
+- 2026-11-12 **E3 KEPT, default off until the default-tracker ADR.** `LkParams::gain_bias`: per-level
+  mean/σ-matched map `α·J + β`, fixed while the level iterates. The per-iteration re-estimate was
+  measured and rejected (`rotate_15` 1280 Δp95 +0.09998, no margin). Lighting scenes p95 1.6–6.4 →
+  ≤ 0.08 px. E3+E2 zncc ≥ 0.7: mean ok 75.4 % (= LK18), Σ wrong-lock 0, false-track 0,
+  `brightness_step` back to 100 %. Worst gate Δp95 +0.070 (`rotate_15` 1280), no ok drop. E1 is
+  redundant on top of E3+E2. Proposed default: E2 + E3, E1 off (ADR after E4). `lk_fingerprint`
+  identical. fmt/clippy/`cargo test --workspace --locked` (52 passed)/check-core-deps ok.
+  Bench `lk_gain_bias_step` +6–12 µs.
+- Next: E4 (loss recovery / re-detection, needs an ADR, reason (a) defect). Reuse E2's reference
+  window. Run it on top of E2+E3.

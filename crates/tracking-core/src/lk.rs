@@ -46,6 +46,14 @@ pub struct LkParams {
     /// this. ZNCC is gain/bias invariant, so lighting changes pass; a different surface
     /// (occluder, background) does not. `None` = off = B-LK18.
     pub min_ref_zncc: Option<f32>,
+    /// Gain/bias compensation (Phase 4 E3): at each pyramid level, the current window `J` at
+    /// the level's initial guess fixes a map `α·J + β` whose mean and standard deviation
+    /// match the reference window `I` (`α = σ_I/σ_J`, `β = μ_I − α·μ_J`). The residual is
+    /// formed against the mapped `J`, so a global lighting change doesn't bias the solve.
+    /// The map is held fixed while that level iterates; re-estimating it every iteration
+    /// measured worse on `rotate_15` (TRACKING_IMPROVEMENTS §E3). A flat `J` gets bias-only
+    /// (`α = 1`). `false` = B-LK18 (brightness constancy).
+    pub gain_bias: bool,
 }
 
 impl Default for LkParams {
@@ -60,6 +68,7 @@ impl Default for LkParams {
             edge_margin_frac: 10.0 / 640.0,
             fb_max_error: None,
             min_ref_zncc: None,
+            gain_bias: false,
         }
     }
 }
@@ -84,6 +93,8 @@ pub struct FlowScratch {
     i: Vec<f32>,
     ix: Vec<f32>,
     iy: Vec<f32>,
+    /// Current-frame window samples (only with `gain_bias`).
+    j: Vec<f32>,
     grad: GradPatch,
 }
 
@@ -100,6 +111,9 @@ pub fn track_point(
     scratch.i.resize(n, 0.0);
     scratch.ix.resize(n, 0.0);
     scratch.iy.resize(n, 0.0);
+    if params.gain_bias {
+        scratch.j.resize(n, 0.0);
+    }
     let area = n as f32;
     let eps2 = params.epsilon * params.epsilon;
 
@@ -167,8 +181,15 @@ pub fn track_point(
             continue;
         }
         let inv = 1.0 / det;
+        // Reference moments for gain/bias compensation (E3); unused when it's off.
+        let (mean_i, sd_i) = if params.gain_bias {
+            moments(&scratch.i)
+        } else {
+            (0.0, 0.0)
+        };
 
         let mut v = Point2::default();
+        let (mut alpha, mut beta) = (1.0f32, 0.0f32);
         let mut iters = 0;
         while iters < params.max_iter {
             iters += 1;
@@ -183,14 +204,26 @@ pub fn track_point(
                 break;
             }
             let (mut bx, mut by) = (0.0f32, 0.0f32);
-            let mut k = 0;
-            for dy in -hw..=hw {
-                for dx in -hw..=hw {
-                    let j = cl.img.sample(q.x + dx as f32, q.y + dy as f32);
-                    let diff = scratch.i[k] - j;
+            if params.gain_bias {
+                sample_window(&cl.img, q, hw, &mut scratch.j);
+                if iters == 1 {
+                    (alpha, beta) = gain_bias(mean_i, sd_i, &scratch.j);
+                }
+                for k in 0..n {
+                    let diff = scratch.i[k] - (alpha * scratch.j[k] + beta);
                     bx += diff * scratch.ix[k];
                     by += diff * scratch.iy[k];
-                    k += 1;
+                }
+            } else {
+                let mut k = 0;
+                for dy in -hw..=hw {
+                    for dx in -hw..=hw {
+                        let j = cl.img.sample(q.x + dx as f32, q.y + dy as f32);
+                        let diff = scratch.i[k] - j;
+                        bx += diff * scratch.ix[k];
+                        by += diff * scratch.iy[k];
+                        k += 1;
+                    }
                 }
             }
             let eta = Point2::new(inv * (gyy * bx - gxy * by), inv * (gxx * by - gxy * bx));
@@ -217,12 +250,21 @@ pub fn track_point(
                 };
             }
             let mut sad = 0.0;
-            let mut k = 0;
-            for dy in -hw..=hw {
-                for dx in -hw..=hw {
-                    sad +=
-                        (scratch.i[k] - cl.img.sample(est.x + dx as f32, est.y + dy as f32)).abs();
-                    k += 1;
+            if params.gain_bias {
+                // Residual after compensation, in reference intensity units.
+                sample_window(&cl.img, est, hw, &mut scratch.j);
+                let (alpha, beta) = gain_bias(mean_i, sd_i, &scratch.j);
+                for k in 0..n {
+                    sad += (scratch.i[k] - (alpha * scratch.j[k] + beta)).abs();
+                }
+            } else {
+                let mut k = 0;
+                for dy in -hw..=hw {
+                    for dx in -hw..=hw {
+                        sad += (scratch.i[k] - cl.img.sample(est.x + dx as f32, est.y + dy as f32))
+                            .abs();
+                        k += 1;
+                    }
                 }
             }
             return FlowResult::Found {
@@ -239,6 +281,38 @@ pub fn track_point(
         g = Point2::new(2.0 * (g.x + v.x), 2.0 * (g.y + v.y));
     }
     unreachable!("level 0 always returns")
+}
+
+/// Bilinear window around `c` into `out` (already sized to the window), row-major.
+fn sample_window(img: &crate::image::ImageF32, c: Point2, hw: isize, out: &mut [f32]) {
+    let mut k = 0;
+    for dy in -hw..=hw {
+        for dx in -hw..=hw {
+            out[k] = img.sample(c.x + dx as f32, c.y + dy as f32);
+            k += 1;
+        }
+    }
+}
+
+/// Mean and (population) standard deviation. Two-pass to avoid f32 cancellation.
+fn moments(v: &[f32]) -> (f32, f32) {
+    let n = v.len() as f32;
+    let mean = v.iter().sum::<f32>() / n;
+    let var = v.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / n;
+    (mean, var.sqrt())
+}
+
+/// E3 photometric map `J ↦ α·J + β` matching `J`'s mean and deviation to the reference's.
+/// A flat or non-finite `J` (σ below 1e-3 intensity) gets `α = 1` (bias only), so the
+/// result is always finite for finite input.
+fn gain_bias(mean_i: f32, sd_i: f32, j: &[f32]) -> (f32, f32) {
+    let (mean_j, sd_j) = moments(j);
+    let alpha = if sd_j > 1e-3 && sd_i.is_finite() {
+        sd_i / sd_j
+    } else {
+        1.0
+    };
+    (alpha, mean_i - alpha * mean_j)
 }
 
 /// Symmetric "near an edge and moving outward" predicate (R-T4; fixes the 2018 x-axis swap).
@@ -673,6 +747,66 @@ mod tests {
         .unwrap();
         let out = t.step(&shifted).unwrap();
         assert_eq!(out.diagnostics.score, None);
+    }
+
+    /// `frame` with an affine intensity map applied (clamped, rounded, as a camera would).
+    fn lit(f: &GrayFrame, gain: f32, bias: f32) -> GrayFrame {
+        let data = f
+            .as_bytes()
+            .iter()
+            .map(|&v| (gain * f32::from(v) + bias).round().clamp(0.0, 255.0) as u8)
+            .collect();
+        GrayFrame::from_vec(f.width(), f.height(), data).unwrap()
+    }
+
+    #[test]
+    fn gain_bias_off_by_default_and_removes_lighting_bias() {
+        assert!(!LkParams::default().gain_bias);
+        let start = Point2::new(160.0, 120.0);
+        let shift = Point2::new(2.6, -1.3);
+        let epe = |params: LkParams, gain: f32, bias: f32| {
+            let mut t = LkTracker::new(params);
+            t.select(&frame(320, 240, Point2::default()), start)
+                .unwrap();
+            let out = t.step(&lit(&frame(320, 240, shift), gain, bias)).unwrap();
+            if out.status != TrackStatus::Tracking {
+                // Plain LK can diverge under a large bias step (finding 5).
+                return f32::INFINITY;
+            }
+            ((out.position.x - start.x - shift.x).powi(2)
+                + (out.position.y - start.y - shift.y).powi(2))
+            .sqrt()
+        };
+        let on = LkParams {
+            gain_bias: true,
+            ..LkParams::default()
+        };
+        for (gain, bias) in [(0.7, 0.0), (0.5, 64.0), (1.3, -20.0), (1.0, 25.0)] {
+            let plain = epe(LkParams::default(), gain, bias);
+            let comp = epe(on, gain, bias);
+            assert!(
+                comp < 0.1,
+                "gain {gain} bias {bias}: compensated error {comp}"
+            );
+            assert!(
+                comp < plain,
+                "gain {gain} bias {bias}: {comp} vs plain {plain}"
+            );
+        }
+        // No lighting change: compensation must not hurt.
+        assert!(epe(on, 1.0, 0.0) < 0.1);
+    }
+
+    #[test]
+    fn gain_bias_is_finite_on_flat_current_window() {
+        let (a, b) = gain_bias(100.0, 20.0, &[50.0; 9]);
+        assert_eq!(a, 1.0);
+        assert_eq!(b, 50.0);
+        let (a, b) = gain_bias(100.0, 20.0, &[90.0, 110.0, 90.0, 110.0]);
+        assert!(
+            (a - 2.0).abs() < 1e-6 && (b + 100.0).abs() < 1e-4,
+            "{a} {b}"
+        );
     }
 
     #[test]

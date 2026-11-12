@@ -12,7 +12,7 @@ still apply.
 cargo test -p tracking-core --release --test baseline lk_fingerprint -- --ignored --nocapture
 # accuracy tables (B-LK18 vs B-NCC, ~5 min)
 cargo test -p tracking-core --release --test baseline baseline_tables -- --ignored --nocapture
-# ablation: every LK variant in `variants()` vs B-LK18 (~1.5 min; filters BASELINE_SCENE, ABLATION)
+# ablation: every LK variant in `variants()` vs B-LK18 (~2 min; filters BASELINE_SCENE, ABLATION)
 cargo test -p tracking-core --release --test baseline ablation_tables -- --ignored --nocapture
 cargo bench -p tracking-core
 ```
@@ -210,6 +210,87 @@ Whether it's enabled by default goes into the default-tracker ADR after E3 (re-m
 difference is inside run-to-run noise. Zero steady-state allocations (the reference is
 allocated in `select`).
 
-## E3–E6
+## E3 — gain/bias-compensated LK: KEPT (default off until the default-tracker ADR)
+
+**Change.** `LkParams::gain_bias: bool` (default `false` = B-LK18). At each pyramid level,
+before iterating, the current-frame window `J` at the level's initial guess fixes a
+photometric map `J ↦ α·J + β`. The map matches `J`'s mean and standard deviation to the
+reference window `I`: `α = σ_I/σ_J`, `β = μ_I − α·μ_J`. A flat `J` (σ < 1e-3) gets bias-only,
+`α = 1`. The map stays fixed while that level iterates, so each level is still a plain
+translation LK solve against the same `G`, and only the residual `I − (α·J + β)` changes. The
+level-0 `Diagnostics::residual` (mean |residual|) uses the map re-estimated at the final
+position. E1's backward pass uses the same params, so it is compensated as well. Default
+output is unchanged: `lk_fingerprint` is identical on all 61 runs (diffed against `6352603`
+on the same toolchain).
+
+**Variant rejected first: re-estimating `α, β` every iteration.** Lighting scenes measured the
+same as the kept version (p95 ≤ 0.08 px). But `rotate_15` got worse: Δp95 vs LK18 was **+0.09998 px** at
+1280, +0.06 at 640. That technically passes the 0.1 px gate, with no margin. Changing α while the
+level iterates changes the objective halfway through the solve. Under rotation the window's
+moments move with the misalignment, and that couples into the step. With the map fixed per
+level, Δp95 is +0.070 / +0.04, and the kept version is also cheaper (one moment pass per level,
+not one per iteration).
+
+**Results** (`ablation_tables`, 2026-11-12, M1). Summary over all 61 runs. Δp95 is now
+printed to 3 decimals, because the E3 row sits close to the gate:
+
+| alg | mean ok | Σ wrong-lock | Σ false-track | worst good-scene Δp95 | worst good-scene ok drop | more wrong-lock than LK18 |
+|---|---|---|---|---|---|---|
+| LK18 | 75.4% | 474 | 103 | +0.000 | none | none |
+| E2 zncc≥0.7 | 73.7% | 0 | 0 | +0.000 | none | none |
+| E3 gain/bias | 75.4% | 474 | 106 | +0.070 (rotate_15 1280) | none | none |
+| E3+E1 fb≤0.5 | 75.3% | 180 | 80 | +0.070 (rotate_15 1280) | none | none |
+| **E3+E2 zncc≥0.7** | **75.4%** | **0** | **0** | +0.070 (rotate_15 1280) | none | none |
+| E3+E2 zncc≥0.8 | 74.0% | 0 | 0 | +0.070 (rotate_15 1280) | 82 pp (rotate_15 320) | none |
+| E3+E1+E2 fb≤0.5 zncc≥0.7 | 75.3% | 0 | 0 | +0.070 (rotate_15 1280) | none | none |
+
+Selected rows (ok / EPE p95 / wrong-lock / false-track / final EPE):
+
+| scene | input | LK18 | E2 zncc≥0.7 | E3 | E3+E2 zncc≥0.7 |
+|---|---|---|---|---|---|
+| brightness_step | 640×480 | 98%/6.43/0/0/6.41 | **50%**/0.06/0/0/lost | 100%/0.05/0/0/0.02 | **100%/0.05/0/0/0.02** |
+| brightness_step | 1280×720 | 98%/6.38/0/0/6.38 | **50%**/0.02/0/0/lost | 100%/0.03/0/0/0.02 | **100%/0.03/0/0/0.02** |
+| brightness_ramp | 640×480 | 100%/1.56/0/0/1.64 | 100%/1.56/0/0/1.64 | 100%/0.04/0/0/0.02 | 100%/0.04/0/0/0.02 |
+| contrast_drop | 640×480 | 100%/1.59/0/0/1.55 | 100%/1.59/0/0/1.55 | 100%/0.07/0/0/0.05 | 100%/0.07/0/0/0.05 |
+| contrast_drop | 1280×720 | 100%/1.57/0/0/1.53 | 100%/1.57/0/0/1.53 | 100%/0.05/0/0/0.03 | 100%/0.05/0/0/0.03 |
+| occlusion_full | 640×480 | 60%/20.24/20/19/20.23 | 60%/0.06/0/0/lost | 60%/28.15/20/19/28.15 | 60%/0.07/0/0/lost |
+| rotate_15 | 640×480 | 100%/1.04/0/0/0.13 | same | 100%/1.08/0/0/0.13 | 100%/1.08/0/0/0.13 |
+| rotate_15 | 1280×720 | 100%/1.08/0/0/0.13 | same | 100%/1.15/0/0/0.14 | 100%/1.15/0/0/0.14 |
+| scale_10 | 640×480 | 100%/0.42/0/0/0.05 | same | 100%/0.30/0/0/0.05 | 100%/0.30/0/0/0.05 |
+| motion_blur | 640×480 | 100%/0.82/0/0/1.00 | same | 100%/0.59/0/0/0.76 | 100%/0.59/0/0/0.76 |
+| sensor_noise | 640×480 | 100%/0.44/0/0/0.35 | same | 100%/0.38/0/0/0.36 | 100%/0.38/0/0/0.36 |
+
+(`brightness_*`/`contrast_drop` at 320 also go to p95 ≤ 0.06. `rotate_15` at 320 is unchanged
+(0.46). `fast_40px`, `edge_*` and `repeated_texture` behave as in §E2 under E3+E2. E3 alone leaves the
+silent errors in place. It follows the occluder further: final EPE 20 → 28 px at 640. E3 is not a gate.)
+
+**Reading.**
+- E3 closes finding 5. The lighting scenes go from p95 1.6–6.4 px to ≤ 0.08 px at every
+  resolution. The `brightness_step` silent 6.4 px offset is gone, because LK no longer
+  overshoots the guard at the gain step.
+- It also fixes the cost E2 paid for finding 5: E3+E2 keeps `brightness_step` at 100 %. So E3+E2
+  ≥ 0.7 is the only tested row with the highest mean ok (75.4 %, = LK18) **and** zero wrong-lock
+  / false-track frames.
+- E1 is now redundant. E3 removes E1's `contrast_drop` loss (E3+E1 stays at 100 % there). But on
+  top of E3+E2, E1 adds nothing measurable except one dropped ok frame on `edge_left` 320 /
+  `repeated_texture` (75.4 → 75.3 %). Alone, E3+E1 still lets 180 wrong-lock frames through
+  (`edge_left` at 640/1280 pass forward-backward). Recommendation for the ADR: E2 + E3, no E1.
+- Gate scenes: no ok drop. Δp95 improves on `scale_10` (−0.12/−0.14), `motion_blur`
+  (−0.06/−0.23/−0.26), `sensor_noise`, `static_60s`. It regresses within the gate only on `rotate_15`
+  640/1280 (+0.04/+0.070 px). HYPOTHESIS: under in-plane rotation the window moments at the
+  propagated guess are slightly off, and the moment-matched α absorbs a little geometric error.
+- E2's 320 `rotate_15` margin is not made worse. Positions at 320 are unchanged (p95 0.46 px),
+  ≥ 0.7 still keeps it and ≥ 0.8 still drops it. The 0.74 minimum wasn't re-probed per frame.
+
+**Decision.** KEEP. Default stays `false` in this commit (fingerprint discipline). The proposed
+default tracker is **E2 (zncc ≥ 0.7) + E3**, with E1 off but kept available. That goes into the
+default-tracker ADR, together with E4's outcome, since E4 changes the loss policy that E2's
+rejections feed into.
+
+**Timing** (M1, divan, medians, `lk_gain_bias_step` vs `lk_step`): 320: 114.2 vs 102.4 µs; 640:
+291.7 vs 280.9 µs; 1280→640: 225.2 vs 219.2 µs. That's one extra window sample per iteration plus a
+moment pass per level. Zero steady-state allocations (the `j` scratch is sized once).
+
+## E4–E6
 
 Not started. See `tasks/active/0006-phase-4-tracking-improvements.md`.

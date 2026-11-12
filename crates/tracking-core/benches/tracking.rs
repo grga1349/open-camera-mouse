@@ -140,3 +140,23 @@ fn lk_zncc_step(bencher: Bencher, res: &str) {
         t.step(black_box(&frames[i % 2 + 1])).unwrap()
     });
 }
+
+/// `lk_step` with gain/bias compensation on (Phase 4 E3, `gain_bias = true`).
+#[divan::bench(args = RES)]
+fn lk_gain_bias_step(bencher: Bencher, res: &str) {
+    let (frames, pt) = input(res);
+    let mut t = LkTracker::new(LkParams {
+        gain_bias: true,
+        ..LkParams::default()
+    });
+    t.select(&frames[0], pt).unwrap();
+    for i in 1..4 {
+        let out = t.step(&frames[i % 2 + 1]).unwrap();
+        assert_eq!(out.status, tracking_core::TrackStatus::Tracking);
+    }
+    let mut i = 0usize;
+    bencher.bench_local(|| {
+        i += 1;
+        t.step(black_box(&frames[i % 2 + 1])).unwrap()
+    });
+}

@@ -104,6 +104,12 @@ fn variants() -> Vec<(&'static str, LkParams)> {
         fb_max_error: fb,
         ..d
     };
+    let gb = |z: Option<f32>, fb: Option<f32>| LkParams {
+        gain_bias: true,
+        min_ref_zncc: z,
+        fb_max_error: fb,
+        ..d
+    };
     vec![
         ("LK18", d),
         ("E1 fb≤0.25", fb(0.25)),
@@ -118,6 +124,11 @@ fn variants() -> Vec<(&'static str, LkParams)> {
         ("E1+E2 fb≤0.5 zncc≥0.6", zn(0.6, Some(0.5))),
         ("E1+E2 fb≤0.5 zncc≥0.7", zn(0.7, Some(0.5))),
         ("E1+E2 fb≤0.5 zncc≥0.8", zn(0.8, Some(0.5))),
+        ("E3 gain/bias", gb(None, None)),
+        ("E3+E1 fb≤0.5", gb(None, Some(0.5))),
+        ("E3+E2 zncc≥0.7", gb(Some(0.7), None)),
+        ("E3+E2 zncc≥0.8", gb(Some(0.8), None)),
+        ("E3+E1+E2 fb≤0.5 zncc≥0.7", gb(Some(0.7), Some(0.5))),
     ]
 }
 
@@ -227,7 +238,7 @@ fn ablation_tables() {
     println!("|---|---|---|---|---|---|---|");
     for ((name, _), s) in vars.iter().zip(&sums) {
         println!(
-            "| {name} | {:.1}% | {} | {} | {:+.2} ({}) | {} | {} |",
+            "| {name} | {:.1}% | {} | {} | {:+.3} ({}) | {} | {} |",
             100.0 * s.ok / s.rows.max(1) as f64,
             s.wrong,
             s.false_t,

@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 4: E0–E2 pushed, CI green)
+Last updated: 2026-11-12 (Phase 4: E0–E2 pushed; E3 done, uncommitted)
 
 ## Branch / commit
 
@@ -16,7 +16,9 @@ E1 (forward-backward, `LkParams::fb_max_error`) KEPT as a component, default off
 decided after E3. E1 = `cac424f`, CI 43124247853 green. E2 (appearance gate,
 `LkParams::min_ref_zncc`, candidate 0.7) KEPT as a component, default off: Σ wrong-lock and
 false-track → 0, no gate-scene change; enable decision after E3. E2 = `47fe4ea`, CI 43126229350 green.
-E3–E6 not started.
+E3 (gain/bias-compensated LK, `LkParams::gain_bias`) KEPT, default off. E2+E3 at zncc ≥ 0.7 has 0
+silent errors at LK18's mean ok. Proposed default: E2 + E3, E1 off (ADR after E4). E3 not yet committed.
+E4–E6 not started.
 
 ## What exists now
 
@@ -33,12 +35,12 @@ E3–E6 not started.
 
 ## Immediate next action
 
-Phase 4 E3 (gain/bias-compensated LK), and re-measure E1/E2 on top
-(`brightness_step`, `contrast_drop`, `rotate_15` 320 margin).
+Phase 4 E4 (loss recovery / re-detection). Write its ADR first (it changes the 2018 loss policy).
+Measure on top of E2+E3.
 
 ## Open risks
 
 - Baseline is synthetic only; no real head-motion recordings until a camera adapter exists.
-- Known tracker failure modes (TRACKING_BASELINE findings 2–5, 7) are the E1–E4 targets.
+- Remaining failure modes: findings 2 and 4 (`fast_40px`, `edge_*`, no recovery) are E4's targets. Findings 3 and 5 are closed by E2+E3.
 - E4 (re-detection) changes the 2018 loss policy and needs an ADR.
 - Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer (P10/P11).
