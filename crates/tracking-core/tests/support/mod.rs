@@ -11,7 +11,9 @@ use tracking_core::redetect::RedetectParams;
 use tracking_core::{GrayFrame, Point2, TrackStatus, Tracker, downsample_to_width};
 
 /// Phase 4 E4 candidate (ADR-0010): E2 zncc ≥ 0.7 + E3 + re-detection with the default
-/// search parameters (τ 0.9, δ 0.1, K 16, level 2) and a 0.25-width spatial prior.
+/// search parameters (τ 0.9, δ 0.1, K 16, level 2) and a 0.25-width spatial prior. Spelled
+/// out here (not via `LkParams::recommended()`) so the ablation row stays fixed if the
+/// recommendation changes; a fixture test pins the two equal (ADR-0011).
 pub fn e4_candidate() -> LkParams {
     LkParams {
         gain_bias: true,

@@ -1,6 +1,12 @@
 # Tracking improvements (Phase 4)
 
 Ablations against B-LK18 (`LkTracker::default()`) on the Phase 3 corpus. Task 0006.
+
+**Outcome (ADR-0011):** the recommended tracker is `LkParams::recommended()` = B-LK18 + E2 (ZNCC ≥ 0.7)
++ E3 + E4 (τ 0.9, δ 0.1, K 16, level 2, r 0.25 w), with E1 off. On 70 runs it has 89.4 % mean ok (B-LK18
+73.4 %), 0 wrong-lock and 0 false-track frames, and no gate-scene regression beyond E3's
++0.070 px on `rotate_15` 1280. A tracked step is 0.29–0.31 ms and a searching step 0.58 ms at 640 (M1).
+E5 and E6 were not attempted (see below).
 Baseline numbers, corpus and metric definitions: `TRACKING_BASELINE.md`. Every experiment is
 kept or rejected on measured deltas from the same corpus. Synthetic-only caveats from Phase 3
 still apply.

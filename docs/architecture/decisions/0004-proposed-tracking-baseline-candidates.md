@@ -1,6 +1,7 @@
 # ADR-0004: Tracking-algorithm baseline candidates for Phase 3
 
-Status: Proposed — decide with measurements in Phase 3, not before
+Status: Accepted — resolved by measurement: Phase 3 kept LK (TRACKING_BASELINE), and ADR-0011
+records the shipped LK configuration. B-NCC stays a frozen test comparator.
 Date: 2026-11-11
 
 ## Context

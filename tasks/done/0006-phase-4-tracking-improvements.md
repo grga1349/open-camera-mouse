@@ -1,6 +1,6 @@
 # 0006 — Phase 4: tracking improvements
 
-Status: ACTIVE (started 2026-11-12)
+Status: DONE (2026-11-12)
 Owner/branch: `rewrite/rust`
 Depends on: 0005 (done)
 
@@ -127,5 +127,21 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
   `e4_recovers_losses_without_silent_errors`, bench `lk_searching_step`.
 - 2026-11-12 **E5 not attempted** (E4 already fixes `fast_40px`). **E6 not attempted** (no measured gap
   left on the corpus). Reasons are in TRACKING_IMPROVEMENTS §E5/§E6.
-- Next: default-tracker ADR (proposed: E2 zncc ≥ 0.7 + E3 + E4 candidate, E1 off), the final
-  latency measurement, then Phase 4 close-out against the acceptance criteria.
+- 2026-11-12 **Default tracker: ADR-0011.** `LkParams::recommended()` = E2 0.7 + E3 + E4 candidate,
+  E1 off. `Default` stays B-LK18. Pinned by the fixture test
+  `recommended_params_are_the_measured_candidate`. New bench `lk_recommended_step`: 0.29–0.31 ms at
+  640 (median), searching step 0.58 ms. ADR-0004 → Accepted.
+
+## Close-out against the acceptance criteria
+
+- E0–E4 each have full-corpus measurements and a keep/reject decision with numbers
+  (TRACKING_IMPROVEMENTS §E0–§E4). E5/E6 not attempted, reasons recorded (§E5, §E6). ✔
+- Kept experiments: worst gate-scene Δp95 +0.070 px (E3, `rotate_15` 1280) < 0.1. No gate-scene ok
+  drop. No scene has more wrong-lock frames than LK18 (`ablation_tables` summary column "none"). ✔
+- Recommended default and its deviations from 2018: ADR-0011 (with ADR-0009, ADR-0010). ✔
+- Latency within §8 on the bench machine, measured: tracked 0.29–0.31 ms, searching 0.58 ms
+  (full-frame worst case 0.92 ms) at 640 vs the < 2 ms target. ✔
+- `scripts/check-core-deps.sh` ok. ✔
+- Verification: fmt, clippy `-D warnings`, `cargo test --workspace --locked`, check-core-deps,
+  `ablation_tables`, `lk_fingerprint` (identical vs `8789d83`), benches. All run locally on
+  2026-11-12. CI on 3 OS: see BACKLOG for the run id.

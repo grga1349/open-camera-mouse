@@ -1,35 +1,30 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 4: E0–E4 done; E4 uncommitted at time of writing)
+Last updated: 2026-11-12 (Phase 4 DONE; Phase 5 next)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Phase 3 = `4038fce` (CI 43119858155 green). Task 0005 close-out + E0 =
-`f68f042`, plus `ad25a34` (task 0006 progress notes). Pushed; CI run 43121280464 green on 3 OS
-+ cargo-deny.
+Branch: `rewrite/rust`. Phase 3 = `4038fce`. Phase 4: E0 `f68f042`, E1 `cac424f`, E2 `47fe4ea`, E3
+`19a2f4a`, E4 `0074611`, then a close-out commit (ADR-0011, `LkParams::recommended()`). See `git log`
+and the CI check in HANDOFF.
 
 ## Milestone
 
-Phases 0–3 DONE. Phase 4 (tracking improvements) ACTIVE:
-`tasks/active/0006-phase-4-tracking-improvements.md`. E0 (perf, no behavior change) KEPT.
-E1 (forward-backward, `LkParams::fb_max_error`) KEPT as a component, default off; enabling is
-decided after E3. E1 = `cac424f`, CI 43124247853 green. E2 (appearance gate,
-`LkParams::min_ref_zncc`, candidate 0.7) KEPT as a component, default off: Σ wrong-lock and
-false-track → 0, no gate-scene change; enable decision after E3. E2 = `47fe4ea`, CI 43126229350 green.
-E3 (gain/bias-compensated LK, `LkParams::gain_bias`) KEPT, default off. E2+E3 at zncc ≥ 0.7 has 0
-silent errors at LK18's mean ok. E3 = `19a2f4a`, CI 43128269741 green.
-E4 (re-detection, `LkParams::redetect`, ADR-0010 Accepted) KEPT, default off. Candidate on E2+E3:
-mean ok 89.4 % (70-run corpus, vs 73.4 %), 0 wrong-lock, 0 false-track. E5/E6 not attempted (reasons
-in TRACKING_IMPROVEMENTS). Proposed default: E2 + E3 + E4 candidate, E1 off → default-tracker ADR.
+Phases 0–4 DONE. Phase 5 (design system) is NEXT per `docs/ROADMAP.md`. Its task file is not
+written yet. The coordinator writes it from the roadmap when the phase starts.
 
 ## What exists now
 
 - Workspace per ADR-0007; mirror-at-ingest + 640×480@30 per ADR-0008.
-- `tracking-core`: B-LK18 (`lk::LkTracker`), B-NCC (`ncc::NccTracker`), image/pyramid
-  primitives. LK computes window-only gradients (`image::GradPatch`); `lk_step` 0.30 ms at 640.
-- Tests: `tests/fixtures.rs` (correctness), `tests/baseline.rs` (ignored: `baseline_tables`,
-  `lk_fingerprint`, `ablation_tables` + `variants()`), benches in `benches/tracking.rs`.
-- Docs: `docs/research/TRACKING_BASELINE.md` (Phase 3), `TRACKING_IMPROVEMENTS.md` (Phase 4).
+- `tracking-core`: B-LK18 (`lk::LkTracker`, `LkParams::default()`), the recommended product tracker
+  `LkParams::recommended()` (ADR-0011: E2 appearance gate + E3 gain/bias + E4 re-detection via
+  `crate::redetect`, ADR-0010), and B-NCC (`ncc::NccTracker`, frozen comparator).
+- Statuses: `Tracking`, `Held(MotionOutlier | NearEdgeMovingOut)`, `Lost(… | AppearanceChanged |
+  Searching | NoSelection)`.
+- Tests: `tests/fixtures.rs`, `tests/baseline.rs` (ignored: `baseline_tables`, `lk_fingerprint`,
+  `ablation_tables`), benches in `benches/tracking.rs`. The corpus is 70 scene × resolution runs (incl. 3
+  distractor scenes).
+- Docs: `TRACKING_BASELINE.md` (Phase 3), `TRACKING_IMPROVEMENTS.md` (Phase 4).
 
 ## Toolchain
 
@@ -37,14 +32,14 @@ in TRACKING_IMPROVEMENTS). Proposed default: E2 + E3 + E4 candidate, E1 off → 
 
 ## Immediate next action
 
-Default-tracker ADR (ADR-0011), the final latency check, then the Phase 4 close-out (task 0006
-acceptance criteria).
+Start Phase 5 (design system): write its task file from ROADMAP Phase 5 deliverables/gate. Inputs
+for the UI states include `Lost(Searching)` and `redetect_armed()` (ADR-0011 consequences).
 
 ## Open risks
 
-- Baseline is synthetic only; no real head-motion recordings until a camera adapter exists.
-- Findings 2–5 are closed on the synthetic corpus by E2+E3+E4. Remaining (unmeasured on real faces): a
-  lookalike appearing within 0.25 w of the loss point; a target returning farther than that;
-  a fixed template vs real head roll (`rotate_15` 320 ZNCC 0.74 vs gate 0.7); 1–1.5 px
-  re-acquisition offset at 320.
+- Synthetic-only evidence. Every tracker threshold (ZNCC 0.7, τ/δ, r 0.25 w) must be re-measured on
+  Phase 6 recordings.
+- Known tracker gaps: a lookalike within r of the loss point; a target returning farther than r away;
+  1.0–1.4 px re-acquisition offset at 320; a fixed template vs head roll (`rotate_15` 320 ZNCC 0.74).
+- Control handover on re-acquisition (`Lost(Searching)` → `Tracking`) is undecided (Phase 6).
 - Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer (P10/P11).

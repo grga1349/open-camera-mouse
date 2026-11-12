@@ -15,8 +15,8 @@ the phase.
 | 1 | Research and specifications | DONE | task 0003; `docs/research/BEHAVIOR_SPEC.md`; ADR-0006 |
 | 2 | Rust architecture | DONE | task 0004; ADR-0007, -0008; `docs/architecture/DEPENDENCIES.md`, `PLATFORM_RISKS.md`; CI green |
 | 3 | Tracking baseline | DONE | task 0005; ADR-0009; `docs/research/TRACKING_BASELINE.md`; CI green |
-| 4 | Tracking improvements | **ACTIVE** | task 0006 |
-| 5 | Design system | — | |
+| 4 | Tracking improvements | DONE | task 0006; ADR-0010, -0011; `docs/research/TRACKING_IMPROVEMENTS.md` |
+| 5 | Design system | **NEXT** | |
 | 6 | Desktop app | — | |
 | 7 | Multiplatform / release | — | |
 | 8 | Hardening / product readiness | — | |
@@ -27,7 +27,7 @@ the phase.
 - ADR-0006: favor Camera Mouse 2018 behavior where practical. Deviations cite defect /
   unknown / platform / prior user decision. Hotkeys are fixed F11/F12.
 - ADR-0007 (crate boundaries, Accepted), ADR-0008 (mirror at ingest; 640×480@30) and
-  ADR-0004 (tracking candidates, Proposed).
+  ADR-0004 (tracking candidates, Accepted), ADR-0011 (recommended tracker: `LkParams::recommended()`).
 
 ## Phase details
 

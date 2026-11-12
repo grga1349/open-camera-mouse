@@ -126,6 +126,12 @@ fn e4_recovers_losses_without_silent_errors() {
     }
 }
 
+/// ADR-0011: the recommended tracker is exactly the measured E4 candidate.
+#[test]
+fn recommended_params_are_the_measured_candidate() {
+    assert_eq!(tracking_core::lk::LkParams::recommended(), e4_candidate());
+}
+
 #[test]
 fn trackers_are_deterministic_on_fixtures() {
     let seq = scene("sensor_noise").render(320, 240);

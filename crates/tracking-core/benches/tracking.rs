@@ -185,3 +185,21 @@ fn lk_searching_step<const PRIOR: bool>(bencher: Bencher, res: &str) {
     assert!((0..4).any(|_| t.step(&empty).unwrap().status == searching));
     bencher.bench_local(|| t.step(black_box(&empty)).unwrap());
 }
+
+/// ADR-0011 recommended tracker, one tracked step (E2 + E3 + E4 armed, target present).
+#[divan::bench(args = RES)]
+fn lk_recommended_step(bencher: Bencher, res: &str) {
+    let (frames, pt) = input(res);
+    let mut t = LkTracker::new(LkParams::recommended());
+    t.select(&frames[0], pt).unwrap();
+    assert!(t.redetect_armed());
+    for i in 1..4 {
+        let out = t.step(&frames[i % 2 + 1]).unwrap();
+        assert_eq!(out.status, tracking_core::TrackStatus::Tracking);
+    }
+    let mut i = 0usize;
+    bencher.bench_local(|| {
+        i += 1;
+        t.step(black_box(&frames[i % 2 + 1])).unwrap()
+    });
+}

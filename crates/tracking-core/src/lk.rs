@@ -63,6 +63,24 @@ pub struct LkParams {
     pub redetect: Option<RedetectParams>,
 }
 
+impl LkParams {
+    /// The recommended product tracker (ADR-0011): the 2018 preset plus the E2 appearance gate
+    /// (ZNCC ≥ 0.7), E3 gain/bias compensation and E4 re-detection (τ 0.9, δ 0.1, K 16,
+    /// level 2, spatial prior 0.25 · width). E1 stays off. `Default` stays B-LK18, the
+    /// measurement baseline.
+    pub fn recommended() -> Self {
+        Self {
+            min_ref_zncc: Some(0.7),
+            gain_bias: true,
+            redetect: Some(RedetectParams {
+                max_radius_frac: Some(0.25),
+                ..RedetectParams::default()
+            }),
+            ..Self::default()
+        }
+    }
+}
+
 impl Default for LkParams {
     fn default() -> Self {
         Self {
