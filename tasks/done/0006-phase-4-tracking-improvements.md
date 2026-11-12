@@ -144,4 +144,4 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
 - `scripts/check-core-deps.sh` ok. ✔
 - Verification: fmt, clippy `-D warnings`, `cargo test --workspace --locked`, check-core-deps,
   `ablation_tables`, `lk_fingerprint` (identical vs `8789d83`), benches. All run locally on
-  2026-11-12. CI on 3 OS: see BACKLOG for the run id.
+  2026-11-12. CI green on 3 OS + cargo-deny: E4 `0074611` run 43131916361, close-out `66768c9` run 43132339284.

@@ -11,9 +11,9 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 step ~0.3 ms and searching step ~0.58 ms at 640.
 
 **Next session, in order:**
-1. `git status` / `git log -1`. CI check for the Phase 4 close-out commit (no `gh` here):
+1. `git status` / `git log -1`. Phase 4 CI is green (close-out `66768c9`, run 43132339284). Check CI
+   again only if newer commits exist:
    `curl -s https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust\&per_page=1`.
-   Record the green run id in `tasks/BACKLOG.md` (the 0006 row says "CI pending").
 2. Phase 5 (design system) per `docs/ROADMAP.md`: write its task file from the deliverables/gate.
    UI states must include tracking / held / lost / **searching (re-acquiring)** / paused / no camera
    / permission, plus a "can't auto-recover this selection" hint (`redetect_armed() == false`).

@@ -5,8 +5,8 @@ Last updated: 2026-11-12 (Phase 4 DONE; Phase 5 next)
 ## Branch / commit
 
 Branch: `rewrite/rust`. Phase 3 = `4038fce`. Phase 4: E0 `f68f042`, E1 `cac424f`, E2 `47fe4ea`, E3
-`19a2f4a`, E4 `0074611`, then a close-out commit (ADR-0011, `LkParams::recommended()`). See `git log`
-and the CI check in HANDOFF.
+`19a2f4a`, E4 `0074611` (CI 43131916361 green), close-out `66768c9` (ADR-0011, `LkParams::recommended()`;
+CI 43132339284 green on 3 OS + cargo-deny).
 
 ## Milestone
 
