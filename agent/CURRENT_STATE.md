@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 4: E0 pushed, CI green; E1 done)
+Last updated: 2026-11-12 (Phase 4: E0 + E1 pushed, CI green)
 
 ## Branch / commit
 
@@ -13,7 +13,7 @@ Branch: `rewrite/rust`. Phase 3 = `4038fce` (CI 43119858155 green). Task 0005 cl
 Phases 0–3 DONE. Phase 4 (tracking improvements) ACTIVE:
 `tasks/active/0006-phase-4-tracking-improvements.md`. E0 (perf, no behavior change) KEPT.
 E1 (forward-backward, `LkParams::fb_max_error`) KEPT as a component, default off; enabling is
-decided after E3. E2–E6 not started.
+decided after E3. E1 = `cac424f`, CI 43124247853 green. E2–E6 not started.
 
 ## What exists now
 

@@ -8,10 +8,10 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 **Branch:** `rewrite/rust`. Phases 0–3 DONE. Phase 4 = task 0006. E0 KEPT (committed
 `f68f042`, CI green). E1 (forward-backward validation) KEPT as a component, **default off**.
 Its enable/threshold decision waits for E3. Results: `docs/research/TRACKING_IMPROVEMENTS.md` §E1.
-E1 may be uncommitted. Check `git status`.
+E1 committed `cac424f`, pushed, CI run 43124247853 green.
 
 **Next session, in order:**
-1. `git status` / `git log -1`. To check CI (no `gh` here):
+1. `git status` / `git log -1` (expect a clean tree at or after `cac424f`). To check CI (no `gh` here):
    `curl -s https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust\&per_page=1`.
 2. E2 photometric residual / confidence gating (targets occlusion false-track, which E1 can't
    catch: the occluder moves rigidly). Add `variants()` entries in `tests/baseline.rs`, alone and
