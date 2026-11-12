@@ -7,7 +7,7 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 
 **Branch:** `rewrite/rust`. Phases 0–3 DONE. Phase 4 = task 0006. E0 KEPT. E1 KEPT, default off
 (now redundant). E2 KEPT, default off (`min_ref_zncc`, candidate 0.7). **E3 KEPT, default off**
-`LkParams::gain_bias`, a per-level mean/σ-matched photometric map that stays fixed while the level
+(`19a2f4a`, CI 43128269741 green): `LkParams::gain_bias`, a per-level mean/σ-matched photometric map that stays fixed while the level
 iterates. Results: `docs/research/TRACKING_IMPROVEMENTS.md` §E3. E2+E3 at zncc ≥ 0.7 has 0 silent
 errors, mean ok 75.4 % (= LK18), worst gate Δp95 +0.070 (`rotate_15` 1280). **Proposed default:
 E2 + E3, E1 off.** That goes into the default-tracker ADR after E4.
