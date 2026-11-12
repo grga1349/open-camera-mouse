@@ -437,6 +437,11 @@ source system.
   control; inactivity N s resumes)? Strongly recommended if R-P1 picks absolute mode.
 - R-A3 Guided recenter (legacy 3 s countdown → pick centre) is the baseline. 2018's
   `CenterDetect` is not reproducible without more evidence.
+  **Decided (user, 2026-11-12, task 0007):** recenter shows a white circle at the preview centre
+  with a **5-second** countdown (5-4-3-2-1, as in 2018, not legacy's 3 s), shown as a badge, not over
+  the circle; at 0 the point inside the circle becomes the tracking target (selection
+  at the frame centre) and tracking resumes. Resuming from Pause (F11 / Resume) always runs this
+  recenter flow. Recenter (F12 / button) is also available while paused and ends the pause.
 - R-A4 Hotkeys: keep legacy's fixed F11 start/stop + F12 recenter unless the user decides
   otherwise. **Decided (user, 2026-11-11): F11 + F12, fixed**. This deviates from 2018's F9/F5,
   see ADR-0006. Per the existing project decision, do not make them configurable without asking.

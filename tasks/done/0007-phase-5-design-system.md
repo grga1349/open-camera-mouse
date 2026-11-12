@@ -60,6 +60,10 @@ values in it are ADR-0006 defaults so that the layout is realistic, not a new sp
 8. **Marker colour revised 2026-11-12 (user, final):** a colour camera stand-in showed yellow is
    near-invisible on light skin. Measured candidates (ΔE vs four skin tones) and chose **neon
    green `#00ff00`**, the same in both themes. Primary buttons stay **yellow**.
+9. **Recenter flow (user, 2026-11-12):** recenter = white circle (same style as the pick circle) at the preview
+   centre + **5 s** countdown 5-4-3-2-1 in a bottom badge;
+   at 0 the point inside the circle becomes the target. Resume after Pause always goes through
+   recenter. Recenter is enabled while paused and ends the pause. Recorded in BEHAVIOR_SPEC R-A3.
 
 ## Non-goals
 
@@ -111,3 +115,12 @@ Phase 6 input, not an edit here. No final iconography assets beyond inline SVG.
   marker-colour picker. Yellow failed (ΔE 58, luminance ratio 1.10 on light skin). The user
   chose neon green `#00ff00` (ΔE ≥ 110 vs all tones). EGUI_FEASIBILITY, DESIGN_PLAN and the lab
   were updated to match. `node --check` OK, screenshots on light and dark skin reviewed.
+- 2026-11-12: lab recenter reworked per Decision 9 (centre circle, pause → recenter, recenter
+  breaks pause); the old white countdown box is removed. `node --check` OK; screenshots of the
+  countdown, its completion (tracking at the circled point) and paused (Recenter enabled) reviewed.
+- 2026-11-12: countdown moved off the camera image into a bottom badge (user: the digit covered the
+  circle and lingered). DOM check: badge/title 3 → 2 → 1 at 0.5/1.5/2.5 s, then hidden + Tracking
+  at 3.5 s.
+- 2026-11-12: recenter circle now uses the same style as the pick circle (white dashed ring,
+  shared draw helper). User request.
+- 2026-11-12: recenter countdown set to 5 s (user; matches 2018's 5-4-3-2-1).

@@ -4,8 +4,8 @@ Last updated: 2026-11-12 (Phase 5 DONE; Phase 6 next)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Phase 4 close-out `66768c9` (CI green). Phase 5 work is docs-only and may
-be uncommitted — check `git status`.
+Branch: `rewrite/rust`. Phase 5 committed and pushed (`3578620` design system + a follow-up commit
+for the guided recenter flow, 5 s countdown). Docs-only; code unchanged since Phase 4 (`66768c9`, CI green).
 
 ## Milestone
 

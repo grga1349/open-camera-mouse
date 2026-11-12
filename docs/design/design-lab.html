@@ -89,6 +89,8 @@ body { background: var(--lab-bg); color: var(--lab-fg); font: 13px/1.4 -apple-sy
 .preview { position:relative; width:100%; aspect-ratio:4/3; flex:none; border-radius:var(--radius); overflow:hidden; background:#000; border:var(--border-w) solid var(--line); }
 .preview canvas { width:100%; height:100%; display:block; cursor:crosshair; }
 .preview.no-pick canvas { cursor:default; }
+.badge.count { top:auto; left:50%; bottom:10px; transform:translateX(-50%); font-size:13px; font-weight:600; padding:5px 12px; }
+.badge[hidden] { display:none; }
 .badge { position:absolute; top:8px; left:8px; display:flex; gap:6px; align-items:center; background:rgba(0,0,0,.7); color:#fff; font-size:11px; padding:3px 8px; border-radius:5px; }
 .overlay { position:absolute; inset:0; display:none; align-items:center; justify-content:center; padding:20px; }
 .overlay.on { display:flex; }
@@ -235,8 +237,8 @@ input[type=range].rng::-moz-range-thumb { width:14px; height:14px; border-radius
           <canvas id="cam" width="640" height="480" role="img" aria-label="Camera preview. Click a point on your face to select the tracking target."></canvas>
           <div class="badge" id="liveBadge"><span id="liveTxt">Live · mirrored</span></div>
           <div class="diag" id="diag"></div>
+          <div class="badge count" id="countBadge" hidden></div>
           <div class="overlay scrim" id="ov-card"><div class="card" id="ovCard"></div></div>
-          <div class="overlay" id="ov-count"><div class="countdown" id="countNum">3</div></div>
           <div class="overlay scrim" id="ov-load"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div class="spinner"></div><div>Starting camera…</div></div></div>
           <div class="overlay scrim" id="ov-hello"><div class="card">
             <svg width="28" height="28"><use href="#i-hello"/></svg>
@@ -392,10 +394,10 @@ const STATES = {
                    hint:'That spot has too little detail to be found again automatically. Try the tip of your nose or an eyebrow.' },
   'handover':    { group:'Running', name:'Mouse took over', icon:'mouse', pointer:'mouse', cam:'live', mark:'track', countdown:4, auto:['tracking',4000],
                    title:'Mouse in control', body:'The camera takes over again when the mouse is still.' },
-  'recentering': { group:'Running', name:'Recentering countdown', icon:'recenter', pointer:'held still', cam:'live', mark:'track', overlay:'count', auto:['tracking',3000],
-                   title:'Recentering', body:'Look straight at the screen. Your head position at zero becomes the centre.' },
+  'recentering': { group:'Running', name:'Recentering (centre circle)', icon:'recenter', pointer:'mouse', cam:'live', mark:'center',
+                   title:'Recentering', body:'Look straight at the screen and put the tip of your nose (or the point you want to track) inside the white circle. Tracking starts when the countdown ends.' },
   'paused':      { group:'Running', name:'Paused', icon:'paused', pointer:'mouse', cam:'dim',
-                   title:'Paused', body:'The pointer is yours. Press F11 or Resume, then pick the target again.' },
+                   title:'Paused', body:'The pointer is yours. Press F11, Resume or Recenter to continue. You line up with the centre circle first.' },
 
   'disconnected':{ group:'Problems', name:'Camera disconnected', icon:'unplug', pointer:'mouse', cam:'frozen',
                    title:'Camera disconnected', body:'Check the cable or close other apps using the camera.',
@@ -412,13 +414,15 @@ for (const [id, s] of Object.entries(STATES)) {
   const o = document.createElement('option'); o.value = id; o.textContent = s.name; og.appendChild(o);
 }
 
-let state = 'tracking', autoTimer = null, countTimer = null, markShape = 'circle';
+let state = 'tracking', autoTimer = null, countTimer = null, markShape = 'circle', countN = 3, recStart = 0;
+const RECENTER_SECONDS = 5;   // 5-4-3-2-1, as in 2018 (user decision, R-A3)
+const CENTER = { x: 320, y: 240 }, PICK_DASH = [5, 4];   // recenter circle = pick circle
 let target = { dx: 0, dy: 12 }, frozenPos = null, hover = null, diag = false;
 
 function setState(id) {
   if (!STATES[id]) return;
   state = id; sel.value = id; const s = STATES[id];
-  clearTimeout(autoTimer); clearInterval(countTimer);
+  clearTimeout(autoTimer); clearInterval(countTimer); $('countBadge').hidden = true;
   if (['held','search','lost'].includes(s.mark)) frozenPos = facePoint(time());
 
   $('stIco').setAttribute('href', '#i-' + s.icon);
@@ -437,7 +441,6 @@ function setState(id) {
     for (const a of s.card.actions) c.querySelector('.row').appendChild(mkBtn(...a));
   }
   $('ov-load').classList.toggle('on', s.overlay === 'load');
-  $('ov-count').classList.toggle('on', s.overlay === 'count');
   $('ov-hello').classList.toggle('on', !!s.hello);
   $('preview').classList.toggle('no-pick', !s.pick);
   $('liveBadge').style.display = s.cam === 'off' ? 'none' : 'flex';
@@ -447,9 +450,14 @@ function setState(id) {
   $('startLbl').textContent = id === 'paused' ? 'Resume' : running ? 'Pause' : 'Start';
   $('startIco').setAttribute('href', running ? '#i-paused' : '#i-play');
   $('startBtn').disabled = ['perm-camera','no-camera','loading','disconnected','error','first-run'].includes(id);
-  $('recenterBtn').disabled = !['tracking','held-motion','held-edge','handover'].includes(id);
+  $('recenterBtn').disabled = !['no-target','tracking','held-motion','held-edge','searching','lost','lost-noauto','handover','paused'].includes(id);
 
-  if (s.overlay === 'count') { let n = 3; $('countNum').textContent = n; countTimer = setInterval(() => { if (--n > 0) $('countNum').textContent = n; }, 1000); }
+  if (id === 'recentering') {
+    // Guided recenter: 5-4-3-2-1 with a white circle at the frame centre; at 0 the point inside it becomes the target.
+    countN = RECENTER_SECONDS; recStart = performance.now();
+    const upd = () => { $('stTitle').textContent = `Recentering · ${countN}`; const b = $('countBadge'); b.hidden = false; b.textContent = `Recentering in ${countN}`; };
+    upd(); countTimer = setInterval(() => { if (--countN > 0) upd(); else finishRecenter(); }, 1000);
+  }
   if (s.countdown) {
     let n = s.countdown; const upd = () => $('stTitle').textContent = `${s.title} · camera resumes in ${n} s`;
     upd(); countTimer = setInterval(() => { if (--n > 0) upd(); }, 1000);
@@ -471,9 +479,15 @@ $('helloGo').addEventListener('click', () => setState('perm-camera'));
 /* Commands */
 function toggleStart() {
   if ($('startBtn').disabled) return;
-  if (state === 'paused') setState('no-target'); else if (RUNNING.includes(state)) setState('paused'); else setState('loading');
+  if (state === 'paused') setState('recentering'); else if (RUNNING.includes(state)) setState('paused'); else setState('loading');
 }
 function recenter() { if (!$('recenterBtn').disabled) setState('recentering'); }
+function finishRecenter() {
+  clearInterval(countTimer);
+  const c = faceCenter(time());
+  target = { dx: CENTER.x - c.x, dy: CENTER.y - c.y };   // the point under the circle becomes the target
+  setState('tracking');
+}
 $('startBtn').addEventListener('click', toggleStart);
 $('recenterBtn').addEventListener('click', recenter);
 document.addEventListener('keydown', (e) => {
@@ -596,7 +610,12 @@ const t0 = performance.now(); let frozenT = 0;
 function time() { return reduced() ? 0.6 : (performance.now() - t0) / 1000; }
 function faceCenter(t) {
   if (STATES[state].edge) return { x: 560 + 18 * Math.sin(t * 0.8), y: 220 };
-  return { x: 320 + 70 * Math.sin(t * 0.55), y: 225 + 16 * Math.sin(t * 0.83) };
+  const sway = { x: 320 + 70 * Math.sin(t * 0.55), y: 225 + 16 * Math.sin(t * 0.83) };
+  if (state !== 'recentering') return sway;
+  // Simulated user lines the nose tip up with the centre circle during the countdown.
+  const k = Math.min(1, (performance.now() - recStart) / 1800), e = k * k * (3 - 2 * k);
+  const goal = { x: CENTER.x, y: CENTER.y - 12 };       // nose tip is 12 px below face centre
+  return { x: sway.x + (goal.x - sway.x) * e, y: sway.y + (goal.y - sway.y) * e };
 }
 function facePoint(t) { const c = faceCenter(t); return { x: c.x + target.dx, y: c.y + target.dy }; }
 /* Realistic colour stand-in for checking marker contrast. Skin tones: lab selector. */
@@ -690,8 +709,11 @@ function frame() {
       marker(q, acc, { size: 30, label: 'Searching' }); break;
     }
     case 'lost': marker(frozenPos || p, '#c8c8c8', { x: true, label: 'Lost' }); break;
+    case 'center':
+      // Same ring as the pick (hover) circle, fixed at the frame centre. Countdown lives in the badge, not here.
+      marker(CENTER, '#ffffff', { dash: PICK_DASH }); break;
     case 'hover':
-      if (hover) marker(hover, '#ffffff', { dash: [5, 4], label: 'Click to select' });
+      if (hover) marker(hover, '#ffffff', { dash: PICK_DASH, label: 'Click to select' });
       else { ctx.save(); ctx.font = '600 16px -apple-system, system-ui, sans-serif'; ctx.textAlign = 'center';
              ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(170, 418, 300, 38); ctx.fillStyle = '#fff'; ctx.fillText('Click a point on your face', 320, 443); ctx.restore(); }
       break;
