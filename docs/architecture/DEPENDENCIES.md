@@ -15,7 +15,10 @@ in the phase that needs it, after a spike · **rejected**.
 | `eframe` / `egui` | 0.37.0 (2026-10-15) | MIT OR Apache-2.0 | apps/desktop | Product decision (egui). Default features: wgpu renderer, winit with x11 + wayland, AccessKit. MSRV 1.95 sets the workspace MSRV. |
 | `egui_kittest` | 0.37.0 | MIT OR Apache-2.0 | apps/desktop (dev) | Headless UI interaction tests by label. Needs no GPU unless the `wgpu` snapshot feature is enabled, which it isn't. |
 | `divan` | 0.1.21 (2025-04-10) | MIT OR Apache-2.0 | tracking-core (dev) | Benchmarks with a built-in allocation profiler, which the §8 zero-allocation target needs; Criterion has none. Chosen over criterion 0.8.2 in Phase 3 despite no release since 2025-04. Swap if it stops building. |
-| `thiserror` | 2.0.21 | MIT OR Apache-2.0 | tracking-core, app-core | Typed errors. Proc-macro only, adds nothing at runtime. The single external crate allowed in the pure cores. |
+| `thiserror` | 2.0.21 | MIT OR Apache-2.0 | tracking-core, app-core, platform | Typed errors. Proc-macro only, adds nothing at runtime. The single external crate allowed in the pure cores. |
+| `serde` | 1.0.229 (2026-07-18) | MIT OR Apache-2.0 | app-core (`derive` + `std`) | Settings schema on `app_core::Settings` (ADR-0012). The only extra crate `app-core` may take; checked by `scripts/check-core-deps.sh`. |
+| `toml` | 1.2.1 (2026-11-06) | MIT OR Apache-2.0 | platform | Settings file (`platform::settings_store`, ADR-0012). |
+| `tempfile` | 3.27.0 | MIT OR Apache-2.0 | platform (dev) | Settings store tests. |
 
 The full transitive graph (~240 packages, nearly all from eframe) is permissive. It also
 includes OFL-1.1 / Ubuntu-font-1.0 for egui's bundled fonts, which `deny.toml` allows
@@ -45,11 +48,16 @@ Pyramids and float buffers are added in Phase 3 inside tracking-core. The previe
 | Cursor, Linux | `x11rb` 0.14.0 (XTest) on X11. `ashpd` 0.14.0 RemoteDesktop portal + libei on Wayland | MIT OR Apache-2.0 / MIT | Wayland absolute pointer depends on the compositor and needs user consent per session. | Document X11-only for v1 if the portal path fails |
 | Cursor, cross-platform | `enigo` | 0.6.1 (2025-08-28), MIT | Active repo, but the last release is over a year old, and we'd still need per-OS code for reading the position and for permissions. Kept as the fallback, not the default. | — |
 | Global hotkeys F11/F12 | `global-hotkey` (Tauri) | 0.10.0 (2026-11-09), Apache-2.0 OR MIT | macOS uses Carbon hotkeys (no Accessibility needed, INFERRED). Windows works. Linux supports X11 only. | Wayland: portal GlobalShortcuts via `ashpd`, or in-app keys only |
-| Settings persistence | `serde` 1.0.229 + `toml` 1.2.1 + `directories` 6.0.0 | MIT OR Apache-2.0 | Schema-versioned file (R-A5). | — |
 | Property tests | `proptest` 1.12.0 | MIT OR Apache-2.0 | Phase 3 tracker invariants. | — |
 | Snapshot tests | `insta` 1.49.0 | Apache-2.0 | Optional, for diagnostics/golden outputs. | — |
 
+Phase 6 candidates were re-queried 2026-11-12; ADR-0012 holds the current table, and D3–D5
+record each adoption there.
+
 ## Rejected
+
+- `directories` 6.0.0 (ADR-0012): its dependency `option-ext` is MPL-2.0, outside the
+  `deny.toml` allowlist. The config path is hand-written in `platform::settings_store`.
 
 - Anything using OpenCV (AGENTS.md), including `nokhwa`'s `input-opencv` feature.
 - `camera_capture` (last release 2017), `kamera` 0.0.2, `eye` 0.5 (dormant), `rdev`

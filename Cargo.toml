@@ -26,6 +26,9 @@ eframe = "0.37.0"
 egui = "0.37.0"
 egui_kittest = "0.37.0"
 divan = "0.1.21"
+serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
+toml = "1.2.1"
+tempfile = "3.27.0"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

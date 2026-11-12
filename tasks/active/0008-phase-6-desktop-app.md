@@ -89,6 +89,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 | Font | egui default fonts for the first build. Revisit with an embedded OFL font later | this file |
 | ~~Pointer permission + handover in R-A1~~ **Decided (D0):** orthogonal `PointerOwner` sub-state; plus top-level `Error` | — | BEHAVIOR_SPEC R-A1 |
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
+| ~~Crates `app-core` may take~~ **Decided (D2):** `serde` derive only, besides `thiserror` + cores; checked by `check-core-deps.sh` | — | ADR-0012 |
 | Camera backend | From the D3 spike | ADR-0012 |
 | Warp vs posted move | From the D4 test | ADR-0012 / PLATFORM_RISKS P6 |
 
@@ -200,3 +201,15 @@ Plus the CI run ID for the closing commit.
   grayscale" was wrong. `CameraFrame` gains a colour image for display in D3 (adapter) and the
   controller mirrors/downsamples it with the luma at ingest; the tracker still runs on luma
   only. Recorded in ADR-0008 (amendment), EGUI_FEASIBILITY, DEPENDENCIES.
+- 2026-11-12: **D2 done.** ADR-0012 (Phase 6 crates, versions/licences re-queried; app-core may
+  take `serde` derive; ADR-0007 amended). `serde` derives on `Settings` (+ `Settings::repaired`:
+  per-field reset of out-of-range values). `platform::settings_store`: TOML file with
+  `schema_version` first, atomic write, never-failing load with `SettingsNotice` (missing →
+  defaults; corrupt / older / missing version → defaults, file moved to `settings.toml.corrupt`;
+  newer → defaults + read-only store; out of range → fields reset; unreadable → read-only).
+  `directories` rejected: `option-ext` is MPL-2.0 (would fail `cargo deny`); config dir is a
+  hand-written, injected-env function tested for all three OS rules. `check-core-deps.sh` now
+  also checks `app-core`. Desktop skeleton loads at startup and shows the notice; save-on-change
+  lands with the Options window (D6). 2 new app-core + 13 new platform tests + 1 kittest. Gates
+  green locally; `cargo deny` not run locally (CI only) — new lockfile crate `toml_writer` is
+  MIT OR Apache-2.0.

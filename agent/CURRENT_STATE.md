@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 6 ACTIVE, D0–D1 done)
+Last updated: 2026-11-12 (Phase 6 ACTIVE, D0–D2 done)
 
 ## Branch / commit
 
@@ -10,7 +10,8 @@ for the guided recenter flow, 5 s countdown). Docs-only; code unchanged since Ph
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. D0 (app-core controller) and D1 (pointer-core behaviour) done, gates green locally; D2 next.
+slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour) and D2 (ADR-0012 + settings
+persistence) done, gates green locally (D2 uncommitted until the user says so); D3 next.
 
 ## What exists now
 
@@ -27,7 +28,11 @@ slices D0–D7. D0 (app-core controller) and D1 (pointer-core behaviour) done, g
   `Step`/`View`, validated `Settings` with schema version). `pointer-core`: `map_raw`/`map_absolute`,
   `smoothing` (dt-aware), `limits` (+ offset drift as a rate), `dwell`, `handover` (move-stop,
   inactivity, R-P4 jump bound). Composed in `Controller::drive`; `Effect::Click` for dwell.
-- `apps/desktop` is still the Phase 2 skeleton (one window, status label, start/stop button),
+- Settings persistence (ADR-0012): `serde` derives on `app_core::Settings` (+ `repaired()`),
+  `platform::settings_store` (TOML, `schema_version`, atomic write, never-failing load with a
+  `SettingsNotice`; newer schema → read-only store). Config dir hand-written (`directories`
+  rejected: MPL-2.0 `option-ext`). `check-core-deps.sh` also checks `app-core`.
+- `apps/desktop` is still the Phase 2 skeleton (now loads settings and shows the load notice) (one window, status label, start/stop button),
   adapted to the new controller API.
 
 ## Toolchain
@@ -36,8 +41,9 @@ slices D0–D7. D0 (app-core controller) and D1 (pointer-core behaviour) done, g
 
 ## Immediate next action
 
-Task 0008 slice D2: dependencies ADR-0012 (re-query versions/licences) + settings persistence
-(serde/toml/directories, outside the pure cores; corrupt/newer-schema → defaults + notice).
+Task 0008 slice D3: camera adapter spike on the dev Mac, `nokhwa` (`input-native` only) vs a thin
+`objc2-av-foundation` adapter; measure open / 640×480 negotiated / real FPS / release on close;
+record the pick in ADR-0012's crate table; colour + luma per frame; check new transitive licences.
 
 ## Open risks
 

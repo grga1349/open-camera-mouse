@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0008 | Phase 6 — desktop app | ACTIVE — `tasks/active/0008-phase-6-desktop-app.md`, slices D0–D7; next D0 (`app-core` controller) |
+| 0008 | Phase 6 — desktop app | ACTIVE — `tasks/active/0008-phase-6-desktop-app.md`, slices D0–D7; D0–D2 done, next D3 (camera adapter spike, macOS) |
 
 ## Done
 

@@ -1,14 +1,17 @@
 //! User settings (BEHAVIOR_SPEC R-A5): one struct, validated on every update and on load, so
-//! an invalid value can't be set (R-P2, fixes L-1). Persistence (file format, schema
-//! migration on disk) is task 0008 slice D2 and lives outside this pure crate.
+//! an invalid value can't be set (R-P2, fixes L-1). The serde derives define the on-disk
+//! field names; reading and writing the file (format, schema version, fallbacks) is
+//! `platform::settings_store` (ADR-0012), outside this pure crate.
 //!
 //! Defaults follow ADR-0006 (2018) and the approved design lab (task 0007). Improvements on
 //! 2018 are opt-in and off by default (`loss_recovery`, `dwell.enabled`).
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Colour theme (design lab: Carbon = dark, default; Paper = light).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Theme {
     #[default]
     Carbon,
@@ -17,7 +20,8 @@ pub enum Theme {
 
 /// Distance the pointer keeps from each edge of the virtual desktop, in screen px (design
 /// lab "Screen limits", default 0; 2018 W/E/N/S limits, ADR-0006).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ScreenLimits {
     pub left: u32,
     pub right: u32,
@@ -26,7 +30,8 @@ pub struct ScreenLimits {
 }
 
 /// Dwell clicking (R-K1/R-K2, ADR-0006 provisional defaults). Behaviour is slice D1.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct DwellSettings {
     pub enabled: bool,
     /// Hold still this long to click.
@@ -48,8 +53,10 @@ impl Default for DwellSettings {
     }
 }
 
-/// Every user-changeable setting.
-#[derive(Debug, Clone, PartialEq)]
+/// Every user-changeable setting. Missing fields deserialize to their defaults, so a file
+/// written before a field existed still loads.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     /// Per-axis gain (R-P3), 2018 default 6/6.
     pub gain_x: f32,
@@ -64,6 +71,7 @@ pub struct Settings {
     pub limits: ScreenLimits,
     pub dwell: DwellSettings,
     /// Camera device id from the platform adapter; `None` = system default.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub camera: Option<String>,
     /// Mirror at ingest (ADR-0008), default on: head right moves the pointer right.
     pub mirror: bool,
@@ -187,6 +195,37 @@ impl Settings {
         }
         Ok(self)
     }
+
+    /// Like [`validated`](Self::validated), but never fails: each out-of-range field is reset
+    /// to its default and named in the returned list (empty = nothing was repaired). Used on
+    /// load, so one bad value in a hand-edited file doesn't throw away every other setting.
+    pub fn repaired(self) -> (Self, Vec<&'static str>) {
+        let d = Self::default();
+        let mut s = self;
+        let mut reset = Vec::new();
+        loop {
+            let err = match s.clone().validated() {
+                Ok(v) => return (v, reset),
+                Err(e) => e,
+            };
+            reset.push(err.field);
+            match err.field {
+                "gain_x" => s.gain_x = d.gain_x,
+                "gain_y" => s.gain_y = d.gain_y,
+                "smoothing" => s.smoothing = d.smoothing,
+                "limits.left" => s.limits.left = d.limits.left,
+                "limits.right" => s.limits.right = d.limits.right,
+                "limits.top" => s.limits.top = d.limits.top,
+                "limits.bottom" => s.limits.bottom = d.limits.bottom,
+                "dwell.dwell_s" => s.dwell.dwell_s = d.dwell.dwell_s,
+                "dwell.refractory_s" => s.dwell.refractory_s = d.dwell.refractory_s,
+                "dwell.radius_frac" => s.dwell.radius_frac = d.dwell.radius_frac,
+                "text_scale" => s.text_scale = d.text_scale,
+                // A field `validated` checks but this list forgot: don't loop, start over.
+                _ => return (d, reset),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -303,6 +342,53 @@ mod tests {
             ..Settings::default()
         };
         assert_eq!(s.validated().unwrap().gain_y, 3.0);
+    }
+
+    #[test]
+    fn repaired_resets_only_the_bad_fields() {
+        let s = Settings {
+            gain_x: 9.0,
+            smoothing: 1.0,
+            text_scale: f32::NAN,
+            theme: Theme::Paper,
+            ..Settings::default()
+        };
+        let (fixed, reset) = s.repaired();
+        assert_eq!(reset, vec!["smoothing", "text_scale"]);
+        assert_eq!(fixed.gain_x, 9.0, "valid fields are kept");
+        assert_eq!(fixed.theme, Theme::Paper);
+        assert_eq!(fixed.smoothing, Settings::default().smoothing);
+        assert_eq!(fixed.text_scale, 1.0);
+        assert_eq!(fixed.clone().validated().unwrap(), fixed);
+    }
+
+    #[test]
+    fn repaired_reaches_every_checked_field() {
+        // Every field `validated` can reject must be resettable, not hit the catch-all.
+        let s = Settings {
+            gain_x: 0.0,
+            gain_y: 0.0,
+            link_gain: false,
+            smoothing: 2.0,
+            limits: ScreenLimits {
+                left: 5000,
+                right: 5000,
+                top: 5000,
+                bottom: 5000,
+            },
+            dwell: DwellSettings {
+                enabled: true,
+                dwell_s: 0.0,
+                refractory_s: 0.0,
+                radius_frac: 0.0,
+            },
+            text_scale: 0.0,
+            ..Settings::default()
+        };
+        let (fixed, reset) = s.repaired();
+        assert_eq!(reset.len(), 11, "{reset:?}");
+        assert!(!fixed.link_gain, "a valid field survives a full repair");
+        assert!(fixed.dwell.enabled);
     }
 
     #[test]

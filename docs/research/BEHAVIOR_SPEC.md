@@ -459,7 +459,9 @@ source system.
   otherwise. **Decided (user, 2026-11-11): F11 + F12, fixed**. This deviates from 2018's F9/F5,
   see ADR-0006. Per the existing project decision, do not make them configurable without asking.
 - R-A5 Settings are validated at the API boundary on every update and on load, with schema
-  versioning for the persisted file.
+  versioning for the persisted file. *Implemented (task 0008 D2, ADR-0012):* out-of-range
+  values reset per field; a corrupt file falls back to defaults and is kept aside; a newer
+  schema falls back to defaults and is never overwritten; each case shows a notice.
 - R-A6 Shared state is never read across threads without synchronisation (fixes L-7). Param
   changes that invalidate tracker state (template size) MUST re-initialise it or be refused
   while tracking (fixes L-8).

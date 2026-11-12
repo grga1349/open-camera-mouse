@@ -1,6 +1,6 @@
 # ADR-0007: Workspace boundaries ratified, with ports owned by app-core
 
-Status: Accepted
+Status: Accepted (amended by ADR-0012: `app-core` may also depend on `serde` derive)
 Date: 2026-11-11
 Supersedes: ADR-0003 (Proposed) in part. The crate set stays the same. The dependency
 direction changes.
