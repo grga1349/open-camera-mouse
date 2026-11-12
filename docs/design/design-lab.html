@@ -13,6 +13,7 @@
    - monochrome UI; the only colour is the target marker (and, in the yellow trial, primary buttons);
    - two fixed-size windows: Tracking and Options;
    - no auto-recenter in the initial rewrite;
+   - "Find the target again" (loss recovery, ADR-0011 amendment 2026-11-12) is an option in Options → Camera, off by default;
    - two themes, switchable in Options: Carbon (dark) and Paper (light);
    - marker = thin neon-green ring (chosen by contrast vs skin tones); lab keeps alternatives for comparison.
   The gear icon path is Feather "settings" (MIT licence).
@@ -145,12 +146,13 @@ input[type=range].rng::-moz-range-progress { height:4px; border-radius:2px; back
 input[type=range].rng::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:50%; background:var(--text); border:3px solid var(--bg); box-shadow:0 0 0 1px var(--text); }
 input[type=range].rng::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--text); border:3px solid var(--bg); }
 .ui.large input[type=range].rng::-webkit-slider-thumb { width:26px; height:26px; margin-top:-11px; }
-.switch { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:var(--hit); cursor:pointer; }
+/* The switch lines up with the label (first line), not with the help text under it. */
+.switch { --lh1: calc(var(--font-size) * var(--scale) * 1.4); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-height:var(--hit); cursor:pointer; }
 .switch .txt { display:flex; flex-direction:column; }
 .switch .txt b { font-weight:600; }
 .switch .txt small { color:var(--muted); font-size:.88em; }
-.switch .st { font-family:var(--mono); font-size:.78em; color:var(--muted); width:2.6em; text-align:right; margin-left:auto; }
-.switch button { flex:none; width:44px; height:24px; border-radius:12px; border:var(--border-w) solid var(--line-strong); background:var(--surface-2); position:relative; cursor:pointer; padding:0; }
+.switch .st { font-family:var(--mono); font-size:.78em; line-height:var(--lh1); color:var(--muted); width:2.6em; text-align:right; margin-left:auto; }
+.switch button { flex:none; margin-top:calc((var(--lh1) - 24px) / 2); width:44px; height:24px; border-radius:12px; border:var(--border-w) solid var(--line-strong); background:var(--surface-2); position:relative; cursor:pointer; padding:0; }
 .switch button::after { content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--muted); transition:left .15s; }
 .switch button[aria-checked="true"] { background:var(--text); border-color:var(--text); }
 .switch button[aria-checked="true"]::after { left:22px; background:var(--bg); }
@@ -285,7 +287,7 @@ input[type=range].rng::-moz-range-thumb { width:14px; height:14px; border-radius
           <div class="field">
             <div class="lbl"><label for="gy">Vertical speed</label><span class="val" id="gyV"></span></div>
             <input class="rng" id="gy" type="range" min="1" max="20" step="0.5" value="6">
-            <label class="switch" style="min-height:auto"><span class="txt"><small>Keep both speeds the same</small></span><span class="st" id="linkS">ON</span><button role="switch" aria-checked="true" id="link" aria-label="Keep both speeds the same"></button></label>
+            <label class="switch" style="min-height:auto"><span class="txt"><b>Keep both speeds the same</b></span><span class="st" id="linkS">ON</span><button role="switch" aria-checked="true" id="link" aria-label="Keep both speeds the same"></button></label>
           </div>
           <div class="field">
             <div class="lbl"><label for="sm">Smoothing</label><span class="val" id="smV"></span></div>
@@ -318,6 +320,7 @@ input[type=range].rng::-moz-range-thumb { width:14px; height:14px; border-radius
             <select class="select" id="camSel"><option>FaceTime HD Camera</option><option>USB Webcam C920</option><option>OBS Virtual Camera</option></select></div>
           <label class="switch"><span class="txt"><b>Mirror preview</b><small>Head right moves the pointer right</small></span><span class="st" id="mirS">ON</span><button role="switch" aria-checked="true" id="mir" aria-label="Mirror preview"></button></label>
           <div class="field"><div class="lbl"><span>Capture format</span></div><div class="readout">640 × 480 · 30 fps</div></div>
+          <label class="switch"><span class="txt"><b>Find the target again</b><small>If tracking is lost, look for the selected point and continue by itself. Off: click your face again or recenter.</small></span><span class="st" id="recS">OFF</span><button role="switch" aria-checked="false" id="rec" aria-label="Find the target again"></button></label>
         </div>
 
         <div class="panel" role="tabpanel" id="p-general" aria-labelledby="t-general">
@@ -352,6 +355,7 @@ input[type=range].rng::-moz-range-thumb { width:14px; height:14px; border-radius
   Click the preview to select a target. <kbd>F11</kbd>/<kbd>F12</kbd> are simulated (the browser may take F11 for fullscreen; the
   buttons do the same). Theme: Options → General → Appearance. The UI is neutral; status is the icon + text line under the
   preview. Marker (approved): thin neon-green ring; other colours kept for comparison. Thin solid = tracking, dashed = holding, growing outline = searching, grey with X = lost.
+  Searching only happens with Options → Camera → <i>Find the target again</i> on (off by default); with it off, a loss goes straight to Lost.
   Deep link: <code>#theme=paper&amp;mc=2d5bff&amp;skin=light&amp;halo=1&amp;mark=rect&amp;state=searching&amp;tab=general&amp;diag=1&amp;opt=0</code>.
 </p>
 <details class="tokens"><summary>Tokens for the current theme (input to <code>EGUI_FEASIBILITY.md</code>)</summary><div class="tok-grid" id="tokGrid"></div></details>
@@ -385,11 +389,11 @@ const STATES = {
                    title:'Holding · moved too fast', body:'Move a little slower. Tracking continues by itself.' },
   'held-edge':   { group:'Running', name:'Holding — near frame edge', icon:'held', pointer:'held still', cam:'live', mark:'held', edge:true, auto:['tracking',2600],
                    title:'Holding · near the edge', body:'Move back toward the middle of the picture.' },
-  'searching':   { group:'Running', name:'Searching (re-acquiring)', icon:'searching', pointer:'mouse', cam:'live', mark:'search', pick:true, auto:['tracking',3200],
+  'searching':   { group:'Running', name:'Searching (find again: on)', icon:'searching', pointer:'mouse', cam:'live', mark:'search', pick:true, auto:['tracking',3200],
                    title:'Looking for the target…', body:'Face the camera. The mouse has control until the target is found.' },
-  'lost':        { group:'Running', name:'Lost — re-select', icon:'lost', pointer:'mouse', cam:'live', mark:'lost', pick:true,
+  'lost':        { group:'Running', name:'Lost — re-select (find again: off)', icon:'lost', pointer:'mouse', cam:'live', mark:'lost', pick:true,
                    title:'Target lost', body:'Click the same point on your face again to continue.' },
-  'lost-noauto': { group:'Running', name:'Lost — can’t auto-recover', icon:'lost', pointer:'mouse', cam:'live', mark:'lost', pick:true,
+  'lost-noauto': { group:'Running', name:'Lost — can’t find again (find again: on)', icon:'lost', pointer:'mouse', cam:'live', mark:'lost', pick:true,
                    title:'Target lost', body:'Click a point on your face again to continue.',
                    hint:'That spot has too little detail to be found again automatically. Try the tip of your nose or an eyebrow.' },
   'handover':    { group:'Running', name:'Mouse took over', icon:'mouse', pointer:'mouse', cam:'live', mark:'track', countdown:4, auto:['tracking',4000],
@@ -414,6 +418,7 @@ for (const [id, s] of Object.entries(STATES)) {
   const o = document.createElement('option'); o.value = id; o.textContent = s.name; og.appendChild(o);
 }
 
+let recovery = false; // "Find the target again" (loss recovery), off by default
 let state = 'tracking', autoTimer = null, countTimer = null, markShape = 'circle', countN = 3, recStart = 0;
 const RECENTER_SECONDS = 5;   // 5-4-3-2-1, as in 2018 (user decision, R-A3)
 const CENTER = { x: 320, y: 240 }, PICK_DASH = [5, 4];   // recenter circle = pick circle
@@ -421,6 +426,10 @@ let target = { dx: 0, dy: 12 }, frozenPos = null, hover = null, diag = false;
 
 function setState(id) {
   if (!STATES[id]) return;
+  // Keep "Find the target again" consistent with the simulated state: Searching / can't-find-again need it on,
+  // plain Lost (re-select) is what you get with it off.
+  const needRec = (id === 'searching' || id === 'lost-noauto') ? true : id === 'lost' ? false : null;
+  if (needRec !== null && needRec !== recovery) { recovery = needRec; $('rec').setAttribute('aria-checked', needRec); $('recS').textContent = needRec ? 'ON' : 'OFF'; }
   state = id; sel.value = id; const s = STATES[id];
   clearTimeout(autoTimer); clearInterval(countTimer); $('countBadge').hidden = true;
   if (['held','search','lost'].includes(s.mark)) frozenPos = facePoint(time());
@@ -567,6 +576,14 @@ function bindSwitch(id, def, onChange) {
 }
 bindSwitch('link', true, (on) => linked = on);
 bindSwitch('dwell', false); bindSwitch('mir', true);
+// "Find the target again" = loss recovery (ADR-0011 amendment): off by default. Searching only exists with it on;
+// with it off a loss goes straight to Lost (re-select or recenter, 2018).
+bindSwitch('rec', false, (on) => {
+  recovery = on;
+  if (!on && (state === 'searching' || state === 'lost-noauto')) setState('lost');
+  else if (on && state === 'lost') setState('searching');
+  else updateDiag();
+});
 bindSwitch('dg', false, (on) => { diag = on; updateDiag(); });
 $('resetBtn').addEventListener('click', () => {
   for (const [k, v] of Object.entries(DEFAULTS)) { $(k).value = v; paintRange(k); }
@@ -733,7 +750,7 @@ function updateDiag() {
   const st = { 'tracking':'Tracking', 'held-motion':'Held(MotionOutlier)', 'held-edge':'Held(NearEdgeMovingOut)', 'searching':'Lost(Searching)',
                'lost':'Lost(AppearanceChanged)', 'lost-noauto':'Lost(AppearanceChanged)', 'no-target':'Lost(NoSelection)' }[state] || '—';
   const z = { 'tracking':'0.91', 'held-motion':'0.88', 'held-edge':'0.84', 'searching':'0.42', 'lost':'0.31', 'lost-noauto':'0.28' }[state] || '—';
-  $('diag').textContent = `fps      30.0\nstep     ${state === 'searching' ? '0.58' : '0.31'} ms\nzncc     ${z}\nstatus   ${st}\nredetect ${state === 'lost-noauto' ? 'not armed' : 'armed'}`;
+  $('diag').textContent = `fps      30.0\nstep     ${state === 'searching' ? '0.58' : '0.31'} ms\nzncc     ${z}\nstatus   ${st}\nredetect ${!recovery ? 'off' : state === 'lost-noauto' ? 'not armed' : 'armed'}`;
 }
 
 /* Deep link: #theme=paper&mc=ff00e6&skin=light&halo=1&mark=rect&state=searching&tab=general&diag=1&opt=0 */

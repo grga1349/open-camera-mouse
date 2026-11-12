@@ -14,7 +14,8 @@ Options → General → Appearance. Two colours only: the target marker is a **t
 **yellow** (Carbon `#ffd60a`, Paper `#f5c518`, black text). Two **fixed-size** native windows:
 **Tracking** (560 × 620 pt: preview, status text line, Pause/Start F11, Recenter F12, Options) and
 **Options** (400 × 620 pt: Pointer / Clicking / Camera / General tabs, Restore defaults, Close). No
-auto-recenter. Status is an icon + text line, never colour alone.
+auto-recenter. Options → Camera has a "Find the target again" switch (loss recovery, off by
+default, ADR-0011 amendment). The Searching state and its marker only occur with it on. Status is an icon + text line, never colour alone.
 
 Marker colour was chosen by measurement (2026-11-12, lab with a colour camera stand-in and four
 skin tones). The smallest CIELAB ΔE76 vs skin (light/olive/medium/dark + shadows) was: neon green
@@ -42,12 +43,12 @@ green background or clothing next to the face.
 | Icons | **Paint them** with `Painter` primitives (circles, rects, lines). ~15 simple shapes, all from the lab sprite. No SVG | Yes | SVG would need `egui_extras` + an SVG loader (new crate deps → ADR, cargo-deny). The lab's cog is the Feather path (MIT). Painting a simplified cog avoids both the dependency and the licence notice |
 | Tabs | Row of `selectable_value` labels with an underline painted for the selected one; arrow keys handled explicitly | Yes | egui has no tab widget; ~40 lines |
 | Sliders with value + default note | `egui::Slider` (`show_value(false)`, value drawn in the label row in monospace), help text as weak label | Yes | Slider range enforcement satisfies R-P2 "invalid values impossible" at the UI layer. `app-core` still validates (R-A5) |
-| Toggle switch with ON/OFF text | Custom widget (egui demo `toggle_switch` pattern) + the ON/OFF label | Yes | Must set `WidgetInfo::selected` for AccessKit |
+| Toggle switch with ON/OFF text | Custom widget (egui demo `toggle_switch` pattern) + the ON/OFF label | Yes | Must set `WidgetInfo::selected` for AccessKit. Layout: label (text colour, strong) and ON/OFF + switch on one top row; help text (muted) below. The switch aligns with the label line, not the help block |
 | Appearance segmented control | Two `selectable_value`s in a framed row | Yes | — |
 | Screen limits (4 numeric fields) | `egui::DragValue` ×4 in a `Grid`, `range(0..=…)` | Yes | — |
 | Camera selector | `egui::ComboBox` | Yes | — |
 | Capture format readout | Monospace label in a frame | Yes | — |
-| Diagnostics overlay | Monospace text in a translucent rect over the preview | Yes | Values come from `tracking-core` diagnostics (ZNCC, status, `redetect_armed()`) |
+| Diagnostics overlay | Monospace text in a translucent rect over the preview | Yes | Values come from `tracking-core` diagnostics (ZNCC, status, `redetect_armed()`, or "off" when Find the target again is off) |
 | Text scale | `Context::set_zoom_factor` | Yes | It scales everything incl. the fixed window contents. See "fixed size" row |
 | Larger controls (48 px targets) | `Style::spacing.interact_size` / `button_padding` + thicker `visuals.widgets.*.bg_stroke` | Yes | Accessibility option, not a theme |
 | F11 / F12 | In-window: `ctx.input(|i| i.key_pressed(Key::F11))`. **Global** (app unfocused, which is the normal case while the pointer drives other apps) needs an OS hotkey hook in `platform` | In-window yes; global = platform work | Global hotkeys are a Phase 6/7 `platform` adapter (legacy used `golang.design/x/hotkey`). Choosing a Rust crate needs an ADR. macOS F11 may be bound to "Show Desktop" by the OS |

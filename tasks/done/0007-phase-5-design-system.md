@@ -64,6 +64,8 @@ values in it are ADR-0006 defaults so that the layout is realistic, not a new sp
    centre + **5 s** countdown 5-4-3-2-1 in a bottom badge;
    at 0 the point inside the circle becomes the target. Resume after Pause always goes through
    recenter. Recenter is enabled while paused and ends the pause. Recorded in BEHAVIOR_SPEC R-A3.
+10. **Find the target again (user, 2026-11-12, during task 0008):** re-detection is a switch in
+    Options → Camera, off by default (ADR-0011 amendment). Added to the lab after approval.
 
 ## Non-goals
 
@@ -124,3 +126,5 @@ Phase 6 input, not an edit here. No final iconography assets beyond inline SVG.
 - 2026-11-12: recenter circle now uses the same style as the pick circle (white dashed ring,
   shared draw helper). User request.
 - 2026-11-12: recenter countdown set to 5 s (user; matches 2018's 5-4-3-2-1).
+- 2026-11-12 (task 0008): Decision 10 added to the lab (Camera tab switch, synced with the
+  Searching/Lost states). Verified there; see task 0008 Progress.

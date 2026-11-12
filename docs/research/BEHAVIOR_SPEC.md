@@ -418,6 +418,10 @@ source system.
 - R-P3 Gain SHOULD be per-axis (2018) with a linked default.
 - R-P4 Reacquisition after loss MUST NOT cause a pointer jump larger than a configured bound
   (fixes L-10). Test it explicitly.
+  **Decided (user, 2026-11-12, ADR-0011 amendment):** automatic re-acquisition (re-detection,
+  ADR-0010) is a user option "Find the target again", **off by default**. Off: a loss releases
+  control to the mouse and the user re-selects or recenters (2018). On: `Lost(Searching)` →
+  `Tracking` hands control back to the camera only within this bound.
 - R-P5 Multi-monitor: map into the full virtual desktop with correct origin handling (2018 and
   legacy both assume primary-at-origin in places). Validated in Phase 7 per OS.
 

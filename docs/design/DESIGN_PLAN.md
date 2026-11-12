@@ -14,6 +14,8 @@ fixed-size windows: Tracking (preview, status, start/pause, recenter, options bu
 No auto-recenter in the initial rewrite. Themes: Carbon (dark) and Paper (light), switchable in
 Options. **Approved 2026-11-12:** `design-lab.html` v3: thin neon-green (`#00ff00`) circle-ring marker,
 yellow primary buttons, everything else monochrome. egui mapping: `EGUI_FEASIBILITY.md`. History: task 0007.
+Added 2026-11-12 (task 0008): Options → Camera → "Find the target again" switch (loss recovery,
+off by default, ADR-0011 amendment). The Searching state only occurs with it on.
 
 ## Candidate directions (v1, superseded by the decision above)
 

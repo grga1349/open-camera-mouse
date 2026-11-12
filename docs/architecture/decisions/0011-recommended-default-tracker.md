@@ -49,7 +49,7 @@ Configuration and its relation to 2018 (ADR-0006 reasons):
 | Texture test `λ_min/|W| ≥ 1.0` | on | deviates | (a), ADR-0009 |
 | E2 appearance gate, ZNCC ≥ 0.7 vs selection window | on | deviates | (a): 2018 silently follows occluders/background; R-T2 forbids silent errors |
 | E3 gain/bias compensation | on | deviates | (a): brightness constancy gave a silent 6.4 px offset on a gain step (finding 5) |
-| E4 re-detection, τ 0.9 / δ 0.1 / K 16 / level 2 / r 0.25 w | on | deviates | (a), ADR-0010 |
+| E4 re-detection, τ 0.9 / δ 0.1 / K 16 / level 2 / r 0.25 w | on in `recommended()`; **product default off** (amended 2026-11-12) | deviates | (a), ADR-0010; amendment below |
 | E1 forward-backward | off | — | redundant (measured) |
 
 **Latency** (Apple M1, divan, medians over 100 samples, `lk_recommended_step` /
@@ -57,6 +57,18 @@ Configuration and its relation to 2018 (ADR-0006 reasons):
 A step while searching takes 0.58 ms (slowest 0.78 ms). Both are inside the §8 budget (p95 < 2 ms at
 640). There are zero steady-state allocations. One run showed isolated multi-ms samples on every bench,
 including plain `lk_step`. Re-runs came in clean, so that is machine noise, not a tracker cost.
+
+## Amendment 2026-11-12 (user, task 0008)
+
+Re-detection becomes a user **option, off by default** in the app: Options → Camera → "Find the
+target again" (setting `loss_recovery`, shown in `docs/design/design-lab.html`).
+`LkParams::recommended()` is unchanged and stays the measured, pinned candidate. `app-core` builds
+the tracker from it and sets `redetect = None` when the option is off. With the option off, a
+loss follows the 2018 policy: control goes back to the mouse, and the user re-selects or recenters.
+With it on, `Lost(Searching)` → `Tracking` hands control back only within the R-P4 jump bound.
+Reason: the thresholds are synthetic-only evidence (see below), so automatic recovery stays opt-in
+until Phase 6 recordings re-measure them. User direction: improve on 2018 and take the best of
+2018 and legacy, but ship well-founded improvements as options until real data backs them.
 
 ## Consequences
 

@@ -77,7 +77,8 @@ has 0 wrong-lock and 0 false-track frames, and no gate-scene regression. A searc
 
 - `LossReason::Searching` is added. App-core (Phase 5) must decide whether a re-acquired
   `Tracking` hands control back automatically, or waits for the 2018 handover rules (§2.7).
-  That is not decided here.
+  That is not decided here. **Decided 2026-11-12 (ADR-0011 amendment):** re-detection is a user
+  option, off by default; with it on, control returns only within the R-P4 jump bound.
 - Re-detection inherits E2's fixed-template risk: real head roll and out-of-plane rotation
   lower the ZNCC of the true target. That makes re-acquisition fail, not lock wrong, and needs
   Phase 6 recordings.

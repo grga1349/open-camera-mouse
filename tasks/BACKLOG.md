@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| — | Phase 6 — desktop app | NEXT — coordinator writes the task file from `docs/ROADMAP.md` when it starts |
+| 0008 | Phase 6 — desktop app | ACTIVE — `tasks/active/0008-phase-6-desktop-app.md`, slices D0–D7; next D0 (`app-core` controller) |
 
 ## Done
 

@@ -17,7 +17,7 @@ the phase.
 | 3 | Tracking baseline | DONE | task 0005; ADR-0009; `docs/research/TRACKING_BASELINE.md`; CI green |
 | 4 | Tracking improvements | DONE | task 0006; ADR-0010, -0011; `docs/research/TRACKING_IMPROVEMENTS.md` |
 | 5 | Design system | DONE | task 0007; `docs/design/design-lab.html` (approved v3), `EGUI_FEASIBILITY.md` |
-| 6 | Desktop app | **NEXT** | |
+| 6 | Desktop app | **ACTIVE** | task 0008 |
 | 7 | Multiplatform / release | — | |
 | 8 | Hardening / product readiness | — | |
 
