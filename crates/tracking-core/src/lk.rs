@@ -37,6 +37,10 @@ pub struct LkParams {
     pub max_motion_frac: f32,
     /// Edge margin for the loss policy as a fraction of frame width. 10/640 = 10 px at 640.
     pub edge_margin_frac: f32,
+    /// Forward-backward validation (Phase 4 E1): after tracking `a → b`, track `b` back to
+    /// `a'` and reject the step when `|a − a'|` exceeds this (tracker px, absolute: it bounds
+    /// solver precision, not motion). `None` = off = B-LK18.
+    pub fb_max_error: Option<f32>,
 }
 
 impl Default for LkParams {
@@ -49,6 +53,7 @@ impl Default for LkParams {
             min_eigen: 1.0,
             max_motion_frac: 35.0 / 640.0,
             edge_margin_frac: 10.0 / 640.0,
+            fb_max_error: None,
         }
     }
 }
@@ -221,6 +226,7 @@ pub fn track_point(
                     min_eigen: Some(min_eig),
                     iterations: Some(iterations),
                     score: None,
+                    fb_error: None,
                 },
             };
         }
@@ -240,8 +246,9 @@ pub fn near_edge_moving_out(a: Point2, b: Point2, width: f32, height: f32, margi
 /// The 2018 tracker: LK + loss policy + outlier guard.
 ///
 /// Statuses: `Tracking`; `Held(MotionOutlier)` when the step exceeds the motion bound (point
-/// kept); `Held(NearEdgeMovingOut)` when LK fails while leaving through an edge (point kept,
-/// 2018 default); `Lost(_)` otherwise — the reference is dropped and the next steps report
+/// kept); `Held(NearEdgeMovingOut)` when LK fails (or, with `fb_max_error` set, fails the
+/// forward-backward check) while leaving through an edge (point kept, 2018 default);
+/// `Lost(_)` otherwise — the reference is dropped and the next steps report
 /// `Lost(NoSelection)` until `select` is called again (2018 invalidates the track point).
 #[derive(Debug, Clone, Default)]
 pub struct LkTracker {
@@ -263,6 +270,49 @@ impl LkTracker {
 
     pub fn params(&self) -> &LkParams {
         &self.params
+    }
+
+    /// Forward-backward check (E1). Call after the buffer swap: `prev` holds the current
+    /// frame and `curr` the previous one. Records the error in `diagnostics`.
+    fn fb_rejects(&mut self, a: Point2, b: Point2, diagnostics: &mut Diagnostics) -> bool {
+        let Some(max) = self.params.fb_max_error else {
+            return false;
+        };
+        let back = track_point(&self.prev, &self.curr, b, &self.params, &mut self.scratch);
+        let err = match back {
+            FlowResult::Found { position: a2, .. } => {
+                ((a2.x - a.x).powi(2) + (a2.y - a.y).powi(2)).sqrt()
+            }
+            FlowResult::Failed { .. } => f32::INFINITY,
+        };
+        diagnostics.fb_error = Some(err);
+        // NaN (non-finite window) also rejects.
+        err.is_nan() || err > max
+    }
+
+    /// 2018 loss policy for a step without a usable estimate: near an edge and moving out →
+    /// `Held` (point kept); otherwise `Lost` and the reference is dropped.
+    fn reject(
+        &mut self,
+        a: Point2,
+        b: Point2,
+        w: f32,
+        h: f32,
+        reason: LossReason,
+        diagnostics: Diagnostics,
+    ) -> TrackOutput {
+        let margin = self.params.edge_margin_frac * w;
+        let status = if near_edge_moving_out(a, b, w, h, margin) {
+            TrackStatus::Held(HoldReason::NearEdgeMovingOut)
+        } else {
+            self.point = None;
+            TrackStatus::Lost(reason)
+        };
+        TrackOutput {
+            position: a,
+            status,
+            diagnostics,
+        }
     }
 }
 
@@ -300,7 +350,7 @@ impl Tracker for LkTracker {
         let out = match result {
             FlowResult::Found {
                 position: b,
-                diagnostics,
+                mut diagnostics,
             } => {
                 let motion = ((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt();
                 if motion > self.params.max_motion_frac * w {
@@ -309,6 +359,8 @@ impl Tracker for LkTracker {
                         status: TrackStatus::Held(HoldReason::MotionOutlier),
                         diagnostics,
                     }
+                } else if self.fb_rejects(a, b, &mut diagnostics) {
+                    self.reject(a, b, w, h, LossReason::Inconsistent, diagnostics)
                 } else {
                     self.point = Some(b);
                     TrackOutput {
@@ -320,21 +372,7 @@ impl Tracker for LkTracker {
             }
             FlowResult::Failed { reason, estimate } => {
                 let b = estimate.unwrap_or(a);
-                let margin = self.params.edge_margin_frac * w;
-                if near_edge_moving_out(a, b, w, h, margin) {
-                    TrackOutput {
-                        position: a,
-                        status: TrackStatus::Held(HoldReason::NearEdgeMovingOut),
-                        diagnostics: Diagnostics::default(),
-                    }
-                } else {
-                    self.point = None;
-                    TrackOutput {
-                        position: a,
-                        status: TrackStatus::Lost(reason),
-                        diagnostics: Diagnostics::default(),
-                    }
-                }
+                self.reject(a, b, w, h, reason, Diagnostics::default())
             }
         };
         Ok(out)
@@ -431,6 +469,75 @@ mod tests {
         // Mid-frame horizontal motion is *not* "near edge" (the 2018 x-swap defect).
         assert!(!near_edge_moving_out(p(50.0, 40.0), p(45.0, 40.0), w, h, m));
         assert!(!near_edge_moving_out(p(50.0, 40.0), p(55.0, 40.0), w, h, m));
+    }
+
+    #[test]
+    fn forward_backward_off_by_default_and_passes_clean_translation() {
+        assert_eq!(LkParams::default().fb_max_error, None);
+        let params = LkParams {
+            fb_max_error: Some(0.5),
+            ..LkParams::default()
+        };
+        let mut t = LkTracker::new(params);
+        t.select(
+            &frame(320, 240, Point2::default()),
+            Point2::new(160.0, 120.0),
+        )
+        .unwrap();
+        let out = t.step(&frame(320, 240, Point2::new(3.3, -1.7))).unwrap();
+        assert_eq!(out.status, TrackStatus::Tracking);
+        let fb = out.diagnostics.fb_error.expect("validation ran");
+        assert!(fb < 0.1, "fb error {fb}");
+        // Off: no backward pass, no error recorded.
+        let mut t = LkTracker::default();
+        t.select(
+            &frame(320, 240, Point2::default()),
+            Point2::new(160.0, 120.0),
+        )
+        .unwrap();
+        let out = t.step(&frame(320, 240, Point2::new(3.3, -1.7))).unwrap();
+        assert_eq!(out.diagnostics.fb_error, None);
+    }
+
+    #[test]
+    fn forward_backward_rejects_a_texture_swap() {
+        // The window's content is replaced by an unrelated texture (a full occlusion onset).
+        let other = {
+            let (w, h) = (320u32, 240u32);
+            let mut data = Vec::with_capacity((w * h) as usize);
+            for y in 0..h {
+                for x in 0..w {
+                    let (x, y) = (x as f32, y as f32);
+                    let v = 128.0 + 60.0 * (x * 0.13 + 1.0).cos() * (y * 0.29 + 2.0).sin()
+                        - 35.0 * ((x - 3.0 * y) * 0.05).sin();
+                    data.push(v.round().clamp(0.0, 255.0) as u8);
+                }
+            }
+            GrayFrame::from_vec(w, h, data).unwrap()
+        };
+        let params = LkParams {
+            fb_max_error: Some(0.5),
+            max_motion_frac: 1.0, // guard off: isolate the FB check
+            ..LkParams::default()
+        };
+        let mut t = LkTracker::new(params);
+        t.select(
+            &frame(320, 240, Point2::default()),
+            Point2::new(160.0, 120.0),
+        )
+        .unwrap();
+        let out = t.step(&other).unwrap();
+        assert_eq!(
+            out.status,
+            TrackStatus::Lost(LossReason::Inconsistent),
+            "{out:?}"
+        );
+        assert_eq!(out.position, Point2::new(160.0, 120.0));
+        // 2018 policy: the reference is dropped.
+        assert_eq!(
+            t.step(&other).unwrap().status,
+            TrackStatus::Lost(LossReason::NoSelection)
+        );
     }
 
     #[test]

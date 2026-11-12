@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 3 closed; Phase 4 E0 done, pushed, CI green)
+Last updated: 2026-11-12 (Phase 4: E0 pushed, CI green; E1 done)
 
 ## Branch / commit
 
@@ -12,7 +12,8 @@ Branch: `rewrite/rust`. Phase 3 = `4038fce` (CI 43119858155 green). Task 0005 cl
 
 Phases 0–3 DONE. Phase 4 (tracking improvements) ACTIVE:
 `tasks/active/0006-phase-4-tracking-improvements.md`. E0 (perf, no behavior change) KEPT.
-E1–E6 not started.
+E1 (forward-backward, `LkParams::fb_max_error`) KEPT as a component, default off; enabling is
+decided after E3. E2–E6 not started.
 
 ## What exists now
 
@@ -20,7 +21,7 @@ E1–E6 not started.
 - `tracking-core`: B-LK18 (`lk::LkTracker`), B-NCC (`ncc::NccTracker`), image/pyramid
   primitives. LK computes window-only gradients (`image::GradPatch`); `lk_step` 0.30 ms at 640.
 - Tests: `tests/fixtures.rs` (correctness), `tests/baseline.rs` (ignored: `baseline_tables`,
-  `lk_fingerprint`), benches in `benches/tracking.rs`.
+  `lk_fingerprint`, `ablation_tables` + `variants()`), benches in `benches/tracking.rs`.
 - Docs: `docs/research/TRACKING_BASELINE.md` (Phase 3), `TRACKING_IMPROVEMENTS.md` (Phase 4).
 
 ## Toolchain
@@ -29,7 +30,7 @@ E1–E6 not started.
 
 ## Immediate next action
 
-Phase 4 E1 (forward-backward validation). Add an ablation mode to `tests/baseline.rs` first.
+Phase 4 E2 (photometric residual / confidence gating) via `variants()` in `tests/baseline.rs`.
 
 ## Open risks
 

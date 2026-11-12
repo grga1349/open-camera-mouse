@@ -99,3 +99,24 @@ fn ncc_step(bencher: Bencher, res: &str) {
         t.step(black_box(&frames[i % 2])).unwrap()
     });
 }
+
+/// `lk_step` with forward-backward validation on (Phase 4 E1, `fb_max_error = 0.5`).
+#[divan::bench(args = RES)]
+fn lk_fb_step(bencher: Bencher, res: &str) {
+    let (frames, pt) = input(res);
+    let mut t = LkTracker::new(LkParams {
+        fb_max_error: Some(0.5),
+        ..LkParams::default()
+    });
+    t.select(&frames[0], pt).unwrap();
+    for i in 1..4 {
+        let out = t.step(&frames[i % 2 + 1]).unwrap();
+        // A rejected step drops the point and later steps would bench the no-selection path.
+        assert_eq!(out.status, tracking_core::TrackStatus::Tracking);
+    }
+    let mut i = 0usize;
+    bencher.bench_local(|| {
+        i += 1;
+        t.step(black_box(&frames[i % 2 + 1])).unwrap()
+    });
+}

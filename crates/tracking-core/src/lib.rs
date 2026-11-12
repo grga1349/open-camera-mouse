@@ -41,6 +41,8 @@ pub enum HoldReason {
 pub enum LossReason {
     OutOfFrame,
     LowConfidence,
+    /// Forward and backward flow disagree (forward-backward validation, Phase 4 E1).
+    Inconsistent,
     /// The tracker has no reference yet: nothing was selected.
     NoSelection,
 }
@@ -64,6 +66,8 @@ pub struct Diagnostics {
     pub min_eigen: Option<f32>,
     /// Solver iterations used, if iterative.
     pub iterations: Option<u32>,
+    /// Forward-backward error `|a − a'|` in tracker px, when validation ran.
+    pub fb_error: Option<f32>,
 }
 
 /// One tracker step's result.

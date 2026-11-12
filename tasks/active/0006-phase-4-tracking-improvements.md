@@ -90,5 +90,11 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
   4.13 → 0.30 ms. `lk_fingerprint` (new ignored test in `tests/baseline.rs`) identical on all
   61 runs. fmt/clippy/`cargo test --workspace --locked` (46 passed, 0 failed, 2 ignored)/
   check-core-deps ok. Results: `docs/research/TRACKING_IMPROVEMENTS.md`.
-- Next: E1 (forward-backward validation). First add an ablation mode to `tests/baseline.rs`
-  (B-LK18 vs variant on the same corpus).
+- 2026-11-12 **E1 KEPT as a component, default off (provisional).** `LkParams::fb_max_error`,
+  `LossReason::Inconsistent`, `Diagnostics::fb_error`. New `ablation_tables` (ignored test,
+  `variants()` list, gate summary) and `lk_fb_step` bench. Σ wrong-lock 474 → 62 at fb ≤ 0.5,
+  with no good-scene change. But `contrast_drop` is dropped at 0.25–1 px, and occlusion
+  false-track remains. Enable/threshold decision is deferred until it's measured on top of E3.
+  `lk_fingerprint` identical. fmt/clippy/tests (48 passed)/check-core-deps ok.
+- Next: E2 (photometric residual / confidence gating). Add it as `variants()` entries alone
+  and combined with E1 fb ≤ 0.5.
