@@ -3,31 +3,29 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-12 (Phase 6 ACTIVE, D0 done)
+## As of 2026-11-12 (Phase 6 ACTIVE, D0–D1 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D0 done and committed** (`918dcca`, not pushed), gates green locally.
-Work rhythm (user): **one slice per session**, then hand off.
+slices D0–D7. **D1 done** (gates green locally). Work rhythm (user): **one slice per session**,
+then hand off.
 
-**Done this session (D0):**
-- `crates/app-core/src/controller.rs`: full R-A1 state machine + `Error`; `PointerOwner`
-  sub-state (decision written into BEHAVIOR_SPEC R-A1); `handle(Input, now_us) -> Step
-  {events, effects}`, `view(now_us) -> View`, `update_settings` (R-A5/R-A6). Owns
-  `LkTracker` (recommended, `redetect = None` unless `loss_recovery`), mirror + downsample at ingest.
-- `crates/app-core/src/settings.rs`: validated/normalised settings, `SCHEMA_VERSION = 1`.
-- `crates/pointer-core/src/handover.rs`: move-stop, inactivity timer, R-P4 jump bound
-  (pulled forward from D1).
-- `crates/app-core/tests/controller.rs`: 26 headless tests. Desktop skeleton adapted to the new API.
+**Done this session (D1):**
+- `crates/pointer-core/src/smoothing.rs`: dt-aware EMA (`retain = smoothing^(dt/70 ms)`), FPS test.
+- `crates/pointer-core/src/limits.rs`: px insets on all edges incl. desktop origin (E/S fix),
+  offset drift ≈ 14.3 image px/s while pinned.
+- `crates/pointer-core/src/dwell.rs`: fires once, re-arm on leave or refractory, ineligible resets.
+- `map_raw` (unclamped) in `pointer-core`; `Controller::drive` composes
+  map → smooth → limits → drift → dwell. `Effect::Click(Point2)`, `View::dwell_progress`.
+- 7 new controller tests + 17 pointer-core unit tests.
 
-**Two findings for the user (in task 0008 Progress):**
-1. Re-detection rarely arms on smooth texture (self-test margin). Open risk; re-measure in D7.
-2. Smoothing polarity: **decided** (user) — "Smoothing", higher = steadier, default 0.05
-   (`= 1 − 2018 damping`), range 0–0.95. Lab updated to match.
+**Provisional choices (in task 0008 Progress, re-check in D7):** dwell radius = fraction of the
+desktop's shorter side; a `Held` frame resets the dwell.
 
-**Next session:** `git log -1` should show the D0 handoff commit. Then D1 (`pointer-core`): dt-aware EMA smoothing (α 0.95 per 70 ms equivalent,
-FPS-independence test), W/E/N/S limits with E/S origin fix, offset drift as a rate, dwell
-(fires once, never while lost / not in control). Then compose them in `Controller::map` /
-`track_step` (currently plain `map_absolute`). Handover + jump bound already exist.
+**Next session:** D2 — ADR-0012 for the Phase 6 crates (re-query versions/licences: camera
+backend candidate from D3, cursor crates, `global-hotkey`, `serde` + `toml` + `directories`;
+state which crates `app-core` may take; keep `scripts/check-core-deps.sh` in step) and
+settings persistence outside the pure cores (corrupt / newer-schema file → defaults + visible
+notice, with tests).
 
 **User direction (don't drift):** start from 2018 (ADR-0006) but improve on it, taking the best of
 2018 and legacy. Ship proven improvements as options, off by default. Design: monochrome; neon

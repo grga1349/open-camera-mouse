@@ -1,10 +1,15 @@
 //! Pure pointer mapping (ADR-0003/ADR-0007).
 //!
 //! The absolute mapping from ADR-0006 (with a test that pins "head right → cursor right",
-//! ADR-0008) and the handover/jump-bound rules in [`handover`]. Smoothing, limits, offset
-//! drift and dwell are task 0008 slice D1, each with its own tests.
+//! ADR-0008), dt-aware [`smoothing`] (R-P2), screen [`limits`] with offset drift, [`dwell`]
+//! clicking (R-K1/R-K2) and the [`handover`]/jump-bound rules (R-A2, R-P4). Each piece is
+//! pure and takes time as an argument; `app-core` composes them per frame as
+//! map → smooth → limit → drift → dwell.
 
+pub mod dwell;
 pub mod handover;
+pub mod limits;
+pub mod smoothing;
 
 use tracking_core::Point2;
 
@@ -52,13 +57,14 @@ pub struct FrameSize {
     pub height: f32,
 }
 
-/// Absolute mapping (ADR-0006):
-/// `desk_center + (p + offset − img_center) · gain · desk_size / img_size`, clamped to the
-/// virtual desktop.
+/// Absolute mapping (ADR-0006), **not** clamped:
+/// `desk_center + (p + offset − img_center) · gain · desk_size / img_size`.
 ///
 /// `p` is in canonical display space (ADR-0008), so with mirroring on, a head moving to
 /// the user's right increases `p.x` and moves the cursor right. No sign flip happens here.
-pub fn map_absolute(
+/// The result can lie outside the desktop; [`limits::apply_limits`] clamps it and reports
+/// the pinned edges that drive the offset drift.
+pub fn map_raw(
     p: Point2,
     offset: Point2,
     frame: FrameSize,
@@ -68,11 +74,21 @@ pub fn map_absolute(
     let c = desktop.center();
     let sx = gain.x * desktop.width / frame.width;
     let sy = gain.y * desktop.height / frame.height;
-    let raw = Point2::new(
+    Point2::new(
         c.x + (p.x + offset.x - frame.width / 2.0) * sx,
         c.y + (p.y + offset.y - frame.height / 2.0) * sy,
-    );
-    desktop.clamp(raw)
+    )
+}
+
+/// [`map_raw`] clamped to the virtual desktop.
+pub fn map_absolute(
+    p: Point2,
+    offset: Point2,
+    frame: FrameSize,
+    desktop: DesktopRect,
+    gain: Gain,
+) -> Point2 {
+    desktop.clamp(map_raw(p, offset, frame, desktop, gain))
 }
 
 #[cfg(test)]

@@ -1,12 +1,12 @@
-//! Controller state machine tests (task 0008 D0). Headless, deterministic: synthetic frames,
+//! Controller state machine tests (task 0008 D0, pointer pipeline D1). Headless, deterministic: synthetic frames,
 //! an injected clock, no camera and no OS cursor.
 
 use std::collections::HashSet;
 
 use app_core::ports::{CameraError, CameraFrame, CaptureFormat, CaptureRequest, PointerError};
 use app_core::{
-    AppState, Command, Controller, DesktopRect, Effect, Event, Input, MarkerKind, PointerAccess,
-    PointerOwner, RECENTER_US, Settings, Step,
+    AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MarkerKind,
+    PointerAccess, PointerOwner, RECENTER_US, ScreenLimits, Settings, Step,
 };
 use tracking_core::{GrayFrame, LossReason, Point2, TrackStatus};
 
@@ -343,7 +343,9 @@ fn head_right_moves_the_cursor_right() {
         assert!((p.y - CENTER.y).abs() < 3.0, "{p:?}");
         last = p;
     }
+    // Smoothing (R-P2) lags a little; once the head is still the cursor settles at
     // 5 px of head motion × gain 6 × (1920 / 640) = 90 px.
+    let last = r.hold(300_000, 5.0, SCENE).pointer_target().unwrap();
     assert!((last.x - (CENTER.x + 90.0)).abs() < 3.0, "{last:?}");
     let t = r.c.view(r.now).marker.unwrap();
     assert!((t.position.x - 325.0).abs() < 0.5, "{t:?}");
@@ -788,4 +790,149 @@ fn every_app_state_is_reachable() {
             "{s:?} not reached: {seen:?}"
         );
     }
+}
+
+// ---- pointer pipeline (D1): smoothing, limits, drift, dwell ----
+
+fn clicks(s: &Step) -> Vec<Point2> {
+    s.effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::Click(p) => Some(*p),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Moves the head from its current `from` to `to` (display-space px) in 2 px steps.
+fn sweep(r: &mut Rig, from: f32, to: f32) -> Step {
+    let mut all = Step::default();
+    let mut dx = from;
+    while (to - dx).abs() > 1e-3 {
+        dx += (to - dx).clamp(-2.0, 2.0);
+        let s = r.frame(dx, 0.0, SCENE);
+        all.events.extend(s.events);
+        all.effects.extend(s.effects);
+    }
+    all
+}
+
+#[test]
+fn zero_smoothing_follows_the_head_in_one_frame() {
+    let mut r = Rig::tracking_with(Settings {
+        smoothing: 0.0,
+        ..Settings::default()
+    });
+    let p = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
+    // 2 px × gain 6 × 1920/640 = 36 px, no lag.
+    assert!((p.x - (CENTER.x + 36.0)).abs() < 2.0, "{p:?}");
+}
+
+#[test]
+fn default_smoothing_lags_then_settles() {
+    let mut r = Rig::tracking();
+    let first = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
+    assert!(first.x > CENTER.x && first.x < CENTER.x + 34.0, "{first:?}");
+    let settled = r.hold(300_000, 2.0, SCENE).pointer_target().unwrap();
+    assert!((settled.x - (CENTER.x + 36.0)).abs() < 2.0, "{settled:?}");
+}
+
+/// Limits keep the cursor inside the insets; while pinned, the offset drifts back so the
+/// cursor comes off the edge (2018 §2.6, as a rate).
+#[test]
+fn screen_limits_pin_the_cursor_and_drift_recentres_the_mapping() {
+    let mut r = Rig::tracking_with(Settings {
+        smoothing: 0.0,
+        limits: ScreenLimits {
+            right: 200,
+            ..ScreenLimits::default()
+        },
+        ..Settings::default()
+    });
+    let edge = DESK.width - 1.0 - 200.0;
+    // Raw x = 960 + dx × 18 passes the 1719 px edge from dx ≈ 42.
+    let s = sweep(&mut r, 0.0, 50.0);
+    let m = moves(&s);
+    assert!(
+        m.iter().all(|p| p.x <= edge),
+        "cursor past the limit: {m:?}"
+    );
+    assert_eq!(m.last().unwrap().x, edge, "pinned at the right limit");
+    // Holding the head there: the offset drifts ~14.3 image px/s toward the centre, so
+    // after 2 s the cursor has come off the edge.
+    let s = r.hold(2_000_000, 50.0, SCENE);
+    let last = s.pointer_target().unwrap();
+    assert!(last.x < edge && last.x > edge - 40.0, "{last:?}");
+    // Head back to centre: the cursor is now left of the desktop centre (mapping shifted).
+    let back = sweep(&mut r, 50.0, 0.0).pointer_target().unwrap();
+    assert!(back.x < CENTER.x - 50.0, "{back:?}");
+}
+
+fn with_dwell() -> Settings {
+    Settings {
+        dwell: DwellSettings {
+            enabled: true,
+            ..DwellSettings::default()
+        },
+        ..Settings::default()
+    }
+}
+
+#[test]
+fn dwell_is_off_by_default() {
+    let mut r = Rig::tracking();
+    assert!(clicks(&r.hold(4_000_000, 0.0, SCENE)).is_empty());
+    assert_eq!(r.c.view(r.now).dwell_progress, None);
+}
+
+/// R-K1: one click after 1 s still, then nothing during the 2 s refractory.
+#[test]
+fn dwell_fires_once_when_enabled() {
+    let mut r = Rig::tracking_with(with_dwell());
+    let s = r.hold(500_000, 0.0, SCENE);
+    assert!(clicks(&s).is_empty());
+    let p = r.c.view(r.now).dwell_progress.unwrap();
+    assert!((0.3..0.6).contains(&p), "{p}");
+    let s = r.hold(2_000_000, 0.0, SCENE);
+    let c = clicks(&s);
+    assert_eq!(c.len(), 1, "{c:?}");
+    assert!(dist(c[0], CENTER) < 3.0, "{c:?}");
+    // The click follows the move in the same step.
+    let idx = s
+        .effects
+        .iter()
+        .position(|e| matches!(e, Effect::Click(_)))
+        .unwrap();
+    assert!(matches!(s.effects[idx - 1], Effect::MovePointer(_)));
+}
+
+/// R-K2: no click while the mouse has control or the target is lost.
+#[test]
+fn dwell_never_fires_in_handover_or_when_lost() {
+    let mut r = Rig::tracking_with(with_dwell());
+    r.hold(800_000, 0.0, SCENE);
+    // The user grabs the mouse: handover, for 3 s (< 4 s inactivity).
+    let cmd = r.c.view(r.now);
+    assert_eq!(cmd.pointer, PointerOwner::Camera);
+    r.input(Input::PointerObserved(Some(Point2::new(100.0, 100.0))));
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Handover);
+    assert!(clicks(&r.hold(3_000_000, 0.0, SCENE)).is_empty());
+    assert_eq!(r.c.view(r.now).dwell_progress, None);
+
+    let mut r = Rig::tracking_with(with_dwell());
+    r.hold(800_000, 0.0, SCENE);
+    r.occlude();
+    let mut all = Step::default();
+    for _ in 0..60 {
+        let s = r.frame(0.0, 0.0, OCCLUDER);
+        all.effects.extend(s.effects);
+    }
+    assert!(clicks(&all).is_empty());
+}
+
+#[test]
+fn dwell_does_not_click_when_pointer_permission_is_denied() {
+    let mut r = Rig::tracking_with(with_dwell());
+    r.input(Input::PointerAccess(PointerAccess::Denied));
+    assert!(clicks(&r.hold(2_000_000, 0.0, SCENE)).is_empty());
 }

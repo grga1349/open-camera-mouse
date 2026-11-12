@@ -180,4 +180,18 @@ Plus the CI run ID for the closing commit.
   (either show 0.05, or rename the slider "Responsiveness" with default 0.95).
   **Decided (user, 2026-11-12): keep "Smoothing", higher = steadier, default 0.05, range
   0–0.95** (matches `Settings::smoothing`). Lab updated (slider, default text, `DEFAULTS.sm`).
-
+- 2026-11-12: **D1 done.** `pointer-core`: `smoothing` (dt-aware EMA, `retain = smoothing^(dt/70 ms)`,
+  exact 2018 formula at one 70 ms tick, FPS-independence test at 15/30/60/144 fps), `limits`
+  (px insets on all four edges incl. the desktop origin = E/S fix, insets that leave no room
+  collapse to the middle, offset drift 1 image px/70 ms ≈ 14.3 px/s while pinned, FPS-independent),
+  `dwell` (fires once, re-arms on leaving the radius or after refractory + another dwell,
+  ineligible resets), `map_raw` (unclamped; `map_absolute` = clamped). `app-core` composes
+  map → smooth → limits → drift → dwell in `Controller::drive`; new `Effect::Click(Point2)`
+  (after the move, suppressed when pointer access is denied/unsupported) and
+  `View::dwell_progress`. Choices made here (provisional, re-check in D7): dwell radius is a
+  fraction of the desktop's **shorter side** (same convention as the R-P4 bound, 54 px at
+  1080 p); a `Held` frame resets the dwell (R-K2 read conservatively); a 2018-style edge test
+  uses the unclamped map so drift starts as soon as the head goes past the edge with limit 0.
+  7 new controller tests (zero/default smoothing, limits + drift, dwell off by default, fires
+  once, never in handover/lost, not with permission denied) + 6 smoothing, 5 limits, 6 dwell
+  unit tests. Gates green locally.

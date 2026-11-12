@@ -21,11 +21,21 @@
 //! - A loss releases control ([`PointerOwner::Mouse`]). With "Find the target again" on, a
 //!   re-acquisition gives control back at once only if the cursor would move at most the
 //!   R-P4 bound; otherwise it goes through `Handover`.
+//!
+//! # Pointer pipeline (task 0008 D1)
+//!
+//! Each tracked frame while the camera is in control: absolute map (ADR-0006) → dt-aware
+//! smoothing (R-P2) → screen limits, all edges including the desktop origin → offset drift
+//! while pinned → dwell (R-K1, only when enabled). Dwell never runs while the target is
+//! held or lost or the mouse has control (R-K2): those reset it.
 
+use pointer_core::dwell::{Dwell, DwellParams};
 use pointer_core::handover::{
     HandoverParams, InactivityTimer, REACQUIRE_MAX_JUMP_FRAC, mouse_moved_away, within_jump_bound,
 };
-use pointer_core::{DesktopRect, FrameSize, Gain, map_absolute};
+use pointer_core::limits::{Limits, apply_limits, drift_offset};
+use pointer_core::smoothing::Smoother;
+use pointer_core::{DesktopRect, FrameSize, Gain, map_raw};
 use tracking_core::lk::{LkParams, LkTracker};
 use tracking_core::{
     Diagnostics, GrayFrame, LossReason, Point2, TrackError, TrackOutput, TrackStatus, Tracker,
@@ -152,6 +162,8 @@ pub enum Effect {
     CloseCamera,
     /// Move the OS cursor (virtual-desktop coordinates).
     MovePointer(Point2),
+    /// A dwell completed: left-click at this position (R-K1). Always after the move.
+    Click(Point2),
 }
 
 /// The result of one [`Controller::handle`] call.
@@ -221,6 +233,8 @@ pub struct View {
     pub recenter: Option<RecenterView>,
     /// Time left before the camera takes over, while [`PointerOwner::Handover`].
     pub handover_remaining_us: Option<u64>,
+    /// Progress `0..=1` of a running dwell, when dwell clicking is on and armed.
+    pub dwell_progress: Option<f32>,
     /// Size of the canonical frame; the preview texture and click mapping use it (R-C2).
     pub frame_size: Option<(u32, u32)>,
     /// Increments on every ingested frame, so the UI knows when to re-upload the texture.
@@ -260,6 +274,8 @@ pub struct Controller {
     offset: Point2,
     last_commanded: Option<Point2>,
     last_observed: Option<Point2>,
+    smoother: Smoother,
+    dwell: Dwell,
     capture: Option<CaptureFormat>,
     error: Option<String>,
 }
@@ -278,6 +294,26 @@ fn frame_size(f: &GrayFrame) -> FrameSize {
     FrameSize {
         width: f.width() as f32,
         height: f.height() as f32,
+    }
+}
+
+fn limits(settings: &Settings) -> Limits {
+    let l = settings.limits;
+    Limits {
+        left: l.left as f32,
+        right: l.right as f32,
+        top: l.top as f32,
+        bottom: l.bottom as f32,
+    }
+}
+
+fn dwell_params(settings: &Settings) -> DwellParams {
+    let d = settings.dwell;
+    let us = |s: f32| (f64::from(s) * 1e6).round() as u64;
+    DwellParams {
+        dwell_us: us(d.dwell_s),
+        refractory_us: us(d.refractory_s),
+        radius_frac: d.radius_frac,
     }
 }
 
@@ -304,6 +340,8 @@ impl Controller {
             offset: Point2::default(),
             last_commanded: None,
             last_observed: None,
+            smoother: Smoother::default(),
+            dwell: Dwell::default(),
             capture: None,
             error: None,
         })
@@ -406,6 +444,9 @@ impl Controller {
         if old.loss_recovery != self.settings.loss_recovery {
             self.rebuild_tracker(&mut step);
         }
+        if old.dwell != self.settings.dwell {
+            self.dwell.reset();
+        }
 
         let owner_after = self.pointer_owner();
         if owner_after != owner_before {
@@ -445,6 +486,11 @@ impl Controller {
             (PointerOwner::Handover, Control::Mouse(Some(t))) => Some(t.remaining_us(now_us)),
             _ => None,
         };
+        let dwell_progress = (self.settings.dwell.enabled
+            && self.state == AppState::Tracking
+            && self.pointer_owner() == PointerOwner::Camera)
+            .then(|| self.dwell.progress(now_us, &dwell_params(&self.settings)))
+            .flatten();
         View {
             state: self.state,
             pointer: self.pointer_owner(),
@@ -452,6 +498,7 @@ impl Controller {
             marker,
             recenter,
             handover_remaining_us,
+            dwell_progress,
             frame_size: self.frame.as_ref().map(|f| (f.width(), f.height())),
             frame_seq: self.frame_seq,
             diagnostics: track.map(|t| t.diagnostics).unwrap_or_default(),
@@ -553,6 +600,7 @@ impl Controller {
                     t.observe(p, now_us, &self.handover);
                     self.control = Control::Mouse(Some(t));
                     self.last_commanded = None;
+                    self.dwell.reset();
                 }
             }
             Control::Mouse(Some(t)) => t.observe(p, now_us, &self.handover),
@@ -596,6 +644,8 @@ impl Controller {
         self.track = None;
         self.control = Control::Mouse(None);
         self.last_commanded = None;
+        self.smoother.reset();
+        self.dwell.reset();
     }
 
     /// 2018 pause: release control, invalidate tracking, cursor to desktop centre.
@@ -677,6 +727,7 @@ impl Controller {
                 // `last_commanded` is kept: it is the R-P4 reference if the cursor position
                 // can't be observed.
                 self.control = Control::Mouse(None);
+                self.dwell.reset();
                 self.set_state(AppState::Lost, step);
             }
             TrackStatus::Tracking | TrackStatus::Held(_) => {
@@ -684,8 +735,10 @@ impl Controller {
                 if was_lost {
                     self.reacquired(out.position, now_us, step);
                 } else if self.control == Control::Camera && out.status == TrackStatus::Tracking {
-                    let target = self.map(out.position);
-                    self.move_pointer(target, step);
+                    self.drive(out.position, now_us, step);
+                } else {
+                    // Held, or the mouse has control: no dwell (R-K2).
+                    self.dwell.reset();
                 }
             }
         }
@@ -701,6 +754,8 @@ impl Controller {
             .is_none_or(|c| within_jump_bound(c, target, self.desktop, REACQUIRE_MAX_JUMP_FRAC))
         {
             self.control = Control::Camera;
+            self.smoother.reset_to(target, now_us);
+            self.dwell.reset();
             self.move_pointer(target, step);
         } else {
             let mut t = InactivityTimer::start(now_us, &self.handover);
@@ -716,7 +771,7 @@ impl Controller {
             && self.recenter_deadline_us.is_some_and(|d| now_us >= d)
         {
             let mut s = Step::default();
-            self.finish_recenter(&mut s);
+            self.finish_recenter(now_us, &mut s);
             step.append(s);
         }
         if let Control::Mouse(Some(t)) = self.control
@@ -724,13 +779,13 @@ impl Controller {
             && self.state == AppState::Tracking
             && let Some(track) = self.track
         {
-            self.take_over(track.position, step);
+            self.take_over(track.position, now_us, step);
         }
     }
 
     /// At 0 the point inside the circle (the frame centre) becomes the target and the camera
     /// takes control (R-A3). Without a frame yet, wait for the next one.
-    fn finish_recenter(&mut self, step: &mut Step) {
+    fn finish_recenter(&mut self, now_us: u64, step: &mut Step) {
         let Some(frame) = &self.frame else { return };
         let c = frame_center(frame);
         if self.tracker.select(frame, c).is_err() {
@@ -743,25 +798,28 @@ impl Controller {
         });
         step.events.push(Event::TargetSelected { at: c });
         self.set_state(AppState::Tracking, step);
-        self.take_over(c, step);
+        self.take_over(c, now_us, step);
     }
 
     /// Camera takes control (2018 `AutoCenterScheme 0`): `position` maps to the desktop
     /// centre and the cursor moves there.
-    fn take_over(&mut self, position: Point2, step: &mut Step) {
+    fn take_over(&mut self, position: Point2, now_us: u64, step: &mut Step) {
         if let Some(frame) = &self.frame {
             let c = frame_center(frame);
             self.offset = Point2::new(c.x - position.x, c.y - position.y);
         }
         self.control = Control::Camera;
-        self.move_pointer(self.desktop.center(), step);
+        let center = self.desktop.center();
+        self.smoother.reset_to(center, now_us);
+        self.dwell.reset();
+        self.move_pointer(center, step);
     }
 
-    fn map(&self, p: Point2) -> Point2 {
+    fn map_unlimited(&self, p: Point2) -> Point2 {
         let Some(frame) = &self.frame else {
             return self.desktop.center();
         };
-        map_absolute(
+        map_raw(
             p,
             self.offset,
             frame_size(frame),
@@ -771,6 +829,37 @@ impl Controller {
                 y: self.settings.gain_y,
             },
         )
+    }
+
+    /// The unsmoothed cursor position for `p`, inside the screen limits.
+    fn map(&self, p: Point2) -> Point2 {
+        apply_limits(self.map_unlimited(p), self.desktop, limits(&self.settings)).position
+    }
+
+    /// One camera-controlled pointer update: map → smooth → limits → drift → dwell.
+    fn drive(&mut self, p: Point2, now_us: u64, step: &mut Step) {
+        let last_us = self.smoother.last_us().unwrap_or(now_us);
+        let raw = self.map_unlimited(p);
+        let smoothed = self.smoother.update(raw, now_us, self.settings.smoothing);
+        let limited = apply_limits(smoothed, self.desktop, limits(&self.settings));
+        // 2018 keeps the clamped position as the filter state.
+        self.smoother.set_current(limited.position);
+        self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us));
+        self.move_pointer(limited.position, step);
+        if !self.settings.dwell.enabled {
+            return;
+        }
+        let params = dwell_params(&self.settings);
+        if let Some(at) = self
+            .dwell
+            .update(limited.position, now_us, true, &params, self.desktop)
+            && !matches!(
+                self.access,
+                PointerAccess::Denied | PointerAccess::Unsupported
+            )
+        {
+            step.effects.push(Effect::Click(at));
+        }
     }
 
     fn move_pointer(&mut self, p: Point2, step: &mut Step) {

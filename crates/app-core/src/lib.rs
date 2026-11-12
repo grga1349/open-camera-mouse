@@ -14,4 +14,4 @@ pub use controller::{
     PointerOwner, RECENTER_US, RecenterView, Step, View,
 };
 pub use pointer_core::DesktopRect;
-pub use settings::{Settings, SettingsError, Theme};
+pub use settings::{DwellSettings, ScreenLimits, Settings, SettingsError, Theme};
