@@ -7,7 +7,15 @@ Explore visual direction in a standalone interactive HTML file *before* committi
 iteration is cheap (browser reload) instead of expensive (Rust recompile + manual state
 puppeting). This document plans that lab; it does not contain the final HTML or final tokens.
 
-## Candidate directions (illustrative, not decided)
+## Decided direction (user, 2026-11-12)
+
+Monochrome dark UI; the only colour is the green rectangular target marker on the preview. Two
+fixed-size windows: Tracking (preview, status, start/pause, recenter, options button) and Options.
+No auto-recenter in the initial rewrite. Themes: Carbon (dark) and Paper (light), switchable in
+Options. **Approved 2026-11-12:** `design-lab.html` v3: thin neon-green (`#00ff00`) circle-ring marker,
+yellow primary buttons, everything else monochrome. egui mapping: `EGUI_FEASIBILITY.md`. History: task 0007.
+
+## Candidate directions (v1, superseded by the decision above)
 
 - **A — Dark technical, understated.** Charcoal/slate, mint-teal accent, minimal chrome.
 - **B — Light native utility.** Bright background, strong contrast, subtle borders, compact

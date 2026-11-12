@@ -41,7 +41,7 @@ Applied to the current open items (BEHAVIOR_SPEC section refs):
 | Tracking algorithm (ADR-0004) | Pyramidal LK with the 2018 preset is the presumptive baseline; NCC stays a measured comparator; Phase 3 measurements can still overturn this | — |
 | Dwell clicking (R-K1, Q-R4) | Off by default; dwell 1 s; 2 s refractory after a click; radius 0.05 | (b): radius unit and the exact `MouseClicker` state machine are UNRESOLVED. Provisionally treat radius as a fraction of screen size and re-arm after refractory *or* leaving the radius, until resolved |
 | 5-4-3-2-1 / CenterDetect recenter | Keep legacy's guided countdown → pick frame centre | (b): CenterDetect body UNRESOLVED |
-| Periodic auto-recenter (Auto54321) | Offer it, default off, interval 3 min | — (adopt once recenter exists) |
+| Periodic auto-recenter (Auto54321) | ~~Offer it, default off, interval 3 min~~ **Amended 2026-11-12: not offered in the initial rewrite** | (d) user decision 2026-11-12 (task 0007); revisit after v1 |
 | Pause | Adopt: release control, invalidate tracking, cursor to desktop centre | — |
 | Camera disconnect | Adopt detection + message (500 ms poll or OS event) | (c) mechanism per OS |
 | Mirroring (R-C1, Q-R5) | **Not decided by this ADR.** 2018's `RevHoriz` default is off, but whether the 2018 tracking space is mirrored (and whether DirectShow drivers pre-mirror) is unresolved (Q-2018-7). Head-right must move the cursor right; Phase 2 decides with that as the constraint | (b) |

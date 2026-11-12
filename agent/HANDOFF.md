@@ -3,26 +3,25 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-12 (Phase 4 DONE)
+## As of 2026-11-12 (Phase 5 DONE)
 
-**Branch:** `rewrite/rust`. Phases 0–4 DONE. Task 0006 is in `tasks/done/`. The recommended tracker is
-`LkParams::recommended()` (ADR-0011): B-LK18 + E2 (ZNCC ≥ 0.7) + E3 + E4 re-detection (ADR-0010), E1 off.
-`Default` stays B-LK18 for the ablation baseline. 89.4 % mean ok on 70 runs, 0 silent errors, tracked
-step ~0.3 ms and searching step ~0.58 ms at 640.
+**Branch:** `rewrite/rust`. Phases 0–5 DONE. Task 0007 is in `tasks/done/`. The approved UI is
+`docs/design/design-lab.html` v3 (open from disk; deep links like
+`#theme=paper&state=searching&tab=general&diag=1`). The egui plan is `docs/design/EGUI_FEASIBILITY.md`.
 
 **Next session, in order:**
-1. `git status` / `git log -1`. Phase 4 CI is green (close-out `66768c9`, run 43132339284). Check CI
-   again only if newer commits exist:
-   `curl -s https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust\&per_page=1`.
-2. Phase 5 (design system) per `docs/ROADMAP.md`: write its task file from the deliverables/gate.
-   UI states must include tracking / held / lost / **searching (re-acquiring)** / paused / no camera
-   / permission, plus a "can't auto-recover this selection" hint (`redetect_armed() == false`).
+1. `git status` / `git log -1` — check whether the Phase 5 docs were committed and pushed.
+2. Phase 6 (desktop app) per `docs/ROADMAP.md`: write its task file from the deliverables/gate.
+   Inputs: EGUI_FEASIBILITY §"Phase 6 acceptance criteria" + §"Inputs for Phase 6" (new AppState
+   variants for pointer permission and handover, global hotkey adapter ADR, font choice).
 
-**Watch (carry into Phase 6):** re-measure all tracker thresholds on recordings. Re-acquisition →
-control handover is undecided. 320 re-acquisition offset follow-up (LK refine vs the selection pyramid).
+**User design decisions (don't drift):** monochrome UI; neon green `#00ff00` only for the thin ring marker,
+yellow only for primary buttons; Carbon + Paper themes switchable in Options; two fixed-size windows; no
+auto-recenter; hotkeys fixed F11/F12.
 
-**Read first:** `docs/ROADMAP.md` Phase 5, `docs/design/`, BEHAVIOR_SPEC §7, ADR-0006, ADR-0011.
-Skills: `egui-development`.
+**Read first:** `docs/ROADMAP.md` Phase 6, `docs/design/EGUI_FEASIBILITY.md`, BEHAVIOR_SPEC §7,
+ADR-0006, ADR-0007, ADR-0011, `docs/architecture/PLATFORM_RISKS.md`. Skills: `egui-development`,
+`platform-integration`, `rust-architecture`.
 
 **Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only.
 

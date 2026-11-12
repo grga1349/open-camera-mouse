@@ -1,30 +1,28 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 4 DONE; Phase 5 next)
+Last updated: 2026-11-12 (Phase 5 DONE; Phase 6 next)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Phase 3 = `4038fce`. Phase 4: E0 `f68f042`, E1 `cac424f`, E2 `47fe4ea`, E3
-`19a2f4a`, E4 `0074611` (CI 43131916361 green), close-out `66768c9` (ADR-0011, `LkParams::recommended()`;
-CI 43132339284 green on 3 OS + cargo-deny).
+Branch: `rewrite/rust`. Phase 4 close-out `66768c9` (CI green). Phase 5 work is docs-only and may
+be uncommitted — check `git status`.
 
 ## Milestone
 
-Phases 0–4 DONE. Phase 5 (design system) is NEXT per `docs/ROADMAP.md`. Its task file is not
+Phases 0–5 DONE. Phase 6 (desktop app) is NEXT per `docs/ROADMAP.md`. Its task file is not
 written yet. The coordinator writes it from the roadmap when the phase starts.
 
 ## What exists now
 
 - Workspace per ADR-0007; mirror-at-ingest + 640×480@30 per ADR-0008.
-- `tracking-core`: B-LK18 (`lk::LkTracker`, `LkParams::default()`), the recommended product tracker
-  `LkParams::recommended()` (ADR-0011: E2 appearance gate + E3 gain/bias + E4 re-detection via
-  `crate::redetect`, ADR-0010), and B-NCC (`ncc::NccTracker`, frozen comparator).
-- Statuses: `Tracking`, `Held(MotionOutlier | NearEdgeMovingOut)`, `Lost(… | AppearanceChanged |
-  Searching | NoSelection)`.
-- Tests: `tests/fixtures.rs`, `tests/baseline.rs` (ignored: `baseline_tables`, `lk_fingerprint`,
-  `ablation_tables`), benches in `benches/tracking.rs`. The corpus is 70 scene × resolution runs (incl. 3
-  distractor scenes).
-- Docs: `TRACKING_BASELINE.md` (Phase 3), `TRACKING_IMPROVEMENTS.md` (Phase 4).
+- `tracking-core`: recommended tracker `LkParams::recommended()` (ADR-0011), B-LK18 default, B-NCC
+  comparator. Statuses `Tracking`, `Held(…)`, `Lost(… | Searching | NoSelection)`.
+- Design (task 0007): approved `docs/design/design-lab.html` v3 — monochrome, Carbon (dark, default) +
+  Paper (light) themes switchable in Options, neon green `#00ff00` thin circle-ring marker, yellow primary
+  buttons, two fixed-size windows (Tracking 560×620, Options 400×620), status as an icon + text line.
+  `docs/design/EGUI_FEASIBILITY.md` = per-affordance egui 0.37 plan, token mapping, Phase 6 criteria.
+- Auto-recenter dropped from the initial rewrite (ADR-0006 row amended 2026-11-12).
+- `apps/desktop` is still the Phase 2 skeleton (one window, status label, start/stop button).
 
 ## Toolchain
 
@@ -32,14 +30,14 @@ written yet. The coordinator writes it from the roadmap when the phase starts.
 
 ## Immediate next action
 
-Start Phase 5 (design system): write its task file from ROADMAP Phase 5 deliverables/gate. Inputs
-for the UI states include `Lost(Searching)` and `redetect_armed()` (ADR-0011 consequences).
+Start Phase 6 (desktop app): write its task file from ROADMAP Phase 6 deliverables/gate, using
+`EGUI_FEASIBILITY.md` §"Phase 6 acceptance criteria" and §"Inputs for Phase 6".
 
 ## Open risks
 
-- Synthetic-only evidence. Every tracker threshold (ZNCC 0.7, τ/δ, r 0.25 w) must be re-measured on
-  Phase 6 recordings.
-- Known tracker gaps: a lookalike within r of the loss point; a target returning farther than r away;
-  1.0–1.4 px re-acquisition offset at 320; a fixed template vs head roll (`rotate_15` 320 ZNCC 0.74).
-- Control handover on re-acquisition (`Lost(Searching)` → `Tracking`) is undecided (Phase 6).
-- Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer (P10/P11).
+- Synthetic-only tracker evidence; re-measure all thresholds on Phase 6 recordings.
+- Re-acquisition → control handover is undecided (Phase 6).
+- Preview grayscale vs colour is undecided (EGUI_FEASIBILITY); the marker colour works on both.
+- R-A1 lacks pointer-permission and mouse-handover states (needed by the approved UI).
+- Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
+- Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer and window placement (P10/P11).
