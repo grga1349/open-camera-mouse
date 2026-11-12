@@ -291,8 +291,8 @@ input[type=range].rng::-moz-range-thumb { width:14px; height:14px; border-radius
           </div>
           <div class="field">
             <div class="lbl"><label for="sm">Smoothing</label><span class="val" id="smV"></span></div>
-            <input class="rng" id="sm" type="range" min="0" max="0.99" step="0.01" value="0.95">
-            <div class="help">Higher is steadier but slower to follow. <span class="def">Default 0.95</span></div>
+            <input class="rng" id="sm" type="range" min="0" max="0.95" step="0.01" value="0.05">
+            <div class="help">Higher is steadier but slower to follow. <span class="def">Default 0.05</span></div>
           </div>
           <div class="field" role="group" aria-labelledby="limLbl">
             <div class="lbl"><span id="limLbl">Screen limits</span><span class="val">px</span></div>
@@ -552,7 +552,7 @@ for (const b of themeBtns) {
 }
 
 /* Settings widgets */
-const DEFAULTS = { gx:6, gy:6, sm:0.95, dt:1, rf:2, rad:5 };
+const DEFAULTS = { gx:6, gy:6, sm:0.05, dt:1, rf:2, rad:5 };
 const fmts = { gx:x=>x.toFixed(1), gy:x=>x.toFixed(1), sm:x=>x.toFixed(2), dt:x=>x.toFixed(1)+' s', rf:x=>x.toFixed(1)+' s', rad:x=>x+' %' };
 let linked = true;
 function paintRange(id) {

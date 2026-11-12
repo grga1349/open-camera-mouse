@@ -43,6 +43,5 @@ Task 0008 slice D1: pointer-core smoothing/limits/drift/dwell, composed into the
 - Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).
 - Preview grayscale vs colour is undecided (EGUI_FEASIBILITY); the marker colour works on both.
 - Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
-- Design-lab Smoothing slider polarity/default contradicts R-P2/2018; needs a user decision.
 - Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
 - Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer and window placement (P10/P11).

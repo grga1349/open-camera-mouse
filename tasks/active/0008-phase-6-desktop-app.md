@@ -177,5 +177,7 @@ Plus the CI run ID for the closing commit.
   "higher is steadier". 2018's `Damping = 0.95` is the weight of the *new* position (very light
   smoothing), so 0.95 labelled "steadier" repeats legacy defect L-2. `Settings::smoothing` is
   `1 − d`, default 0.05, range 0–0.95, higher = steadier. The lab label/default need fixing
-  (either show 0.05, or rename the slider "Responsiveness" with default 0.95). Ask the user.
+  (either show 0.05, or rename the slider "Responsiveness" with default 0.95).
+  **Decided (user, 2026-11-12): keep "Smoothing", higher = steadier, default 0.05, range
+  0–0.95** (matches `Settings::smoothing`). Lab updated (slider, default text, `DEFAULTS.sm`).
 

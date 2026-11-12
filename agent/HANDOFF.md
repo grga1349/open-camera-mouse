@@ -21,8 +21,8 @@ Work rhythm (user): **one slice per session**, then hand off.
 
 **Two findings for the user (in task 0008 Progress):**
 1. Re-detection rarely arms on smooth texture (self-test margin). Open risk; re-measure in D7.
-2. Design-lab Smoothing slider "0.95, higher is steadier" contradicts 2018 polarity (L-2).
-   Code uses `smoothing = 1 − d`, default 0.05. Lab wording needs a decision.
+2. Smoothing polarity: **decided** (user) — "Smoothing", higher = steadier, default 0.05
+   (`= 1 − 2018 damping`), range 0–0.95. Lab updated to match.
 
 **Next session:** `git log -1` should show the D0 handoff commit. Then D1 (`pointer-core`): dt-aware EMA smoothing (α 0.95 per 70 ms equivalent,
 FPS-independence test), W/E/N/S limits with E/S origin fix, offset drift as a rate, dwell
