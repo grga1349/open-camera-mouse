@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 4: E0 + E1 pushed; E2 done, uncommitted)
+Last updated: 2026-11-12 (Phase 4: E0–E2 pushed, CI green)
 
 ## Branch / commit
 
@@ -15,8 +15,8 @@ Phases 0–3 DONE. Phase 4 (tracking improvements) ACTIVE:
 E1 (forward-backward, `LkParams::fb_max_error`) KEPT as a component, default off; enabling is
 decided after E3. E1 = `cac424f`, CI 43124247853 green. E2 (appearance gate,
 `LkParams::min_ref_zncc`, candidate 0.7) KEPT as a component, default off: Σ wrong-lock and
-false-track → 0, no gate-scene change; enable decision after E3. E2 is in the working tree,
-not yet committed. E3–E6 not started.
+false-track → 0, no gate-scene change; enable decision after E3. E2 = `47fe4ea`, CI 43126229350 green.
+E3–E6 not started.
 
 ## What exists now
 
@@ -33,7 +33,7 @@ not yet committed. E3–E6 not started.
 
 ## Immediate next action
 
-Commit E2 if not done. Then Phase 4 E3 (gain/bias-compensated LK), and re-measure E1/E2 on top
+Phase 4 E3 (gain/bias-compensated LK), and re-measure E1/E2 on top
 (`brightness_step`, `contrast_drop`, `rotate_15` 320 margin).
 
 ## Open risks

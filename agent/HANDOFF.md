@@ -8,8 +8,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 **Branch:** `rewrite/rust`. Phases 0–3 DONE. Phase 4 = task 0006. E0 KEPT (`f68f042`). E1 KEPT,
 default off (`cac424f`, CI green). **E2 KEPT, default off**: `LkParams::min_ref_zncc` (ZNCC vs
 the selection-frame window), `LossReason::AppearanceChanged`, `Diagnostics::score`. Candidate
-threshold 0.7. Results: `docs/research/TRACKING_IMPROVEMENTS.md` §E2. E2 may still be
-uncommitted; check `git status`.
+threshold 0.7. Results: `docs/research/TRACKING_IMPROVEMENTS.md` §E2. E2 = `47fe4ea`,
+pushed, CI 43126229350 green.
 
 **Next session, in order:**
 1. `git status` / `git log -1`. CI check (no `gh` here):
