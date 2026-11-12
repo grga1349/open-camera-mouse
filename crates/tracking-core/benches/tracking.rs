@@ -120,3 +120,23 @@ fn lk_fb_step(bencher: Bencher, res: &str) {
         t.step(black_box(&frames[i % 2 + 1])).unwrap()
     });
 }
+
+/// `lk_step` with the appearance gate on (Phase 4 E2, `min_ref_zncc = 0.7`).
+#[divan::bench(args = RES)]
+fn lk_zncc_step(bencher: Bencher, res: &str) {
+    let (frames, pt) = input(res);
+    let mut t = LkTracker::new(LkParams {
+        min_ref_zncc: Some(0.7),
+        ..LkParams::default()
+    });
+    t.select(&frames[0], pt).unwrap();
+    for i in 1..4 {
+        let out = t.step(&frames[i % 2 + 1]).unwrap();
+        assert_eq!(out.status, tracking_core::TrackStatus::Tracking);
+    }
+    let mut i = 0usize;
+    bencher.bench_local(|| {
+        i += 1;
+        t.step(black_box(&frames[i % 2 + 1])).unwrap()
+    });
+}

@@ -99,12 +99,25 @@ fn variants() -> Vec<(&'static str, LkParams)> {
         fb_max_error: Some(e),
         ..d
     };
+    let zn = |z: f32, fb: Option<f32>| LkParams {
+        min_ref_zncc: Some(z),
+        fb_max_error: fb,
+        ..d
+    };
     vec![
         ("LK18", d),
         ("E1 fb≤0.25", fb(0.25)),
         ("E1 fb≤0.5", fb(0.5)),
         ("E1 fb≤1", fb(1.0)),
         ("E1 fb≤2", fb(2.0)),
+        ("E2 zncc≥0.5", zn(0.5, None)),
+        ("E2 zncc≥0.6", zn(0.6, None)),
+        ("E2 zncc≥0.7", zn(0.7, None)),
+        ("E2 zncc≥0.8", zn(0.8, None)),
+        ("E2 zncc≥0.9", zn(0.9, None)),
+        ("E1+E2 fb≤0.5 zncc≥0.6", zn(0.6, Some(0.5))),
+        ("E1+E2 fb≤0.5 zncc≥0.7", zn(0.7, Some(0.5))),
+        ("E1+E2 fb≤0.5 zncc≥0.8", zn(0.8, Some(0.5))),
     ]
 }
 
@@ -138,13 +151,15 @@ fn ablation_tables() {
         .map(|(_, v)| v)
         .collect();
     // Per variant: Σ wrong-lock, Σ false-track, Σ ok fraction, worst good-scene Δp95 and
-    // where, scenes with more wrong-lock frames than LK18.
+    // where, worst good-scene ok drop and where (Δp95 alone can't see a lost track: it only
+    // covers frames still `Tracking`), scenes with more wrong-lock frames than LK18.
     struct Sum {
         wrong: usize,
         false_t: usize,
         ok: f64,
         rows: usize,
         worst: (f64, String),
+        ok_drop: (f64, String),
         new_wrong: Vec<String>,
     }
     let mut sums: Vec<Sum> = vars
@@ -155,6 +170,7 @@ fn ablation_tables() {
             ok: 0.0,
             rows: 0,
             worst: (f64::NEG_INFINITY, String::new()),
+            ok_drop: (0.0, String::new()),
             new_wrong: Vec::new(),
         })
         .collect();
@@ -193,6 +209,10 @@ fn ablation_tables() {
                     if d > s.worst.0 {
                         s.worst = (d, tag.clone());
                     }
+                    let drop = ms[0].tracked_ok - m.tracked_ok;
+                    if drop > s.ok_drop.0 {
+                        s.ok_drop = (drop, tag.clone());
+                    }
                 }
                 if m.wrong_lock > ms[0].wrong_lock {
                     s.new_wrong.push(tag.clone());
@@ -202,17 +222,22 @@ fn ablation_tables() {
     }
     println!();
     println!(
-        "| alg | mean ok | Σ wrong-lock | Σ false-track | worst good-scene Δp95 | more wrong-lock than LK18 |"
+        "| alg | mean ok | Σ wrong-lock | Σ false-track | worst good-scene Δp95 | worst good-scene ok drop | more wrong-lock than LK18 |"
     );
-    println!("|---|---|---|---|---|---|");
+    println!("|---|---|---|---|---|---|---|");
     for ((name, _), s) in vars.iter().zip(&sums) {
         println!(
-            "| {name} | {:.1}% | {} | {} | {:+.2} ({}) | {} |",
+            "| {name} | {:.1}% | {} | {} | {:+.2} ({}) | {} | {} |",
             100.0 * s.ok / s.rows.max(1) as f64,
             s.wrong,
             s.false_t,
             s.worst.0,
             s.worst.1,
+            if s.ok_drop.1.is_empty() {
+                "none".into()
+            } else {
+                format!("{:.0} pp ({})", 100.0 * s.ok_drop.0, s.ok_drop.1)
+            },
             if s.new_wrong.is_empty() {
                 "none".into()
             } else {

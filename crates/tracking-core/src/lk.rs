@@ -41,6 +41,11 @@ pub struct LkParams {
     /// `a'` and reject the step when `|a − a'|` exceeds this (tracker px, absolute: it bounds
     /// solver precision, not motion). `None` = off = B-LK18.
     pub fb_max_error: Option<f32>,
+    /// Appearance gate (Phase 4 E2): reject a step when the ZNCC between the level-0 window
+    /// at the new position and the window sampled from the *selection* frame (R-T3) is below
+    /// this. ZNCC is gain/bias invariant, so lighting changes pass; a different surface
+    /// (occluder, background) does not. `None` = off = B-LK18.
+    pub min_ref_zncc: Option<f32>,
 }
 
 impl Default for LkParams {
@@ -54,6 +59,7 @@ impl Default for LkParams {
             max_motion_frac: 35.0 / 640.0,
             edge_margin_frac: 10.0 / 640.0,
             fb_max_error: None,
+            min_ref_zncc: None,
         }
     }
 }
@@ -247,7 +253,7 @@ pub fn near_edge_moving_out(a: Point2, b: Point2, width: f32, height: f32, margi
 ///
 /// Statuses: `Tracking`; `Held(MotionOutlier)` when the step exceeds the motion bound (point
 /// kept); `Held(NearEdgeMovingOut)` when LK fails (or, with `fb_max_error` set, fails the
-/// forward-backward check) while leaving through an edge (point kept, 2018 default);
+/// forward-backward check or, with `min_ref_zncc` set, the appearance gate) while leaving through an edge (point kept, 2018 default);
 /// `Lost(_)` otherwise — the reference is dropped and the next steps report
 /// `Lost(NoSelection)` until `select` is called again (2018 invalidates the track point).
 #[derive(Debug, Clone, Default)]
@@ -258,6 +264,63 @@ pub struct LkTracker {
     scratch: FlowScratch,
     point: Option<Point2>,
     size: (u32, u32),
+    /// Zero-mean, unit-norm level-0 window from the selection frame (only with `min_ref_zncc`).
+    reference: Vec<f32>,
+}
+
+/// Fills `out` with the `(2·hw + 1)²` bilinear window around `c`, zero-mean and unit-norm.
+/// Returns `false` (and leaves `out` unspecified) when the window is flat or non-finite.
+fn normalized_window(
+    img: &crate::image::ImageF32,
+    c: Point2,
+    hw: usize,
+    out: &mut Vec<f32>,
+) -> bool {
+    let hw = hw as isize;
+    out.clear();
+    for dy in -hw..=hw {
+        for dx in -hw..=hw {
+            out.push(img.sample(c.x + dx as f32, c.y + dy as f32));
+        }
+    }
+    let mean = out.iter().sum::<f32>() / out.len() as f32;
+    let mut ss = 0.0f32;
+    for v in out.iter_mut() {
+        *v -= mean;
+        ss += *v * *v;
+    }
+    // Flat window: ZNCC is undefined. Also catches NaN.
+    if ss.is_nan() || ss <= 1e-6 * out.len() as f32 {
+        return false;
+    }
+    let inv = 1.0 / ss.sqrt();
+    out.iter_mut().for_each(|v| *v *= inv);
+    true
+}
+
+/// ZNCC in [−1, 1] between a [`normalized_window`] reference and the window around `c`.
+/// A flat or non-finite current window scores 0. Allocation-free.
+fn zncc_against(img: &crate::image::ImageF32, c: Point2, hw: usize, reference: &[f32]) -> f32 {
+    let hw = hw as isize;
+    let (mut s, mut s2, mut sr) = (0.0f32, 0.0f32, 0.0f32);
+    let mut k = 0;
+    for dy in -hw..=hw {
+        for dx in -hw..=hw {
+            // Offset by mid-grey to limit f32 cancellation in the one-pass variance.
+            let v = img.sample(c.x + dx as f32, c.y + dy as f32) - 128.0;
+            s += v;
+            s2 += v * v;
+            // The reference is zero-mean, so Σ r·(v − mean) = Σ r·v (offset included).
+            sr += reference[k] * v;
+            k += 1;
+        }
+    }
+    let n = k as f32;
+    let var = s2 - s * s / n;
+    if var.is_nan() || var <= 1e-6 * n {
+        return 0.0;
+    }
+    (sr / var.sqrt()).clamp(-1.0, 1.0)
 }
 
 impl LkTracker {
@@ -288,6 +351,27 @@ impl LkTracker {
         diagnostics.fb_error = Some(err);
         // NaN (non-finite window) also rejects.
         err.is_nan() || err > max
+    }
+
+    /// Appearance gate (E2). Call after the buffer swap (`prev` = current frame). Records the
+    /// score in `diagnostics.score`.
+    fn appearance_rejects(&self, b: Point2, diagnostics: &mut Diagnostics) -> bool {
+        let Some(min) = self.params.min_ref_zncc else {
+            return false;
+        };
+        // No usable reference (flat selection window): LK's own texture test governs.
+        if self.reference.is_empty() {
+            return false;
+        }
+        let z = zncc_against(
+            &self.prev.level(0).img,
+            b,
+            self.params.half_window,
+            &self.reference,
+        );
+        diagnostics.score = Some(z);
+        // NaN also rejects.
+        z.is_nan() || z < min
     }
 
     /// 2018 loss policy for a step without a usable estimate: near an edge and moving out →
@@ -323,6 +407,16 @@ impl Tracker for LkTracker {
         self.prev.build(frame, self.params.max_level);
         self.point = Some(point);
         self.size = (frame.width(), frame.height());
+        if self.params.min_ref_zncc.is_some()
+            && !normalized_window(
+                &self.prev.level(0).img,
+                point,
+                self.params.half_window,
+                &mut self.reference,
+            )
+        {
+            self.reference.clear();
+        }
         Ok(())
     }
 
@@ -361,6 +455,8 @@ impl Tracker for LkTracker {
                     }
                 } else if self.fb_rejects(a, b, &mut diagnostics) {
                     self.reject(a, b, w, h, LossReason::Inconsistent, diagnostics)
+                } else if self.appearance_rejects(b, &mut diagnostics) {
+                    self.reject(a, b, w, h, LossReason::AppearanceChanged, diagnostics)
                 } else {
                     self.point = Some(b);
                     TrackOutput {
@@ -538,6 +634,65 @@ mod tests {
             t.step(&other).unwrap().status,
             TrackStatus::Lost(LossReason::NoSelection)
         );
+    }
+
+    #[test]
+    fn appearance_gate_off_by_default_and_gain_invariant() {
+        assert_eq!(LkParams::default().min_ref_zncc, None);
+        let params = LkParams {
+            min_ref_zncc: Some(0.9),
+            ..LkParams::default()
+        };
+        let mut t = LkTracker::new(params);
+        t.select(
+            &frame(320, 240, Point2::default()),
+            Point2::new(160.0, 120.0),
+        )
+        .unwrap();
+        // Translated and contrast-halved around mid-grey: same surface, still tracked.
+        let shifted = frame(320, 240, Point2::new(2.2, -1.1));
+        let dim: Vec<u8> = shifted
+            .as_bytes()
+            .iter()
+            .map(|&v| (0.5 * f32::from(v) + 64.0).round() as u8)
+            .collect();
+        let out = t
+            .step(&GrayFrame::from_vec(320, 240, dim).unwrap())
+            .unwrap();
+        assert_eq!(out.status, TrackStatus::Tracking, "{out:?}");
+        let z = out.diagnostics.score.expect("gate ran");
+        // Not ~1: plain LK's position is biased by the gain change (TRACKING_BASELINE
+        // finding 5) and halving doubles 8-bit quantisation. Undimmed it scores > 0.97.
+        assert!(z > 0.9, "zncc {z}");
+        // Off: no score recorded.
+        let mut t = LkTracker::default();
+        t.select(
+            &frame(320, 240, Point2::default()),
+            Point2::new(160.0, 120.0),
+        )
+        .unwrap();
+        let out = t.step(&shifted).unwrap();
+        assert_eq!(out.diagnostics.score, None);
+    }
+
+    #[test]
+    fn zncc_is_one_on_itself_and_zero_on_flat() {
+        let f = frame(64, 64, Point2::default());
+        let mut img = crate::image::ImageF32::default();
+        crate::image::gray_to_f32_into(&f, &mut img);
+        let mut r = Vec::new();
+        assert!(normalized_window(&img, Point2::new(30.5, 31.25), 5, &mut r));
+        let z = zncc_against(&img, Point2::new(30.5, 31.25), 5, &r);
+        assert!((z - 1.0).abs() < 1e-4, "{z}");
+        let mut flat = crate::image::ImageF32::default();
+        crate::image::gray_to_f32_into(&GrayFrame::filled(64, 64, 77).unwrap(), &mut flat);
+        assert_eq!(zncc_against(&flat, Point2::new(30.0, 30.0), 5, &r), 0.0);
+        assert!(!normalized_window(
+            &flat,
+            Point2::new(30.0, 30.0),
+            5,
+            &mut r
+        ));
     }
 
     #[test]

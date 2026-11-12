@@ -43,6 +43,8 @@ pub enum LossReason {
     LowConfidence,
     /// Forward and backward flow disagree (forward-backward validation, Phase 4 E1).
     Inconsistent,
+    /// The window no longer looks like the selection (appearance gate, Phase 4 E2).
+    AppearanceChanged,
     /// The tracker has no reference yet: nothing was selected.
     NoSelection,
 }

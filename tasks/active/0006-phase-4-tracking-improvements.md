@@ -96,5 +96,13 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
   with no good-scene change. But `contrast_drop` is dropped at 0.25–1 px, and occlusion
   false-track remains. Enable/threshold decision is deferred until it's measured on top of E3.
   `lk_fingerprint` identical. fmt/clippy/tests (48 passed)/check-core-deps ok.
-- Next: E2 (photometric residual / confidence gating). Add it as `variants()` entries alone
-  and combined with E1 fb ≤ 0.5.
+- 2026-11-12 **E2 KEPT as a component, default off (provisional).** `LkParams::min_ref_zncc`
+  (ZNCC of the level-0 window against the selection-frame window), `LossReason::AppearanceChanged`,
+  `Diagnostics::score`. `ablation_tables` got a "worst good-scene ok drop" column, because Δp95 can't
+  see a lost gate scene. At zncc ≥ 0.7: Σ wrong-lock 474 → 0, false-track 103 → 0 (occlusion
+  fixed), no gate-scene change. Costs: `brightness_step` 640/1280 98 % → 50 %. That was a silent 6.4 px
+  offset after a guard hold, i.e. finding 5. Also a thin margin on `rotate_15` at 320 (min ZNCC 0.74;
+  ≥ 0.8 drops it to 18 %). E2 dominates E1. Enable decision after E3. `lk_fingerprint` identical.
+  fmt/clippy/`cargo test --workspace --locked` (50 passed)/check-core-deps ok.
+- Next: E3 (gain/bias-compensated LK). Re-measure E1 and E2 on top of it (`contrast_drop`,
+  `brightness_step`).
