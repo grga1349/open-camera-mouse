@@ -56,3 +56,11 @@ format is unknown (Q-2018-6).
 - Benchmarks keep 320/640/1280 inputs. 1280 exercises the downsample path.
 - If Q-2018-7 resolves to "2018 tracked unmirrored, and drivers didn't pre-mirror", item 2
   still stands, because the head-right constraint wins.
+
+## Amendment (2026-11-12): colour preview
+
+User decision: the preview is shown in **colour**, not grayscale. The tracker still runs on
+the 8-bit luma plane only. The camera adapter delivers a colour image (RGB/RGBA) for display
+next to the luma, and ingest applies the same mirror and downsample to both, so the preview,
+selection, overlay and tracking stay in one canonical display space (R-C1). Implemented in
+task 0008 D3 (adapter) and D6 (texture).

@@ -53,7 +53,8 @@ crates. `apps/desktop` is one window with a status label and a button.
   negotiated, real FPS from timestamps, release on close). Panics caught at the adapter boundary
   → `CameraError::Backend`. Capture thread with a bounded channel (latest frame wins). Disconnect
   = backend error or frame timeout → `CameraDisconnected` (P5). Permission denial →
-  `PermissionDenied` (P2). Windows and Linux: same crate if the spike picks `nokhwa`, compiled
+  `PermissionDenied` (P2). Each frame carries the luma plane for tracking **and** a colour
+  (RGB/RGBA) image for the preview (user decision: colour preview). Windows and Linux: same crate if the spike picks `nokhwa`, compiled
   in CI; on-device validation is Phase 7.
 - **D4 — Pointer adapter (macOS first).** Decide warp (`CGWarpMouseCursorPosition`) vs posted
   move events on the dev Mac, including whether each needs Accessibility (P6) and the handover
@@ -65,8 +66,8 @@ crates. `apps/desktop` is one window with a status label and a button.
   `ToggleStart`/`Recenter`. Registration failure is shown in the UI (P13: macOS F11 = Show
   Desktop). In-window F11/F12 always work as a fallback.
 - **D6 — Desktop UI per the approved lab.** Tracking window (560×620, fixed) and Options window
-  (400×620, fixed, `show_viewport_immediate`). Carbon/Paper visuals from the token table. Preview
-  texture updated per frame. Click-to-select through the same rect as drawing (R-C2). Marker
+  (400×620, fixed, `show_viewport_immediate`). Carbon/Paper visuals from the token table. Colour
+  preview texture updated per frame (`ColorImage::from_rgb`/`from_rgba_unmultiplied`). Click-to-select through the same rect as drawing (R-C2). Marker
   variants (ring, dashed held, searching, lost grey + X). Recenter circle + badge. Status line
   (icon + text) per state. Options tabs: Pointer, Clicking, Camera, General. Painted icons, no SVG
   crate. Text scale, larger controls. The desktop crate only renders `app-core` output and sends
@@ -84,7 +85,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 
 | Question | Default if the user doesn't decide | Where |
 |---|---|---|
-| Preview grayscale (luma) vs colour | Grayscale. Ports already carry luma, so this is the cheap path, and the green ring was chosen to work on it | this file + EGUI_FEASIBILITY |
+| ~~Preview grayscale (luma) vs colour~~ **Decided (user, 2026-11-12): colour preview.** Grayscale is rejected. The camera adapter delivers a colour frame for display alongside the luma the tracker uses; both are mirrored and downsampled at ingest so they share one display space (ADR-0008 amendment) | — | this file + EGUI_FEASIBILITY + ADR-0008 |
 | Font | egui default fonts for the first build. Revisit with an embedded OFL font later | this file |
 | ~~Pointer permission + handover in R-A1~~ **Decided (D0):** orthogonal `PointerOwner` sub-state; plus top-level `Error` | — | BEHAVIOR_SPEC R-A1 |
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
@@ -195,3 +196,7 @@ Plus the CI run ID for the closing commit.
   7 new controller tests (zero/default smoothing, limits + drift, dwell off by default, fires
   once, never in handover/lost, not with permission denied) + 6 smoothing, 5 limits, 6 dwell
   unit tests. Gates green locally.
+- 2026-11-12: **Decision (user): colour preview, not grayscale.** The earlier "default
+  grayscale" was wrong. `CameraFrame` gains a colour image for display in D3 (adapter) and the
+  controller mirrors/downsamples it with the luma at ingest; the tracker still runs on luma
+  only. Recorded in ADR-0008 (amendment), EGUI_FEASIBILITY, DEPENDENCIES.

@@ -31,8 +31,9 @@ row-major `Vec<u8>` luma buffer with checked construction. Reasons:
 - Most capture formats (NV12, YUYV) have a luma plane, so adapters can fill the buffer
   without colour conversion.
 
-Pyramids and float buffers are added in Phase 3 inside tracking-core. A colour preview
-frame (RGBA) for the UI is an adapter → desktop concern (Phase 6).
+Pyramids and float buffers are added in Phase 3 inside tracking-core. The preview is
+**colour** (user decision 2026-11-12): the adapter also delivers an RGB(A) frame for the UI
+(Phase 6 D3), outside the cores.
 
 ## Candidates (by phase)
 

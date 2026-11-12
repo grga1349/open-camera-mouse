@@ -33,7 +33,8 @@ green `#00ff00` only for the thin ring marker; yellow only for primary buttons; 
 two fixed-size windows; no auto-recenter; hotkeys fixed F11/F12; recenter = white centre circle + 5 s
 countdown badge; resume from pause goes through recenter; Recenter ends a pause.
 
-**Still open:** grayscale vs colour preview (default grayscale), font (default egui). D6 only.
+**Decided:** preview is **colour**, not grayscale (user, 2026-11-12; ADR-0008 amendment) — D3 adapter delivers colour + luma.
+**Still open:** font (default egui). D6 only.
 
 **Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only.
 

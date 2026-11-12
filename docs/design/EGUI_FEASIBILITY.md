@@ -32,7 +32,7 @@ green background or clothing next to the face.
 | Fixed size, not resizable | `ViewportBuilder::with_inner_size([560., 620.])`, `.with_resizable(false)`, `.with_maximize_button(false)`; Options also `.with_minimize_button(false)` | Yes | Sizes are logical points, so high-DPI scales automatically. At text scale 130 % / larger controls the content may not fit. Phase 6 must either grow the fixed size per scale step or scroll the status/options area (`ScrollArea`), which is what the lab does |
 | Themes Carbon / Paper | Two `egui::Visuals` built from the tokens below, applied with `Context::set_visuals` (or `set_theme` + per-theme style). Persist the choice in settings (R-A5) | Yes | Start from `Visuals::dark()` / `light()` and override every colour; don't rely on egui defaults (they're bluish) |
 | Yellow primary buttons | Custom `Button::new(...).fill(yellow)` with black `RichText`, or a small `primary_button(ui, …)` helper | Yes | Keep one helper so the "only yellow" rule is enforced in one place |
-| Camera preview | Grayscale frame → `ColorImage::from_gray([w, h], &luma)`. One `TextureHandle` created once with `Context::load_texture`, then updated each frame with `TextureHandle::set(image, TextureOptions::LINEAR)`. Draw with `ui.image` at 4:3 inside the window | Yes | 640 × 480 × 4 B ≈ 1.2 MB upload per frame at 30 fps; fine for wgpu/glow. `from_gray` expands to RGBA on the CPU. Measure it in Phase 6 (§8 budget); if it shows up, request repaint only on a new frame (`request_repaint` from the capture thread), never in a busy loop |
+| Camera preview | **Colour** frame (user decision 2026-11-12) → `ColorImage::from_rgb([w, h], &rgb)` (or `from_rgba_unmultiplied`). One `TextureHandle` created once with `Context::load_texture`, then updated each frame with `TextureHandle::set(image, TextureOptions::LINEAR)`. Draw with `ui.image` at 4:3 inside the window | Yes | 640 × 480 × 4 B ≈ 1.2 MB upload per frame at 30 fps; fine for wgpu/glow. `from_rgb` expands to RGBA on the CPU. Measure it in Phase 6 (§8 budget); if it shows up, request repaint only on a new frame (`request_repaint` from the capture thread), never in a busy loop |
 | Click to select target | `ui.image(...).interact(Sense::click())` → map the pointer position through the **same** rect used to draw (R-C2) → frame coords | Yes | Hover preview ring = the same painter call with a dashed stroke |
 | Marker: thin neon-green ring | `Painter::circle_stroke(center, r, Stroke::new(2.0, Color32::from_rgb(0, 255, 0)))` | Yes | The lab also has an optional 1 px dark shadow under the ring. Not adopted. Revisit if Phase 6 recordings show low visibility |
 | Marker variants (held dashed, searching growing ring, lost grey ring + X) | Dashed ring = `Shape::dashed_line` over a polyline approximating the circle (no dashed-circle primitive). Growing ring = radius/alpha from `ctx.input(|i| i.time)` + `request_repaint`. X = two `line_segment`s | Yes | Honour reduced motion: freeze the animation when the OS requests it (read via the platform crate; egui has no reduced-motion flag) |
@@ -79,10 +79,11 @@ green background or clothing next to the face.
 | `--gap` / `--pad` | 12 / 16 | 12 / 16 | `spacing.item_spacing` / `window_margin` |
 | marker ring | 2 px (3 large), r ≈ 15 frame px | same | `Stroke::new(2.0, green)` |
 
-Preview colour is an open Phase 6 decision. The ports deliver luma only (ADR-0008), so the cheap path is a
-grayscale preview, where the green ring stands out on every skin tone. A colour preview needs the
-camera adapter to pass a colour frame for display alongside the luma, which costs one more conversion
-and upload per frame. The marker colour was chosen to work on both.
+**Preview colour — decided (user, 2026-11-12): colour preview.** Grayscale is rejected. The
+camera adapter passes a colour frame for display alongside the luma the tracker uses (ADR-0008
+amendment); both are mirrored at ingest into the same display space. This costs one colour
+conversion and upload per frame. The neon-green ring was chosen to stay visible on a colour
+image too.
 
 ## Phase 6 acceptance criteria carried from Phase 5
 
@@ -103,5 +104,5 @@ and upload per frame. The marker colour was chosen to work on both.
   `Mouse`, `PermissionNeeded`, `Unsupported`) plus a top-level `AppState::Error`. See BEHAVIOR_SPEC R-A1.
 - The global F11/F12 hotkey adapter and its crate (ADR).
 - Font: egui default vs an embedded OFL font.
-- Preview: grayscale (luma) vs colour (see token section).
+- ~~Preview: grayscale (luma) vs colour.~~ **Decided: colour** (see token section).
 - Wording is draft-quality. Review it with real users in Phase 8.

@@ -9,7 +9,8 @@ puppeting). This document plans that lab; it does not contain the final HTML or 
 
 ## Decided direction (user, 2026-11-12)
 
-Monochrome dark UI; the only colour is the green rectangular target marker on the preview. Two
+Monochrome UI chrome with exactly two accent hues: the neon-green target marker on the preview
+and yellow primary buttons. The camera preview itself is shown in colour (user, 2026-11-12). Two
 fixed-size windows: Tracking (preview, status, start/pause, recenter, options button) and Options.
 No auto-recenter in the initial rewrite. Themes: Carbon (dark) and Paper (light), switchable in
 Options. **Approved 2026-11-12:** `design-lab.html` v3: thin neon-green (`#00ff00`) circle-ring marker,

@@ -43,7 +43,7 @@ Task 0008 slice D2: dependencies ADR-0012 (re-query versions/licences) + setting
 
 - Synthetic-only tracker evidence; re-measure all thresholds on Phase 6 recordings.
 - Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).
-- Preview grayscale vs colour is undecided (EGUI_FEASIBILITY); the marker colour works on both.
+- Preview is **colour** (user decision 2026-11-12): adapter must deliver a colour frame next to luma (D3), mirrored at ingest with it (ADR-0008 amendment).
 - Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
 - Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
 - Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer and window placement (P10/P11).
