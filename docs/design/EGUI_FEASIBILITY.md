@@ -98,8 +98,9 @@ and upload per frame. The marker colour was chosen to work on both.
 
 ## Inputs for Phase 6 (not decided here)
 
-- R-A1 has no state for "pointer permission needed" or "mouse in control (handover)". The lab
-  shows both. Add them to `AppState` or model them as sub-states.
+- ~~R-A1 has no state for "pointer permission needed" or "mouse in control (handover)".~~
+  **Resolved in task 0008 D0:** `app_core::PointerOwner` sub-state (`Camera`, `Handover`,
+  `Mouse`, `PermissionNeeded`, `Unsupported`) plus a top-level `AppState::Error`. See BEHAVIOR_SPEC R-A1.
 - The global F11/F12 hotkey adapter and its crate (ADR).
 - Font: egui default vs an embedded OFL font.
 - Preview: grayscale (luma) vs colour (see token section).

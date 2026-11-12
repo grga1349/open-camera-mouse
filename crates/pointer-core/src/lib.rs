@@ -1,8 +1,10 @@
 //! Pure pointer mapping (ADR-0003/ADR-0007).
 //!
-//! Phase 2 provides only the absolute mapping from ADR-0006 so the mirroring decision
-//! (ADR-0008) has a test that pins "head right → cursor right". Smoothing, limits, offset
-//! drift, handover and dwell are added later, each with its own tests.
+//! The absolute mapping from ADR-0006 (with a test that pins "head right → cursor right",
+//! ADR-0008) and the handover/jump-bound rules in [`handover`]. Smoothing, limits, offset
+//! drift and dwell are task 0008 slice D1, each with its own tests.
+
+pub mod handover;
 
 use tracking_core::Point2;
 

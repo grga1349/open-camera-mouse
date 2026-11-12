@@ -86,7 +86,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 |---|---|---|
 | Preview grayscale (luma) vs colour | Grayscale. Ports already carry luma, so this is the cheap path, and the green ring was chosen to work on it | this file + EGUI_FEASIBILITY |
 | Font | egui default fonts for the first build. Revisit with an embedded OFL font later | this file |
-| Pointer permission + handover in R-A1 | Sub-states, decided in D0 | BEHAVIOR_SPEC R-A1 |
+| ~~Pointer permission + handover in R-A1~~ **Decided (D0):** orthogonal `PointerOwner` sub-state; plus top-level `Error` | — | BEHAVIOR_SPEC R-A1 |
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
 | Camera backend | From the D3 spike | ADR-0012 |
 | Warp vs posted move | From the D4 test | ADR-0012 / PLATFORM_RISKS P6 |
@@ -155,3 +155,27 @@ Plus the CI run ID for the closing commit.
   headless Chrome DOM check (lost → OFF, searching → ON) and screenshot reviewed.
 - 2026-11-12: lab fixes (user): "Keep both speeds the same" uses the label colour (was muted);
   switches align with the label line, not the help text. Screenshots of Pointer/Camera tabs reviewed.
+- 2026-11-12: **D0 done.** `app-core`: `controller.rs` (R-A1 + `Error`, `PointerOwner` sub-state,
+  `Input`/`Command`/`Event`/`Effect`, `Step`, `View` with marker/recenter/handover countdowns
+  from deadlines, injected `now_us`), `settings.rs` (validated, normalised, `SCHEMA_VERSION = 1`,
+  `loss_recovery` off → `redetect = None`). `pointer-core::handover` (5 px move-stop, 4 s
+  inactivity timer, R-P4 jump bound 0.05 × shorter desktop side, provisional) pulled forward from
+  D1 because D0's handover states need it. Mapping is `map_absolute` unsmoothed; smoothing,
+  limits, drift and dwell stay D1. 26 controller tests (`crates/app-core/tests/controller.rs`,
+  synthetic mirrored frames: head right → cursor right, handover, recenter 5 s, pause/resume via
+  recenter, loss off/on, jump bound, permission, settings R-A6, every state reachable) + 4
+  settings + 4 handover unit tests. Gates green locally.
+- 2026-11-12: **Finding (re-detection arming, open risk):** the selection self-test (ADR-0010)
+  only arms on fine texture at 640×480. Value noise with 4 px cells arms; 8 px cells fail at 2 of
+  3 points; 16 px cells fail everywhere (best 1.0, "second" 0.97–0.99: the true peak's shoulder
+  just beyond `hw0` = 10 px counts as a distinct lookalike, so the 0.1 margin never holds).
+  Real faces are smooth, so "Find the target again" may rarely arm in practice and the UI would
+  mostly show the "can't find again" hint. Not changed here (non-goal). Re-measure on D7
+  recordings; a fix would be in `redetect.rs` (e.g. a distinctness radius tied to the ZNCC
+  peak width rather than `hw0`) and needs its own measurement + ADR-0010 amendment.
+- 2026-11-12: **Finding (design lab vs R-P2):** the lab's Smoothing slider shows default 0.95,
+  "higher is steadier". 2018's `Damping = 0.95` is the weight of the *new* position (very light
+  smoothing), so 0.95 labelled "steadier" repeats legacy defect L-2. `Settings::smoothing` is
+  `1 − d`, default 0.05, range 0–0.95, higher = steadier. The lab label/default need fixing
+  (either show 0.05, or rename the slider "Responsiveness" with default 0.95). Ask the user.
+

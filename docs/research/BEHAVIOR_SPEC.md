@@ -436,6 +436,15 @@ source system.
 - R-A1 Explicit state machine with every state user-visible: `Stopped`, `Starting`,
   `NoCamera`, `PermissionDenied`, `NoTarget`, `Tracking`, `Lost`, `Recentering`, `Paused`,
   `CameraDisconnected`. Every transition is emitted. No silent stop (fixes L-4, L-5, L-6).
+  **Decided (task 0008 D0, 2026-11-12):** one more top-level state, `Error`, for a camera
+  backend failure that is none of the named cases (the approved lab has an error screen).
+  Pointer permission and mouse handover are **not** top-level states: they don't stop
+  tracking, so they are an orthogonal sub-state `PointerOwner` = `Camera` | `Handover` (mouse
+  in control, camera takes over after 4 s still, countdown from a controller deadline) |
+  `Mouse` (no automatic takeover: no target, lost, recentering, paused, stopped) |
+  `PermissionNeeded` | `Unsupported`. Owner changes are emitted as events too. A click-select
+  goes through `Handover` (2018 inactivity start); the end of a recenter takes over at once
+  (2018 forced start). See `crates/app-core/src/controller.rs`.
 - R-A2 *→ ADR-0006: adopted* (5 px move-stop, 4 s inactivity resume, cursor to centre on
   takeover). Original question: adopt 2018-style handover (physical move > threshold yields
   control; inactivity N s resumes)? Strongly recommended if R-P1 picks absolute mode.

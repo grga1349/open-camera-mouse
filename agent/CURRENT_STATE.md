@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 6 ACTIVE, task 0008 written)
+Last updated: 2026-11-12 (Phase 6 ACTIVE, D0 done)
 
 ## Branch / commit
 
@@ -10,7 +10,7 @@ for the guided recenter flow, 5 s countdown). Docs-only; code unchanged since Ph
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. No slice started yet.
+slices D0–D7. D0 (app-core controller) done, gates green locally; D1 next.
 
 ## What exists now
 
@@ -23,7 +23,11 @@ slices D0–D7. No slice started yet.
   buttons, two fixed-size windows (Tracking 560×620, Options 400×620), status as an icon + text line.
   `docs/design/EGUI_FEASIBILITY.md` = per-affordance egui 0.37 plan, token mapping, Phase 6 criteria.
 - Auto-recenter dropped from the initial rewrite (ADR-0006 row amended 2026-11-12).
-- `apps/desktop` is still the Phase 2 skeleton (one window, status label, start/stop button).
+- `app-core`: full controller (R-A1 + `Error`, `PointerOwner` sub-state, injected clock,
+  `Step`/`View`, validated `Settings` with schema version). `pointer-core`: `map_absolute` +
+  `handover` (move-stop, inactivity, R-P4 jump bound). No smoothing/limits/drift/dwell yet (D1).
+- `apps/desktop` is still the Phase 2 skeleton (one window, status label, start/stop button),
+  adapted to the new controller API.
 
 ## Toolchain
 
@@ -31,14 +35,14 @@ slices D0–D7. No slice started yet.
 
 ## Immediate next action
 
-Task 0008 slice D0: full `app-core` controller (pure, injected clock), per the task file. Check
-the "Decisions owed" table first for anything the user has settled.
+Task 0008 slice D1: pointer-core smoothing/limits/drift/dwell, composed into the controller.
 
 ## Open risks
 
 - Synthetic-only tracker evidence; re-measure all thresholds on Phase 6 recordings.
-- Re-acquisition → control handover: decided (option, off by default; ADR-0011 amendment). Implement in D0/D1.
+- Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).
 - Preview grayscale vs colour is undecided (EGUI_FEASIBILITY); the marker colour works on both.
-- R-A1 lacks pointer-permission and mouse-handover states (needed by the approved UI).
+- Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
+- Design-lab Smoothing slider polarity/default contradicts R-P2/2018; needs a user decision.
 - Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
 - Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer and window placement (P10/P11).
