@@ -6,7 +6,23 @@
 //! fraction of frame width, at every resolution. Everything is seeded and deterministic.
 #![allow(dead_code)]
 
+use tracking_core::lk::LkParams;
+use tracking_core::redetect::RedetectParams;
 use tracking_core::{GrayFrame, Point2, TrackStatus, Tracker, downsample_to_width};
+
+/// Phase 4 E4 candidate (ADR-0010): E2 zncc ≥ 0.7 + E3 + re-detection with the default
+/// search parameters (τ 0.9, δ 0.1, K 16, level 2) and a 0.25-width spatial prior.
+pub fn e4_candidate() -> LkParams {
+    LkParams {
+        gain_bias: true,
+        min_ref_zncc: Some(0.7),
+        redetect: Some(RedetectParams {
+            max_radius_frac: Some(0.25),
+            ..RedetectParams::default()
+        }),
+        ..LkParams::default()
+    }
+}
 
 // ---------------------------------------------------------------------------------------
 // Deterministic randomness and texture.
@@ -141,6 +157,15 @@ impl Pose {
     }
 }
 
+/// A static second disc (same radius as the target, no rotation/scale) drawn over the
+/// background, under the target and occluder, for frames `frames.0..frames.1`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Distractor {
+    pub surface: Surface,
+    pub center: (f64, f64),
+    pub frames: (usize, usize),
+}
+
 #[derive(Debug, Clone)]
 pub struct Scene {
     pub name: &'static str,
@@ -159,6 +184,7 @@ pub struct Scene {
     pub pose: fn(usize) -> Pose,
     /// Frames to repeat verbatim (a stalled camera): `(start, len)`.
     pub stall: Option<(usize, usize)>,
+    pub distractor: Option<Distractor>,
     pub seed: u64,
 }
 
@@ -191,7 +217,7 @@ impl Scene {
         }
     }
 
-    fn clean_value(&self, p: &Pose, x: f64, y: f64) -> f64 {
+    fn clean_value(&self, t: usize, p: &Pose, x: f64, y: f64) -> f64 {
         if let Some((x0, y0, x1, y1)) = p.occluder
             && x >= x0
             && x <= x1
@@ -204,7 +230,16 @@ impl Scene {
         let (s, c) = p.angle_rad.sin_cos();
         let (lx, ly) = ((c * dx + s * dy) / p.scale, (-s * dx + c * dy) / p.scale);
         let r = (lx * lx + ly * ly).sqrt();
-        let bg = self.background.eval(x, y);
+        let mut bg = self.background.eval(x, y);
+        if let Some(d) = self.distractor
+            && (d.frames.0..d.frames.1).contains(&t)
+        {
+            let (lx, ly) = (x - d.center.0, y - d.center.1);
+            let wd = ((self.radius - lx.hypot(ly)) / 2.0 + 0.5).clamp(0.0, 1.0);
+            if wd > 0.0 {
+                bg += wd * (d.surface.eval(lx + 1000.0, ly + 1000.0) - bg);
+            }
+        }
         // Soft 2-unit edge so the disc boundary is band-limited.
         let w = ((self.radius - r) / 2.0 + 0.5).clamp(0.0, 1.0);
         if w == 0.0 {
@@ -277,6 +312,9 @@ impl Scene {
             && pa.angle_rad == pb.angle_rad
             && pa.scale == pb.scale
             && pa.occluder == pb.occluder
+            && self.distractor.is_none_or(|d| {
+                (d.frames.0..d.frames.1).contains(&a) == (d.frames.0..d.frames.1).contains(&b)
+            })
     }
 
     fn render_clean(&self, t: usize, width: u32, height: u32, k: f64) -> Vec<f64> {
@@ -305,8 +343,11 @@ impl Scene {
         for py in 0..height {
             for px in 0..width {
                 let (x, y) = (f64::from(px) / k, f64::from(py) / k);
-                let v =
-                    poses.iter().map(|p| self.clean_value(p, x, y)).sum::<f64>() / samples as f64;
+                let v = poses
+                    .iter()
+                    .map(|p| self.clean_value(t, p, x, y))
+                    .sum::<f64>()
+                    / samples as f64;
                 out.push(v);
             }
         }
@@ -367,6 +408,7 @@ fn base(
         blur_samples: 1,
         pose,
         stall: None,
+        distractor: None,
         seed: 0xC0FFEE,
     }
 }
@@ -377,6 +419,20 @@ fn sway(t: usize) -> (f64, f64) {
         C0.0 + 110.0 * (t * 0.07).sin(),
         C0.1 + 50.0 * (t * 0.045).sin(),
     )
+}
+
+/// Slow drift right; the whole target is occluded for frames 30–49.
+fn occluded_drift(t: usize) -> Pose {
+    let mut p = Pose::at((C0.0 + 0.5 * t as f64, C0.1));
+    if (30..50).contains(&t) {
+        p.occluder = Some((
+            p.center.0 - 70.0,
+            p.center.1 - 70.0,
+            p.center.0 + 70.0,
+            p.center.1 + 70.0,
+        ));
+    }
+    p
 }
 
 fn edge_path(t: usize, dir: (f64, f64), reach: f64) -> Pose {
@@ -471,18 +527,7 @@ pub fn corpus() -> Vec<Scene> {
             "occlusion_full",
             "occluder covers the whole target, frames 30–49",
             70,
-            |t| {
-                let mut p = Pose::at((C0.0 + 0.5 * t as f64, C0.1));
-                if (30..50).contains(&t) {
-                    p.occluder = Some((
-                        p.center.0 - 70.0,
-                        p.center.1 - 70.0,
-                        p.center.0 + 70.0,
-                        p.center.1 + 70.0,
-                    ));
-                }
-                p
-            },
+            occluded_drift,
         ),
         base(
             "rotate_15",
@@ -586,6 +631,42 @@ pub fn corpus() -> Vec<Scene> {
         contrast: 120.0,
     };
     v.push(grating);
+
+    // Phase 4 E4 distractors: a second disc 190 units left of the target while the target is
+    // fully occluded (frames 30–49). Re-detection must not lock onto it.
+    let twin_at = (C0.0 - 190.0, C0.1);
+    let distractor = |name, description, surface, frames| {
+        let mut s = base(name, description, 70, occluded_drift);
+        s.distractor = Some(Distractor {
+            surface,
+            center: twin_at,
+            frames,
+        });
+        s
+    };
+    v.push(distractor(
+        "distractor_twin",
+        "identical twin disc visible throughout; target occluded 30–49",
+        TARGET,
+        (0, 70),
+    ));
+    v.push(distractor(
+        "distractor_late_twin",
+        "identical twin disc appears at frame 30 while the target is occluded (known gap)",
+        TARGET,
+        (30, 70),
+    ));
+    v.push(distractor(
+        "distractor_similar",
+        "same-statistics disc (other seed) visible throughout; target occluded 30–49",
+        Surface::Texture {
+            seed: 29,
+            cell: 14.0,
+            base: 30.0,
+            contrast: 200.0,
+        },
+        (0, 70),
+    ));
     v
 }
 

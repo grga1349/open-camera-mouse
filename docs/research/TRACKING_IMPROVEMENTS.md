@@ -291,6 +291,152 @@ rejections feed into.
 291.7 vs 280.9 µs; 1280→640: 225.2 vs 219.2 µs. That's one extra window sample per iteration plus a
 moment pass per level. Zero steady-state allocations (the `j` scratch is sized once).
 
-## E4–E6
+## E4 — loss recovery by re-detection: KEPT (default off until the default-tracker ADR)
 
-Not started. See `tasks/active/0006-phase-4-tracking-improvements.md`.
+ADR-0010 (deviation from the 2018 loss policy, reason (a) defect).
+
+**Change.** `LkParams::redetect: Option<RedetectParams>` (default `None` = B-LK18), with the
+search in a new module, `crate::redetect`. At `select`, it stores one zero-mean, unit-norm
+template per pyramid level from the selection frame. Level 0 is E2's window; level `l` uses
+half-size `max(1, hw >> l)`. A step the 2018 policy turns into `Lost` now **keeps** the
+reference and searches the same frame. Later frames report the new `Lost(Searching)` until a
+match is accepted, and then `Tracking` resumes from it. `Held` statuses are unchanged: a
+held point that ends up on background becomes a `Lost` through E2, so E4 is only measured on
+top of E2 + E3.
+
+Search per frame:
+1. exhaustive integer ZNCC at level 2 (5×5 template);
+2. 3×3 local maxima, greedy suppression within `2·hw_L`, top K = 16;
+3. ±2 px refinement at each finer level;
+4. separable parabolic sub-pixel fit at level 0.
+
+Accept when the best level-0 score `z1 ≥ τ` **and** `z1 − z2 ≥ δ`, where `z2` is the best other
+refined peak farther than `hw`. Two guards against wrong locks:
+- **Selection-time self-test.** The selection frame must re-detect its own point (within
+  1 px) under the same rule. Otherwise re-detection is disarmed for that selection, and
+  `LkTracker::redetect_armed()` reports it. This catches lookalikes visible at selection,
+  and gratings.
+- **Spatial prior** `max_radius_frac`. While searching, only positions within `r·width` of the
+  last known point are scored and accepted.
+
+**New fixtures** (generator, `Distractor`: a static second disc, optional frame range). Each
+one is `occlusion_full` (target fully occluded at frames 30–49) plus a disc 190 ref units to
+the left:
+- `distractor_twin`: an identical twin, visible throughout.
+- `distractor_late_twin`: an identical twin that appears at frame 30, while the target is
+  occluded. This is ADR-0010's predicted structural gap.
+- `distractor_similar`: same texture statistics, other seed, visible throughout.
+
+The existing 61 scene × resolution runs render the same as before. `lk_fingerprint` is
+identical on all 61 shared lines (diffed against `8789d83` in a worktree with its own
+`CARGO_TARGET_DIR`). From here on the corpus has **70 runs**, so the summary means are not
+comparable to the 61-run tables above. The LK18 and E3+E2 rows are recomputed below.
+
+**Results** (`ablation_tables`, 2026-11-12, M1, 70 runs):
+
+| alg | mean ok | Σ wrong-lock | Σ false-track | worst good-scene Δp95 | worst good-scene ok drop | more wrong-lock than LK18 |
+|---|---|---|---|---|---|---|
+| LK18 | 73.4% | 654 | 277 | +0.000 | none | none |
+| E3+E2 zncc≥0.7 | 73.4% | 0 | 0 | +0.070 (rotate_15 1280) | none | none |
+| E4 τ.85 δ.1 K16 L2 (full frame) | 87.6% | 60 | 57 | +0.070 (rotate_15 1280) | none | none |
+| E4 τ.8 / τ.9, same | 87.6% | 60 | 57 | +0.070 | none | none |
+| E4 δ.05 | 87.7% | 60 | 57 | +0.070 | none | none |
+| E4 δ.2 | 78.1% | 20 | 19 | +0.070 | none | none |
+| E4 K8 / K32 / L1 | 87.6% | 60 | 57 | +0.070 | none | none |
+| E4 L3 | 79.8% | 20 | 19 | +0.070 | none | none |
+| E4 τ.85 r.15 | 89.5% | 0 | 0 | +0.070 | none | none |
+| E4 τ.85 r.2 / r.25 / r.3 | 89.4% | 0 | 0 | +0.070 | none | none |
+| **E4 τ.9 δ.1 K16 L2 r.25 (candidate)** | **89.4%** | **0** | **0** | +0.070 (rotate_15 1280) | none | none |
+
+(E1/E2/E3 rows on 70 runs are in the test output. Their ordering is unchanged from §E1–§E3.)
+
+Rows that changed, at 640×480 (ok / wrong-lock / false-track / final EPE):
+
+| scene | LK18 | E3+E2 | E4 full frame | E4 candidate (r.25) |
+|---|---|---|---|---|
+| fast_40px | 37%/18/0/185.80 | 37%/0/0/lost | 100%/0/0/0.04 | 100%/0/0/0.04 |
+| occlusion_full | 60%/20/19/20.23 | 60%/0/0/lost | 98%/0/0/0.09 | 100%/0/0/0.06 |
+| edge_left | 50%/37/2/26.08 | 50%/0/0/lost | 99%/0/0/0.06 | 99%/0/0/0.06 |
+| edge_right | 49%/35/6/52.36 | 49%/0/0/lost | 97%/0/0/0.05 | 97%/0/0/0.05 |
+| edge_top | 49%/35/6/29.59 | 49%/0/0/lost | 94%/0/0/0.02 | 96%/0/0/0.02 |
+| edge_bottom | 50%/37/6/31.24 | 50%/0/0/lost | 99%/0/0/0.55 | 99%/0/0/0.55 |
+| distractor_twin | 60%/20/19/20.23 | 60%/0/0/lost | 60%/0/0/lost | 60%/0/0/lost |
+| distractor_late_twin | 60%/20/19/20.23 | 60%/0/0/lost | **60%/20/19/224.48** | **100%/0/0/0.06** |
+| distractor_similar | 60%/20/19/20.23 | 60%/0/0/lost | 98%/0/0/0.09 | 100%/0/0/0.06 |
+| repeated_texture | 3%/0/0/lost | 3%/0/0/lost | 3%/0/0/lost | 3%/0/0/lost |
+
+(320 and 1280 follow the same pattern. At 320, the candidate's `edge_right` / `edge_bottom`
+recoveries come back with a 1.0 / 1.4 px residual offset (final EPE 0.98 / 1.36). That is within
+tolerance; see Reading. Every gate-scene row is identical to E3+E2, because none of them
+loses the track.)
+
+**Reading.**
+- **Findings 2 and 4 are closed.** `fast_40px` goes 37 % → 100 % at every resolution, and `edge_*`
+  goes ≈ 50 % → 93–99 %, re-acquiring 1–4 frames after the target is back. Finding 3 gets its
+  recovery: `occlusion_full` 60 % → 100 %, re-found on the first frame the target is visible
+  (recover 0). E2 + E3 had already made these losses explicit. E4 turns them back into tracking.
+- **Finding 7 stays fixed.** `repeated_texture` is refused twice: LK's texture test, and the
+  self-test (the grating fails δ). The `distractor_twin` self-test disarms re-detection, so it
+  behaves exactly like E3+E2: lost, not locked.
+- **The predicted gap is real without the prior.** Full-frame re-detection accepts a lookalike
+  that appears while the target is lost: `distractor_late_twin`, 20 wrong-lock + 19 false-track
+  frames per resolution, i.e. all 60 / 57 frames in the full-frame rows. Margin can't help,
+  because the twin is the only peak. δ = 0.2 happens to refuse it at 640/1280, but it also refuses
+  most true recoveries (78.1 %).
+- **The spatial prior closes the fixture's gap at no measured cost.** Every radius from 0.15 to
+  0.3 of the width gives 0 wrong-lock / 0 false-track, and recovers the true target in
+  `distractor_late_twin`. The twin sits ≈ 0.32 w from the loss point, so **the corpus only brackets r
+  to [0.15, 0.32)**. r = 0.25 is the middle: 4.6× the 35/640 guard, which comfortably covers
+  `fast_40px` (≈ 80–120 units from the held point). A lookalike within r of the loss point is
+  still accepted. That is the remaining structural limit, unmeasured on real faces.
+- **τ.** 0.8–0.9 makes no corpus difference. A probe with the target removed from a
+  `head_sway` frame found background-only best scores of 0.885 / 0.889 (640 / 1280,
+  full frame) and 0.84 / 0.88 within r.25. They were refused only by δ. **τ = 0.9** is chosen so
+  that this background is rejected on score alone. The τ.9 r.25 rows equal τ.85 r.25 on 69 of 70
+  runs. The exception is `edge_top` 320: τ.9 re-acquires one frame later (ok 94 → 93 %, recover 3 → 4)
+  but lands precisely (final EPE 1.44 → 0.04 px). τ.85 accepted a partly-visible, lower-score
+  match there.
+- **K and level.** K 8–32 and level 1 or 2 are identical. Level 3 (3×3 template at 640) misses
+  true targets. Level 2 is chosen for cost.
+- **Re-acquisition precision.** At 640/1280 the re-acquired point is within ≤ 0.6 px. At 320,
+  `edge_right` / `edge_bottom` keep a 1.0 / 1.4 px offset after recovery. HYPOTHESIS, partly
+  supported by the τ.85 → τ.9 change on `edge_top`: at 320 the 21×21 window spans
+  42 ref units around a point 14 units from the disc centre, so the template includes
+  background that moved relative to the target. Under absolute mapping (ADR-0006) 1.5 px at 320
+  is a visible cursor offset. A follow-up candidate: refine the match with one LK solve against
+  the selection pyramid. Not done here.
+
+**Decision.** KEEP. Candidate: τ = 0.9, δ = 0.1, K = 16, search level 2, r = 0.25 w
+(`RedetectParams::default()` plus `max_radius_frac: Some(0.25)`, `support::e4_candidate()`). It
+passes the task gate: worst gate-scene Δp95 +0.070 (from E3, unchanged), no gate-scene ok
+drop, no new wrong-lock on any scene. The default stays off in this commit (fingerprint
+discipline). The default-tracker ADR decides it.
+
+**Timing** (M1, divan, medians, 100 samples). `lk_searching_step` is one step while lost:
+pyramid build + search. That is the per-frame cost for as long as the target is away.
+`lk_step` is shown for reference:
+
+| Bench | 320×240 | 640×480 | 1280×720 → 640×360 |
+|---|---|---|---|
+| lk_step | 101 µs | 281 µs | 220 µs |
+| searching, r = 0.25 (candidate) | 315 µs | 588 µs (max 613) | 528 µs |
+| searching, full frame | 361 µs | 916 µs (max 1.02 ms) | 714 µs |
+
+That is within the §8 budget (p95 < 2 ms at 640), even full-frame. There are zero steady-state
+allocations (divan reports no allocation rows; scratch is sized in `select`). The
+self-test adds one search to `select`. A tracked step costs the same as E3+E2: the search only
+runs once the 2018 policy says `Lost`.
+
+## E5 — adaptive search / guard: NOT ATTEMPTED
+
+The task scopes E5 to "only if E4 doesn't already fix `fast_40px`". E4 takes it to 100 % at
+every resolution with no guard change, so the 35/640 guard stays as the 2018 preset (ADR-0009).
+The guard still produces one `Held(MotionOutlier)` frame per over-guard jump before
+re-detection catches up. That is visible in `fast_40px` as the step pattern, not as an ok loss.
+
+## E6 — multi-point consensus: NOT ATTEMPTED
+
+Optional, "only if E1–E4 leave a measured gap". On the corpus the candidate leaves the
+expected refusals (`textureless`, `repeated_texture`, `distractor_twin`), and nothing else below
+93 % ok. The remaining risks (head roll vs a fixed template, lookalikes within the prior,
+320 re-acquisition offset) need real recordings (Phase 6) before a multi-point design is justified.

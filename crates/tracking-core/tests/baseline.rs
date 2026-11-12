@@ -9,6 +9,7 @@ mod support;
 use support::{Metrics, RESOLUTIONS, corpus, metrics, run};
 use tracking_core::lk::{LkParams, LkTracker};
 use tracking_core::ncc::NccTracker;
+use tracking_core::redetect::RedetectParams;
 
 fn fmt(v: f64) -> String {
     if v.is_nan() {
@@ -110,6 +111,24 @@ fn variants() -> Vec<(&'static str, LkParams)> {
         fb_max_error: fb,
         ..d
     };
+    // E4 runs on top of the proposed E2 (zncc ≥ 0.7) + E3 candidate.
+    let rdr = |min_zncc: f32,
+               min_margin: f32,
+               candidates: usize,
+               search_level: usize,
+               max_radius_frac: Option<f32>| LkParams {
+        gain_bias: true,
+        min_ref_zncc: Some(0.7),
+        redetect: Some(RedetectParams {
+            min_zncc,
+            min_margin,
+            candidates,
+            search_level,
+            max_radius_frac,
+        }),
+        ..d
+    };
+    let rd = |z, m, k, l| rdr(z, m, k, l, None);
     vec![
         ("LK18", d),
         ("E1 fb≤0.25", fb(0.25)),
@@ -129,6 +148,23 @@ fn variants() -> Vec<(&'static str, LkParams)> {
         ("E3+E2 zncc≥0.7", gb(Some(0.7), None)),
         ("E3+E2 zncc≥0.8", gb(Some(0.8), None)),
         ("E3+E1+E2 fb≤0.5 zncc≥0.7", gb(Some(0.7), Some(0.5))),
+        ("E4 τ.85 δ.1 K16 L2", rd(0.85, 0.1, 16, 2)),
+        ("E4 τ.8 δ.1 K16 L2", rd(0.8, 0.1, 16, 2)),
+        ("E4 τ.9 δ.1 K16 L2", rd(0.9, 0.1, 16, 2)),
+        ("E4 τ.85 δ.05 K16 L2", rd(0.85, 0.05, 16, 2)),
+        ("E4 τ.85 δ.2 K16 L2", rd(0.85, 0.2, 16, 2)),
+        ("E4 τ.85 δ.1 K8 L2", rd(0.85, 0.1, 8, 2)),
+        ("E4 τ.85 δ.1 K32 L2", rd(0.85, 0.1, 32, 2)),
+        ("E4 τ.85 δ.1 K16 L1", rd(0.85, 0.1, 16, 1)),
+        ("E4 τ.85 δ.1 K16 L3", rd(0.85, 0.1, 16, 3)),
+        ("E4 τ.85 δ.1 K16 L2 r.15", rdr(0.85, 0.1, 16, 2, Some(0.15))),
+        ("E4 τ.85 δ.1 K16 L2 r.2", rdr(0.85, 0.1, 16, 2, Some(0.2))),
+        ("E4 τ.85 δ.1 K16 L2 r.25", rdr(0.85, 0.1, 16, 2, Some(0.25))),
+        (
+            "E4 τ.9 δ.1 K16 L2 r.25 (candidate)",
+            support::e4_candidate(),
+        ),
+        ("E4 τ.85 δ.1 K16 L2 r.3", rdr(0.85, 0.1, 16, 2, Some(0.3))),
     ]
 }
 

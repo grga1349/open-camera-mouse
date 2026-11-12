@@ -10,6 +10,7 @@ pub mod image;
 pub mod lk;
 pub mod ncc;
 pub mod pyramid;
+pub mod redetect;
 
 pub use frame::{FrameError, GrayFrame, downsample_to_width, ingest};
 
@@ -47,6 +48,9 @@ pub enum LossReason {
     AppearanceChanged,
     /// The tracker has no reference yet: nothing was selected.
     NoSelection,
+    /// The track was lost earlier; the tracker kept its selection reference and is searching
+    /// for it, with no confident, unambiguous match this frame (re-detection, Phase 4 E4).
+    Searching,
 }
 
 /// Per-step tracker status (R-T2).

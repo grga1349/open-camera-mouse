@@ -160,3 +160,28 @@ fn lk_gain_bias_step(bencher: Bencher, res: &str) {
         t.step(black_box(&frames[i % 2 + 1])).unwrap()
     });
 }
+
+/// Phase 4 E4: one step while lost (`Lost(Searching)`): pyramid build + re-detection search,
+/// the per-frame cost for as long as the target stays away. `full` searches the whole frame
+/// (worst case), `r.25` is the candidate's 0.25-width spatial prior.
+#[divan::bench(args = RES, consts = [false, true])]
+fn lk_searching_step<const PRIOR: bool>(bencher: Bencher, res: &str) {
+    let (w, h) = parse(res);
+    let (frames, pt) = input(res);
+    // Same background, target removed: nothing to find, so every step searches.
+    let mut s = support::scene("head_sway");
+    s.frames = 1;
+    s.radius = 0.0;
+    let empty = s.render(w, h).frames.remove(0);
+    let mut params = support::e4_candidate();
+    if !PRIOR && let Some(rd) = params.redetect.as_mut() {
+        rd.max_radius_frac = None;
+    }
+    let mut t = LkTracker::new(params);
+    t.select(&frames[0], pt).unwrap();
+    assert!(t.redetect_armed());
+    // A guard hold or E2 rejection comes first; then every step searches.
+    let searching = tracking_core::TrackStatus::Lost(tracking_core::LossReason::Searching);
+    assert!((0..4).any(|_| t.step(&empty).unwrap().status == searching));
+    bencher.bench_local(|| t.step(black_box(&empty)).unwrap());
+}

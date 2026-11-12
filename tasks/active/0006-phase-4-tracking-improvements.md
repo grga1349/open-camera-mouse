@@ -112,5 +112,20 @@ new `TRACKING_IMPROVEMENTS.md` next to it), new ADR(s) for E4 and any default ch
   redundant on top of E3+E2. Proposed default: E2 + E3, E1 off (ADR after E4). `lk_fingerprint`
   identical. fmt/clippy/`cargo test --workspace --locked` (52 passed)/check-core-deps ok.
   Bench `lk_gain_bias_step` +6–12 µs.
-- Next: E4 (loss recovery / re-detection, needs an ADR, reason (a) defect). Reuse E2's reference
-  window. Run it on top of E2+E3.
+- 2026-11-12 **E4 KEPT, default off until the default-tracker ADR.** ADR-0010 (Accepted;
+  deviation from the 2018 loss policy, reason (a)). `LkParams::redetect: Option<RedetectParams>`,
+  new `crate::redetect` (coarse-to-fine ZNCC vs per-level selection templates, τ/δ acceptance,
+  selection-time self-test, spatial prior `max_radius_frac`), `LossReason::Searching`,
+  `LkTracker::redetect_armed()`. New fixtures `distractor_twin`, `distractor_late_twin`,
+  `distractor_similar` (corpus now 70 runs; the existing 61 render unchanged).
+  Candidate τ 0.9 / δ 0.1 / K 16 / L2 / r 0.25 w on E2+E3: mean ok 73.4 → 89.4 %, Σ wrong-lock 0,
+  false-track 0. `fast_40px` 37 → 100 %, `edge_*` ≈ 50 → 93–99 %, `occlusion_full` 60 → 100 %. No
+  gate-scene change vs E3+E2. Without the prior, `distractor_late_twin` locks wrong (60 / 57 frames),
+  which is why the prior is in. Searching step 0.59 ms at 640 (0.92 full-frame), zero allocs.
+  `lk_fingerprint` identical on all 61 shared runs vs `8789d83`. fmt/clippy/
+  `cargo test --workspace --locked` (62 passed)/check-core-deps ok. New fixture test
+  `e4_recovers_losses_without_silent_errors`, bench `lk_searching_step`.
+- 2026-11-12 **E5 not attempted** (E4 already fixes `fast_40px`). **E6 not attempted** (no measured gap
+  left on the corpus). Reasons are in TRACKING_IMPROVEMENTS §E5/§E6.
+- Next: default-tracker ADR (proposed: E2 zncc ≥ 0.7 + E3 + E4 candidate, E1 off), the final
+  latency measurement, then Phase 4 close-out against the acceptance criteria.

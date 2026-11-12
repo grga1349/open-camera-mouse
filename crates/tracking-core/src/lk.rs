@@ -14,6 +14,7 @@
 
 use crate::image::GradPatch;
 use crate::pyramid::Pyramid;
+use crate::redetect::{RedetectParams, SearchResult, Searcher};
 use crate::{
     Diagnostics, GrayFrame, HoldReason, LossReason, Point2, TrackError, TrackOutput, TrackStatus,
     Tracker, check_selection,
@@ -54,6 +55,12 @@ pub struct LkParams {
     /// measured worse on `rotate_15` (TRACKING_IMPROVEMENTS §E3). A flat `J` gets bias-only
     /// (`α = 1`). `false` = B-LK18 (brightness constancy).
     pub gain_bias: bool,
+    /// Loss recovery (Phase 4 E4, ADR-0010): a step the 2018 policy turns into `Lost` keeps
+    /// the selection reference, and the frame is searched for it ([`crate::redetect`]).
+    /// Tracking resumes on a confident, unambiguous match; until then steps report
+    /// `Lost(Searching)`. Disabled for a selection whose own frame already contains a
+    /// lookalike (selection-time self-test). `None` = B-LK18 (invalidate → re-select).
+    pub redetect: Option<RedetectParams>,
 }
 
 impl Default for LkParams {
@@ -69,6 +76,7 @@ impl Default for LkParams {
             fb_max_error: None,
             min_ref_zncc: None,
             gain_bias: false,
+            redetect: None,
         }
     }
 }
@@ -330,6 +338,9 @@ pub fn near_edge_moving_out(a: Point2, b: Point2, width: f32, height: f32, margi
 /// forward-backward check or, with `min_ref_zncc` set, the appearance gate) while leaving through an edge (point kept, 2018 default);
 /// `Lost(_)` otherwise — the reference is dropped and the next steps report
 /// `Lost(NoSelection)` until `select` is called again (2018 invalidates the track point).
+/// With `redetect` set and armed (ADR-0010), a `Lost` keeps the reference instead: the frame
+/// is searched, later steps report `Lost(Searching)`, and a confident, unambiguous match
+/// resumes `Tracking`.
 #[derive(Debug, Clone, Default)]
 pub struct LkTracker {
     params: LkParams,
@@ -340,11 +351,18 @@ pub struct LkTracker {
     size: (u32, u32),
     /// Zero-mean, unit-norm level-0 window from the selection frame (only with `min_ref_zncc`).
     reference: Vec<f32>,
+    /// Selection templates for re-detection (only with `redetect`, and only when the
+    /// selection passed its self-test).
+    searcher: Searcher,
+    /// Lost with a kept reference: later steps search instead of tracking.
+    searching: bool,
+    /// Last reported position while searching.
+    last: Point2,
 }
 
 /// Fills `out` with the `(2·hw + 1)²` bilinear window around `c`, zero-mean and unit-norm.
 /// Returns `false` (and leaves `out` unspecified) when the window is flat or non-finite.
-fn normalized_window(
+pub(crate) fn normalized_window(
     img: &crate::image::ImageF32,
     c: Point2,
     hw: usize,
@@ -464,12 +482,60 @@ impl LkTracker {
             TrackStatus::Held(HoldReason::NearEdgeMovingOut)
         } else {
             self.point = None;
+            if self.searcher.is_ready() {
+                // E4: keep the reference and search this frame right away.
+                self.searching = true;
+                self.last = a;
+                return self.redetect_step(reason, diagnostics);
+            }
             TrackStatus::Lost(reason)
         };
         TrackOutput {
             position: a,
             status,
             diagnostics,
+        }
+    }
+}
+
+impl LkTracker {
+    /// Whether loss recovery is armed for the current selection: `redetect` is set, the
+    /// selection window is textured, and the selection frame holds no lookalike.
+    pub fn redetect_armed(&self) -> bool {
+        self.searcher.is_ready()
+    }
+
+    /// E4 search on `self.prev` (the current frame, after the swap). On a match, tracking
+    /// resumes there; otherwise `Lost(reason)` at the last position.
+    fn redetect_step(&mut self, reason: LossReason, mut diagnostics: Diagnostics) -> TrackOutput {
+        let Some(rp) = self.params.redetect else {
+            unreachable!("searcher is only armed with redetect params")
+        };
+        let w = self.size.0 as f32;
+        let region = rp.max_radius_frac.map(|f| (self.last, f * w));
+        match self.searcher.search(&self.prev, &rp, region) {
+            SearchResult::Found { position, score } => {
+                self.searching = false;
+                self.point = Some(position);
+                TrackOutput {
+                    position,
+                    status: TrackStatus::Tracking,
+                    diagnostics: Diagnostics {
+                        score: Some(score),
+                        ..Diagnostics::default()
+                    },
+                }
+            }
+            SearchResult::NotFound { best, .. } => {
+                if diagnostics.score.is_none() {
+                    diagnostics.score = Some(best);
+                }
+                TrackOutput {
+                    position: self.last,
+                    status: TrackStatus::Lost(reason),
+                    diagnostics,
+                }
+            }
         }
     }
 }
@@ -481,6 +547,21 @@ impl Tracker for LkTracker {
         self.prev.build(frame, self.params.max_level);
         self.point = Some(point);
         self.size = (frame.width(), frame.height());
+        self.searching = false;
+        self.searcher.clear();
+        if let Some(rp) = self.params.redetect {
+            self.searcher
+                .prepare(&self.prev, point, self.params.half_window, &rp);
+            // Self-test: the selection frame must re-detect its own point, unambiguously.
+            let own = matches!(
+                self.searcher.search(&self.prev, &rp, None),
+                SearchResult::Found { position, .. }
+                    if (position.x - point.x).hypot(position.y - point.y) <= 1.0
+            );
+            if !own {
+                self.searcher.clear();
+            }
+        }
         if self.params.min_ref_zncc.is_some()
             && !normalized_window(
                 &self.prev.level(0).img,
@@ -495,13 +576,13 @@ impl Tracker for LkTracker {
     }
 
     fn step(&mut self, frame: &GrayFrame) -> Result<TrackOutput, TrackError> {
-        let Some(a) = self.point else {
+        if self.point.is_none() && !self.searching {
             return Ok(TrackOutput {
                 position: Point2::default(),
                 status: TrackStatus::Lost(LossReason::NoSelection),
                 diagnostics: Diagnostics::default(),
             });
-        };
+        }
         let size = (frame.width(), frame.height());
         if size != self.size {
             return Err(TrackError::FrameSizeChanged {
@@ -509,6 +590,11 @@ impl Tracker for LkTracker {
                 to: size,
             });
         }
+        let Some(a) = self.point else {
+            // E4: lost with a kept reference.
+            self.prev.build(frame, self.params.max_level);
+            return Ok(self.redetect_step(LossReason::Searching, Diagnostics::default()));
+        };
         self.curr.build(frame, self.params.max_level);
         let (w, h) = (size.0 as f32, size.1 as f32);
         let result = track_point(&self.prev, &self.curr, a, &self.params, &mut self.scratch);
@@ -550,6 +636,7 @@ impl Tracker for LkTracker {
 
     fn reset(&mut self) {
         self.point = None;
+        self.searching = false;
     }
 }
 
@@ -827,6 +914,131 @@ mod tests {
             5,
             &mut r
         ));
+    }
+
+    fn noise_frame(w: u32, h: u32, f: impl Fn(f32, f32) -> f32) -> GrayFrame {
+        let mut data = Vec::with_capacity((w * h) as usize);
+        for y in 0..h {
+            for x in 0..w {
+                data.push(f(x as f32, y as f32).round().clamp(0.0, 255.0) as u8);
+            }
+        }
+        GrayFrame::from_vec(w, h, data).unwrap()
+    }
+
+    /// E2 + E3 + E4 with the default search parameters and a 0.25-width spatial prior.
+    fn e4() -> LkParams {
+        LkParams {
+            gain_bias: true,
+            min_ref_zncc: Some(0.7),
+            redetect: Some(RedetectParams {
+                max_radius_frac: Some(0.25),
+                ..RedetectParams::default()
+            }),
+            ..LkParams::default()
+        }
+    }
+
+    /// Steps a flat frame until the tracker reports `Lost` (a flat current frame is a guard
+    /// hold or an E2 rejection first, then LK's texture test on the flat previous frame).
+    fn lose(t: &mut LkTracker) -> LossReason {
+        let flat = GrayFrame::filled(320, 240, 100).unwrap();
+        for _ in 0..3 {
+            if let TrackStatus::Lost(r) = t.step(&flat).unwrap().status {
+                return r;
+            }
+        }
+        panic!("not lost after 3 flat frames");
+    }
+
+    #[test]
+    fn redetect_off_by_default_and_loss_still_needs_reselection() {
+        assert_eq!(LkParams::default().redetect, None);
+        let n = crate::redetect::tests::noise;
+        let mut t = LkTracker::new(LkParams {
+            min_ref_zncc: Some(0.7),
+            ..LkParams::default()
+        });
+        t.select(&noise_frame(320, 240, n), Point2::new(160.0, 120.0))
+            .unwrap();
+        assert!(!t.redetect_armed());
+        lose(&mut t);
+        let back = noise_frame(320, 240, n);
+        assert_eq!(
+            t.step(&back).unwrap().status,
+            TrackStatus::Lost(LossReason::NoSelection)
+        );
+    }
+
+    #[test]
+    fn redetect_recovers_a_target_that_returns_elsewhere() {
+        let n = crate::redetect::tests::noise;
+        let sel = Point2::new(160.0, 120.0);
+        let mut t = LkTracker::new(e4());
+        t.select(&noise_frame(320, 240, n), sel).unwrap();
+        assert!(t.redetect_armed());
+        assert_ne!(lose(&mut t), LossReason::Searching);
+        let flat = GrayFrame::filled(320, 240, 100).unwrap();
+        let out = t.step(&flat).unwrap();
+        assert_eq!(out.status, TrackStatus::Lost(LossReason::Searching));
+        assert_eq!(out.position, sel, "searching reports the last position");
+        // Returns 36 px away: beyond the 17.5 px guard at 320, inside the 80 px prior.
+        let (dx, dy) = (30.0f32, -20.0f32);
+        let moved = noise_frame(320, 240, |x, y| n(x - dx, y - dy));
+        let out = t.step(&moved).unwrap();
+        assert_eq!(out.status, TrackStatus::Tracking);
+        let err = (out.position.x - sel.x - dx).hypot(out.position.y - sel.y - dy);
+        assert!(err < 0.5, "re-detected {err} px off");
+        let out = t.step(&moved).unwrap();
+        assert_eq!(
+            out.status,
+            TrackStatus::Tracking,
+            "LK resumes from the match"
+        );
+    }
+
+    #[test]
+    fn redetect_ignores_a_match_outside_the_spatial_prior() {
+        let n = crate::redetect::tests::noise;
+        let mut t = LkTracker::new(e4());
+        t.select(&noise_frame(320, 240, n), Point2::new(100.0, 120.0))
+            .unwrap();
+        lose(&mut t);
+        // 120 px away > 0.25 · 320 = 80 px.
+        let far = noise_frame(320, 240, |x, y| n(x - 120.0, y));
+        assert_eq!(
+            t.step(&far).unwrap().status,
+            TrackStatus::Lost(LossReason::Searching)
+        );
+    }
+
+    #[test]
+    fn redetect_is_disarmed_when_the_selection_frame_has_a_lookalike() {
+        let n = crate::redetect::tests::noise;
+        // Right half repeats the left half: a perfect twin 160 px away.
+        let twin = noise_frame(320, 240, |x, y| n(x % 160.0, y));
+        let mut t = LkTracker::new(e4());
+        t.select(&twin, Point2::new(80.0, 120.0)).unwrap();
+        assert!(!t.redetect_armed());
+        lose(&mut t);
+        assert_eq!(
+            t.step(&twin).unwrap().status,
+            TrackStatus::Lost(LossReason::NoSelection)
+        );
+    }
+
+    #[test]
+    fn reset_stops_searching() {
+        let n = crate::redetect::tests::noise;
+        let mut t = LkTracker::new(e4());
+        t.select(&noise_frame(320, 240, n), Point2::new(160.0, 120.0))
+            .unwrap();
+        lose(&mut t);
+        t.reset();
+        assert_eq!(
+            t.step(&noise_frame(320, 240, n)).unwrap().status,
+            TrackStatus::Lost(LossReason::NoSelection)
+        );
     }
 
     #[test]
