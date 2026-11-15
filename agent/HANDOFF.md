@@ -3,11 +3,11 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-15 (Phase 6b: slice 2b done in code, uncommitted; device check pending)
+## As of 2026-11-15 (Phase 6b: slice 2b committed `54386f4`, pushed; next 2d)
 
 **Branch:** `rewrite/rust`, task `tasks/active/0009-phase-6b-test-drive.md` (Progress entry
-"slice 2b DONE in code"). CI for 2a (`f458e92`) is green. Gates green locally. **Not committed
-yet** (ask).
+"slice 2b DONE in code"). CI for 2a (`f458e92`) is green. Slice 2b committed and pushed as
+`54386f4`; check its CI first.
 
 **What 2b became:** recordings are **diagnosis-only** (user rule, see memory). The repo has
 no recordings, no benchmark numbers and no code that reads recordings. Findings became synthetic
