@@ -6,7 +6,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 ## As of 2026-11-15 (Phase 6 ACTIVE, D0–D3 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D3 done** (gates green locally, uncommitted until the user says so). Work rhythm
+slices D0–D7. **D3 done**: committed `7d39825`, pushed, CI run 43721527313 green (macOS, Windows,
+Linux + cargo-deny). Work rhythm
 (user): **one slice per session**, then hand off.
 
 **Done this session (D3):**
@@ -19,8 +20,7 @@ slices D0–D7. **D3 done** (gates green locally, uncommitted until the user say
   `NokhwaCamera` (capture thread, panics → `Backend`, permission → `PermissionDenied`, 3 s frame
   timeout → `Disconnected`, 10 s open timeout), `list_devices()`. On-device test:
   `cargo test -p platform --test camera_device -- --ignored --nocapture`.
-- CI Linux apt adds `libclang-dev` (bindgen in `v4l2-sys-mit`); first CI run with nokhwa will
-  confirm Linux/Windows builds.
+- CI Linux apt adds `libclang-dev` (bindgen in `v4l2-sys-mit`); nokhwa builds on all three OS in CI.
 
 **Next session:** D4 — pointer adapter, macOS first: warp (`CGWarpMouseCursorPosition`) vs posted
 move events measured on the dev Mac, incl. whether each needs Accessibility (P6) and warp's
@@ -38,6 +38,8 @@ two fixed-size windows; no auto-recenter; hotkeys fixed F11/F12; recenter = whit
 countdown badge; resume from pause goes through recenter; Recenter ends a pause. Preview is colour.
 **Still open:** font (default egui). D6 only. Save-on-change wiring: D6 (Options window).
 
-**Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only.
+**Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only. No `gh` CLI
+here: check CI with `curl -s "https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust&per_page=1"`
+(public API), then `/actions/runs/<id>/jobs`.
 
 **Blockers:** none.

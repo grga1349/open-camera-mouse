@@ -233,3 +233,4 @@ Plus the CI run ID for the closing commit.
   headers), CI decides. All 51 new lockfile crates permissive; `cargo deny` CI only.
   Not done here: physical unplug (D7 manual QA), camera LED off after close (D7), external
   webcams / Windows / Linux on device (Phase 7), permission denial path in a `.app` (P2, D7).
+  Committed `7d39825`; CI run 43721527313 green (macOS, Windows, Linux, cargo-deny).

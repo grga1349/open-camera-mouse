@@ -4,15 +4,15 @@ Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D3 done)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Phase 5 committed and pushed (`3578620` design system + a follow-up commit
-for the guided recenter flow, 5 s countdown). Docs-only; code unchanged since Phase 4 (`66768c9`, CI green).
+Branch: `rewrite/rust`, pushed. Latest code commit `7d39825` (Phase 6 D3), CI run 43721527313
+green on macOS, Windows, Linux + cargo-deny. Working tree: only this handoff update.
 
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
-persistence) and D3 (camera adapter) done, gates green locally (D3 uncommitted until the user
-says so); D4 next.
+persistence) and D3 (camera adapter) done. D3 = `7d39825`, CI run 43721527313 green on all
+three OS + cargo-deny. D4 next.
 
 ## What exists now
 
@@ -54,7 +54,6 @@ Task 0008 slice D4: pointer adapter on the dev Mac (warp vs posted events, Acces
 
 - Synthetic-only tracker evidence; re-measure all thresholds on Phase 6 recordings.
 - Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).
-- First CI run with `nokhwa`: Linux needs bindgen/libclang (added to apt) — confirm green.
 - `nokhwa` macOS bindings pull `block` 0.1.6 (future-incompat warning); MJPEG-only cameras unsupported (ADR-0012).
 - Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
 - Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
