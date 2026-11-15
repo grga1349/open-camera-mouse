@@ -8,6 +8,7 @@
 mod app;
 mod icons;
 mod options;
+mod perf;
 mod preview;
 mod recorder;
 mod runtime;
@@ -71,7 +72,9 @@ fn start_runtime(shell: &Shell, ctx: &egui::Context) -> Runtime<ThreadedCamera> 
     let wake = ctx.clone();
     let camera = ThreadedCamera::spawn(factory, move || wake.request_repaint());
     let pointer = platform::SystemPointer::new().map(|p| Box::new(p) as Box<dyn PointerSink>);
-    Runtime::new(camera, pointer).with_recorder(recorder::Recorder::from_env())
+    Runtime::new(camera, pointer)
+        .with_recorder(recorder::Recorder::from_env())
+        .with_perf(perf::Perf::from_env())
 }
 
 /// Debug builds only, for side-by-side design checks against the lab without clicking
@@ -173,6 +176,19 @@ impl eframe::App for DesktopApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let started = std::time::Instant::now();
+        self.draw(ui);
+        if let Some(p) = self.runtime.perf_mut() {
+            if let Some(d) = self.shell.last_upload.take() {
+                p.upload(d);
+            }
+            p.ui(started.elapsed());
+        }
+    }
+}
+
+impl DesktopApp {
+    fn draw(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.shell.apply_style(&ctx);
         let margin = egui::Frame::central_panel(&ctx.global_style()).inner_margin(16);

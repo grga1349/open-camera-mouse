@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6b test drive ACTIVE, task 0009; part 1 committed)
+Last updated: 2026-11-15 (Phase 6b test drive ACTIVE, task 0009; part 1 committed, part 2 planned)
 
 ## Branch / commit
 
@@ -73,12 +73,11 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Phase 6b part 2, per `agent/HANDOFF.md`: #2 (losses) and #5 (jitter) are the user's top
-priority. Start from the research report (`docs/research/TEST_DRIVE_RESEARCH_PROMPT.md`), the
-per-display gain lead for #5, and a scripted `OCM_RECORD` benchmark for #2. Part 1 (#1, #3, #4,
-steady zone) is committed but the full gates weren't re-run locally; let CI or scoped runs check.
-Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the threshold re-measurement
-in Phase 8.
+Phase 6b part 2, slice **2a** (issue #6 camera/preview lag, ADR-0016 engine thread), per the
+"Part 2 plan" in `tasks/active/0009-phase-6b-test-drive.md` and `agent/HANDOFF.md`. Then 2b
+(recordings + `replay_bench`), 2c (#5 jitter), 2d (#2 losses). `OCM_PERF=1` timing report
+exists (`apps/desktop/src/perf.rs`). Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7;
+row 21 and the threshold re-measurement in Phase 8.
 
 ## Open risks
 

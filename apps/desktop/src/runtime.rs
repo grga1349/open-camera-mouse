@@ -21,7 +21,7 @@
 //! 4. A `Tick`, so deadlines fire without frames.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::thread::{self, JoinHandle};
 
@@ -32,6 +32,7 @@ use app_core::ports::{
 use app_core::{Effect, Input, PointerAccess};
 
 use crate::app::Shell;
+use crate::perf::Perf;
 use crate::recorder::Recorder;
 
 /// How often pointer permission is re-checked (a grant takes effect without a restart).
@@ -60,6 +61,11 @@ pub trait CameraLink {
     /// Messages of the current session since the last call, in order, frames coalesced to the
     /// newest between other messages.
     fn poll(&mut self) -> Vec<CameraMsg>;
+    /// Running totals for diagnostics: frames dropped because the UI was behind, and frames
+    /// coalesced away in `poll`.
+    fn dropped(&self) -> (u64, u64) {
+        (0, 0)
+    }
 }
 
 /// Makes the camera for a device on the worker thread, so it never has to be `Send`.
@@ -81,6 +87,8 @@ pub struct ThreadedCamera {
     msgs: Receiver<(u64, CameraMsg)>,
     session: u64,
     in_flight: Arc<AtomicUsize>,
+    dropped: Arc<AtomicU64>,
+    coalesced: u64,
     worker: Option<JoinHandle<()>>,
 }
 
@@ -99,15 +107,19 @@ impl ThreadedCamera {
         let (msg_tx, msgs) = mpsc::channel();
         let in_flight = Arc::new(AtomicUsize::new(0));
         let counter = in_flight.clone();
+        let dropped = Arc::new(AtomicU64::new(0));
+        let drops = dropped.clone();
         let worker = thread::Builder::new()
             .name("camera-worker".into())
-            .spawn(move || worker(factory, &cmd_rx, &msg_tx, &counter, &wake))
+            .spawn(move || worker(factory, &cmd_rx, &msg_tx, &counter, &drops, &wake))
             .ok();
         Self {
             cmds,
             msgs,
             session: 0,
             in_flight,
+            dropped,
+            coalesced: 0,
             worker,
         }
     }
@@ -145,7 +157,11 @@ impl CameraLink for ThreadedCamera {
                         continue;
                     }
                     match msg {
-                        CameraMsg::Frame(_) => frame = Some(msg),
+                        CameraMsg::Frame(_) => {
+                            if frame.replace(msg).is_some() {
+                                self.coalesced += 1;
+                            }
+                        }
                         other => {
                             out.extend(frame.take());
                             out.push(other);
@@ -165,6 +181,10 @@ impl CameraLink for ThreadedCamera {
         out.extend(frame);
         out
     }
+
+    fn dropped(&self) -> (u64, u64) {
+        (self.dropped.load(Ordering::Relaxed), self.coalesced)
+    }
 }
 
 impl Drop for ThreadedCamera {
@@ -183,6 +203,7 @@ fn worker(
     cmds: &Receiver<Cmd>,
     msgs: &Sender<(u64, CameraMsg)>,
     in_flight: &AtomicUsize,
+    dropped: &AtomicU64,
     wake: &dyn Fn(),
 ) {
     let send = |session: u64, msg: CameraMsg| {
@@ -242,6 +263,7 @@ fn worker(
         match cam.next_frame() {
             Ok(f) => {
                 if in_flight.load(Ordering::Relaxed) >= MAX_FRAMES_IN_FLIGHT {
+                    dropped.fetch_add(1, Ordering::Relaxed);
                     continue;
                 }
                 in_flight.fetch_add(1, Ordering::Relaxed);
@@ -275,6 +297,7 @@ pub struct Runtime<C: CameraLink> {
     desktop_due_us: Option<u64>,
     desktop: Option<Desktop>,
     recorder: Option<Recorder>,
+    perf: Option<Perf>,
 }
 
 impl<C: CameraLink> std::fmt::Debug for Runtime<C> {
@@ -300,6 +323,7 @@ impl<C: CameraLink> Runtime<C> {
             desktop_due_us: None,
             desktop: None,
             recorder: None,
+            perf: None,
         }
     }
 
@@ -309,8 +333,22 @@ impl<C: CameraLink> Runtime<C> {
         self
     }
 
+    /// Frame-path timing (`OCM_PERF=1`, `perf`).
+    pub fn with_perf(mut self, perf: Option<Perf>) -> Self {
+        self.perf = perf;
+        self
+    }
+
+    pub fn perf_mut(&mut self) -> Option<&mut Perf> {
+        self.perf.as_mut()
+    }
+
     /// One pass of the loop (module doc, "Order per pump").
     pub fn pump(&mut self, shell: &mut Shell) {
+        if let Some(p) = &mut self.perf {
+            let (dropped, coalesced) = self.camera.dropped();
+            p.logic(dropped, coalesced);
+        }
         self.perform(shell);
         let now = shell.now_us();
         if self.access_due_us.is_none_or(|t| now >= t) {
@@ -330,7 +368,15 @@ impl<C: CameraLink> Runtime<C> {
                     if let Some(r) = &mut self.recorder {
                         r.frame(&f);
                     }
+                    let age_us = shell.now_us().saturating_sub(f.timestamp_us);
+                    let t0 = std::time::Instant::now();
                     shell.input(Input::Frame(f));
+                    let t1 = std::time::Instant::now();
+                    self.perform(shell);
+                    if let Some(p) = &mut self.perf {
+                        p.frame(age_us, t1 - t0, t1.elapsed());
+                    }
+                    continue;
                 }
                 CameraMsg::Opened(fmt) => shell.input(Input::CameraOpened(fmt)),
                 CameraMsg::Failed(e) => shell.input(Input::CameraFailed(e)),

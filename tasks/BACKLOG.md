@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0009 | Phase 6b — test drive (ADR-0013) | ACTIVE — issue log `docs/qa/TEST_DRIVE.md`; waiting on the user's reports |
+| 0009 | Phase 6b — test drive (ADR-0013) | ACTIVE — issue log `docs/qa/TEST_DRIVE.md` (#1–#6); part 2 plan (slices 2a–2d) in the task file; next 2a |
 
 ## Done
 

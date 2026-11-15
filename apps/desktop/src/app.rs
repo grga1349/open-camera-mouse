@@ -107,6 +107,8 @@ pub struct Shell {
     events: Vec<Event>,
     texture: Option<TextureHandle>,
     uploaded_seq: u64,
+    /// How long the last preview upload took, for `OCM_PERF` (taken by `main`).
+    pub last_upload: Option<std::time::Duration>,
     fps: FpsMeter,
     applied_style: Option<(Theme, bool, u32)>,
 }
@@ -159,6 +161,7 @@ impl Shell {
             events: Vec::new(),
             texture: None,
             uploaded_seq: 0,
+            last_upload: None,
             fps: FpsMeter::default(),
             applied_style: None,
         }
@@ -273,6 +276,7 @@ impl Shell {
         if seq == self.uploaded_seq {
             return;
         }
+        let started = std::time::Instant::now();
         let image = if let Some(rgb) = self.controller.preview_rgb() {
             ColorImage::from_rgb(
                 [rgb.width() as usize, rgb.height() as usize],
@@ -295,6 +299,7 @@ impl Shell {
             }
         }
         self.uploaded_seq = seq;
+        self.last_upload = Some(started.elapsed());
     }
 
     fn act(&mut self, ui: &Ui, action: Action) {

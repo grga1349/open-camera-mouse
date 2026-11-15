@@ -55,3 +55,161 @@ scripts/check-core-deps.sh
   #3 re-detection fix (ADR-0011 amendment). Partial: #5 steady zone (ADR-0015) — user says it
   doesn't help. Open: #2 losses, #5 jitter (top priority, part 2; see `agent/HANDOFF.md`).
   Replay harness `crates/app-core/tests/replay.rs` added.
+- 2026-11-15 part 2 (planning session): #6 lag measured with the new `OCM_PERF=1` report
+  (`apps/desktop/src/perf.rs`, numbers in `docs/qa/TEST_DRIVE.md` #6). Research inputs saved in
+  `docs/research/HEAD_POINTER_STABILITY_INPUTS.md`. Plan below agreed for the next sessions.
+
+## Part 2 plan (slices 2a–2d, one per session)
+
+Why this order: every later measurement depends on a frame path that isn't saturated and on
+camera timestamps; the cursor work (2c) and the tracker work (2d) need the scripted recordings
+and the metrics harness (2b) to be judged by numbers, not by feel. Each slice ends with gates,
+the user's on-device check, a commit question, and a handoff (one slice per session).
+
+Inputs: `docs/research/HEAD_POINTER_STABILITY_INPUTS.md` (A = online research, B = brief with
+2018 RE facts) and `RE_EVIDENCE.md`. Section refs like "A §3" point into that file.
+
+Every item says how it's checked. **CI** = runs in `cargo test` on 3 OS, no camera.
+**Replay** = `#[ignore]` test on the user's recordings (local, faces never committed; the
+resulting *numbers* go into `docs/`). **Device** = the user runs the app with `OCM_PERF=1`.
+
+### 2a — Frame path and performance (#6), ADR-0016
+
+Problem (measured, dev build): per frame the main thread spends `track` 19 ms + preview
+`upload` 11.6 ms ≈ 31 of 33 ms, so the loop runs once per frame with no slack, frames wait
+42 ms (p50) before the controller sees them, cursor ≈ 60 ms behind the camera, and any UI
+hiccup (118 ms seen) stalls the cursor. Causes: (1) tracking + pointer run inside eframe
+`logic`, paced by repaints; (2) only `tracking-core` is optimised in dev (decode, mirror,
+`ColorImage::from_rgb`, egui at opt-level 0); (3) the controller's clock for a frame is the
+UI-loop time, not the capture timestamp, so UI jitter becomes smoothing `dt` jitter;
+(4) two hand-offs (`LatestSlot` → mpsc) and the in-flight cap keeps old frames over new ones.
+
+1. **Measure first, keep measuring.** `OCM_PERF` moves with the code: stages timed on the
+   engine thread, `age` becomes capture → pointer move. Add divan benches (compile-checked in
+   CI, run locally): `platform` YUYV decode 640×480, `app-core` `Controller::handle(Frame)`
+   with tracking on (synthetic textured frame), desktop preview image build. Find where the
+   19 ms `track` goes before optimising anything (suspects: RGB mirror at opt 0, copies).
+2. **Dev profile:** `[profile.dev.package."*"] opt-level = 2` (dependencies) and opt-level 3
+   for `platform`, `app-core`, `pointer-core` (debug info kept). Not a workaround: per-pixel
+   code at opt 0 is not representative of anything. Re-measure on device.
+3. **Engine thread (ADR-0016 before code).** One `Engine` owns the controller, the camera
+   (reading its `LatestSlot` directly: one hand-off, newest frame always wins) and the
+   pointer (made on that thread by a factory, like the camera; `SystemPointer` isn't `Send`
+   but needn't be). It wakes on a frame, a command, or the next controller deadline (no busy
+   loop, no repaint dependency). UI → engine: commands (clicks, hotkeys, settings, access
+   re-check). Engine → UI: a snapshot (`View`, settings, events) + the preview as an
+   `Arc<ColorImage>` already converted (and mirrored) off the UI thread, then
+   `request_repaint`. The UI only uploads that Arc and paints. Main-thread-only calls (macOS
+   Accessibility prompt, opening System Settings, hotkey registration) stay on the main
+   thread. Side effect: the pointer no longer drops to ~10 Hz while minimised (a "known, not
+   bug" item — tell the user it changes).
+4. **Camera time.** `Input::Frame` is handled at the frame's capture timestamp (clamped
+   monotonic); ticks use the clock. Smoothing / dwell / steady `dt` then follow the camera.
+5. **Update rate (B §4).** The engine moves the pointer once per processed frame (≤ 30 Hz;
+   2018: ≤ 14 Hz, 70 ms sleep — not copied). Higher-rate output (60/120 Hz from the latest
+   state, interpolation, short-horizon prediction) is *not* in 2a: interpolation adds no
+   information and costs latency; it's a 2c experiment, judged by replay lag + device feel.
+
+Checks:
+- CI: `Engine` has a synchronous `step()`; the UI talks to an `EngineHandle` trait, so the 33
+  kittest tests and 14 runtime tests run inline with fakes (adapt, don't delete). New tests:
+  pointer moves happen with no UI pass at all; a slow UI changes neither the number nor the
+  positions of moves; a stalled engine gets the *newest* frame next; the same frames with
+  regular timestamps but irregular arrival give identical pointer paths; deadlines fire with
+  no frames and no UI (minimised).
+- Device (dev build, tracking on, 60 s, then again with Options open): fps ≥ 29, `dropped` 0;
+  **proposed targets**: capture → move p95 ≤ 25 ms (was ≈ 60 p50); UI pass p95 ≤ 5 ms; opening
+  Options doesn't change engine timings. Process CPU % before/after (`ps -o %cpu`).
+- Device risk to check: CGEvent posting from a non-main thread on macOS (documented
+  thread-safe; verify `pointer_device` test + manual QA rows for pointer/handover/dwell).
+- Stop / fallback: if the engine refactor breaks more than it fixes inside the session, ship
+  steps 1–2 + 4 alone (they don't need the thread) and hand off.
+
+### 2b — Benchmark recordings and metrics harness (prerequisite for 2c, 2d)
+
+1. `docs/qa/BENCHMARK_PROTOCOL.md`: one recording per scenario, stored **outside the repo and
+   outside /tmp** (`~/ocm-recordings/<scenario>-<date>/`; the first recording was lost with
+   /tmp). Scenarios: **S0 static target 30 s** (a printed photo or textured object in front of the camera,
+nothing moves: pure measurement noise, A §1 distinction (1) vs (2)); S1 still 45 s looking at the main screen centre; S2 slow yaw ×5; S3 slow
+   pitch ×5; S4 roll ×5; S5 four screen corners ×3; S6 fast comfortable moves; S7 talking
+   30 s; S8 hand occlusion ×3; S9 return-to-start (look at centre, roam 20 s, return); S10
+   optional 5 min normal use. Select the nose at the start of each. Recorder writes on its own
+   thread so recording doesn't slow the engine.
+2. `replay_bench` (`crates/app-core/tests/replay.rs`, `#[ignore]`, `OCM_BENCH=<root>`): runs
+   every scenario through named variants (tracker × filter × mapping) on the user's real
+   desktop geometry, prints one table, no ground truth needed: losses per minute and % time
+   tracking (S2–S8), still wander screen px RMS / P95 / span (S1), anchor return error camera
+   px (S9), lag of the filtered vs unfiltered cursor (cross-correlation, S2/S6), processing
+   time p50/p95 (release). S0 vs S1 splits tracker noise from real head micro-movement, which
+   decides whether 2c attacks measurement (2d) or motion (filter/gain). Results (numbers only) are committed under `docs/research/`.
+3. CI: extend the synthetic corpus (`crates/tracking-core/tests/support`) with appearance-change
+   scenes that have ground truth (scale + in-plane rotation + illumination gradient + local
+   non-rigid warp, the 2D stand-in for out-of-plane turns) and pin today's tracker on them, so
+   2d has regression gates.
+- Needs the user: ~10 min of recording after 2a lands.
+
+### 2c — Cursor stability (#5)
+
+1. **Mapping reference** (Replay S1, S5): scale by desktop width (today, = 2018) vs the main
+   display's width vs the display under the cursor. Expected: 2× less wander on 2 × 2560
+   (only arithmetic so far). Changing the default departs from 2018 → ask the user with the
+   numbers, ADR-0017 either way.
+2. **1€ filter** in `pointer-core` (`one_euro.rs`, pure, timestamp `dt`), in camera space
+   before mapping (screen space as a comparison). CI property tests: constant input → exact
+   output after convergence; seeded-noise variance reduction at rest; ramp lag matches the
+   formula; same response at 30 and 15 fps (dt invariance); no overshoot; reset semantics.
+   Replay grid: `min_cutoff` 0.5 / 1.0 / 1.5 Hz, `beta` sweep, `d_cutoff` 1 Hz, vs the EMA.
+3. Re-evaluate the steady zone (ADR-0015) on top, with hysteresis variants; dwell still
+   clicks (existing dwell tests + one on filtered noise).
+4. Comparison rows in the same replay table (A §3E, B §3): EMA (2018), 1€, constant-velocity
+   Kalman, alpha-beta, double-exponential; then velocity-dependent gain
+   `cursor_v = g(head_v)·head_v` (continuous, no discontinuity, tested for monotonicity) and a
+   precision mode; 60 Hz output with interpolation vs per-frame (lag cost measured). Simplest
+   that meets the targets wins.
+5. Accessibility checks (B §6): dwell success / accidental clicks on S1 with each variant
+   (replay counts dwell `Click` effects); no movement trapping at low speed (S2 slow onset).
+- Proposed targets (Replay): S1 P95 wander ≤ 3 px on the user's desktop; S6 added lag ≤ 1
+  frame vs unfiltered. Ships as an option ("Smoothing: 2018 / Adaptive"), off by default
+  unless the user decides otherwise after trying it.
+- Stop: if 1€ can't get S1 under ~5 px without > 2 frames lag on S6, try velocity-dependent
+  gain / precision mode next; don't stack more filters.
+
+### 2d — Tracking continuity (#2, and #3 "could be better")
+
+1. Baselines in the `replay_bench` table first (cheap): **2018-like** (10×10 window, level 3,
+   no appearance gate, 35 px displacement guard holding the previous point — B §RE; it should
+   rarely "lose" but may drift: S9 return error tells), recommended (B-LK18), hw 15 + gate 0.6
+   (9 vs 15 losses on the old recording), anchored template update (update the reference only
+   while ZNCC to the original stays high; never replace it — Matthews 2004, A §2B), gate with
+   hysteresis/degraded state instead of an instant loss (A §2C).
+2. **Virtual-anchor feature cloud** (`tracking-core`, new tracker variant, ADR before code):
+   24–32 Shi–Tomasi points with minimum spacing in a box around the clicked point; LK per point
+   (existing kernel); forward–backward check, sweep 0.5–1.5 px (Kalal 2010); robust similarity
+   with deterministic RANSAC (seeded, reprojection 1–2 px, ≥ 6–10 inliers, reject spatially
+   clustered inlier sets) + least-squares refit on inliers; similarity vs affine compared;
+   local subset near the anchor vs whole box (out-of-plane rotation breaks one 2D model, A §2A); the anchor moves with the transform;
+   replenish lost points; confidence → existing statuses (`Tracking`, `Held` = degraded,
+   pointer holds; `Lost`). The original patch becomes a drift check near the selection pose,
+   not a hard per-frame gate. Must stay deterministic (R-T1) and pure.
+3. Checks: CI on the 2b synthetic corpus (anchor error, losses, coherent-drift scene: all
+   points slide together); Replay on S2–S9 vs baselines; release processing p95 ≤ 10 ms.
+- **Stop condition:** no ≥ 50 % fewer losses on S2–S5 with S9 return error no worse than
+  B-LK18 and p95 ≤ 10 ms → stop, keep the best cheap baseline, record why.
+- Ships as an option, off by default (ask the user before changing the default tracker).
+
+### Deferred, recorded so they aren't lost
+
+- Face / landmark detection for recovery (PICO, NPD, small pure-Rust inference; A §2D): only if
+  2d recovery is still weak; a face box alone can't restore the nose point.
+- LK alternatives (inverse-compositional LK, ECC, direct patch alignment; B §5): only if 2d's
+  per-point LK is the bottleneck in accuracy or CPU.
+- Competitor source reading (eViacam GPL-3.0, GameFace Apache-2.0, archived 2025-09-05; A §7):
+  behaviour only, never copy GPL code; worth one pass before finalising 2c defaults.
+- Long-session drift and fatigue (B §6): S10 + the user's own use after 2d.
+- Camera sensor-to-screen latency (A §5): `OCM_PERF` covers capture → move only; an end-to-end
+  measurement (e.g. phone slow-motion video of an LED/screen) is Phase 8 latency work.
+
+### After 2d
+
+Optional 2e: the final research report (`HEAD_POINTER_STABILITY_RESEARCH.md`) only for what the
+experiments leave open. Then the user test-drives again; Phase 7 when they say ready.
