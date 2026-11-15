@@ -6,8 +6,7 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 ## As of 2026-11-16 (Phase 6b: slice 2d done and device-checked; next = user test drive)
 
 **Branch:** `rewrite/rust`, task `tasks/active/0009-phase-6b-test-drive.md`. CI green for
-`d0dc472`. Slice 2d (ADR-0018) may or may not be committed — check `git status`/`git log`;
-if committed and pushed, verify CI.
+`d0dc472`. Slice 2d committed and pushed as `df4c670`.
 
 **Done in 2d:** the head-turn losses were the E2 appearance gate, not LK (with the gate off,
 LK follows the synthetic extreme turn within 4.2 px). New `LkParams::anchored`
@@ -19,11 +18,10 @@ at 0 wrong lock / 0 false tracking; fixtures adversarial list runs recommended +
 Local replay (not in repo): S2 turns losses 5 → 2, S1 unchanged, drift 0 %. The feature
 cloud (2d.2) was not built: the cheap candidate met the stop condition.
 
-**Next:** device check with the user (`cargo run -p open-camera-mouse`, dev build): turn the
-head left/right/up/down, hold, pass a hand over the face. If turns still lose the point, a
-fresh ≈ 1–2 min S2 recording + local replay (`~/ocm-recordings/_tools/replay-tool`,
-`replay_tune` now lists anchored variants and prints each loss). Then optional 2e or the
-user's test drive → Phase 7 when they say ready.
+**Next:** 2d committed (`df4c670`) and device-checked ("turns hold much better now"); verify
+CI. Then optional 2e (research report) or the user's test drive → Phase 7 when they say
+ready. If turns still lose the point later, take a fresh ≈ 1–2 min S2 recording and replay it
+locally (`replay_tune` lists anchored variants and prints each loss).
 
 **Local diagnosis (not in repo):** recordings `~/ocm-recordings/S1-still-2026-11-15`,
 `S2-turns-2026-11-15` (may be deleted). Replay tool: `cd ~/ocm-recordings/_tools/replay-tool &&
