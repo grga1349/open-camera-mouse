@@ -2,7 +2,7 @@
 
 The live phase plan for the Rust rewrite. Condensed from the frozen planning seed
 (`docs/archive/rust-rewrite-seed/02-roadmap-nine-phases.md`), which stays the historical
-source. Change phases here, via an ADR, never by silently renumbering. Per-task status lives in
+source. Phase 6b (test drive) was inserted by ADR-0013 without renumbering. Change phases here, via an ADR, never by silently renumbering. Per-task status lives in
 `tasks/BACKLOG.md`. This file only tracks phase status.
 
 Working rule: when a phase starts, its coordinator writes that phase's task file(s) in
@@ -18,7 +18,8 @@ the phase.
 | 4 | Tracking improvements | DONE | task 0006; ADR-0010, -0011; `docs/research/TRACKING_IMPROVEMENTS.md` |
 | 5 | Design system | DONE | task 0007; `docs/design/design-lab.html` (approved v3), `EGUI_FEASIBILITY.md` |
 | 6 | Desktop app | DONE | task 0008; ADR-0012; `docs/qa/MANUAL_QA.md` (rows 1–18 pass); CI green |
-| 7 | Multiplatform / release | NEXT | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
+| 6b | Test drive (ADR-0013) | NEXT | |
+| 7 | Multiplatform / release | — | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
 | 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 
 ## Standing inputs for every phase from 2 on
@@ -69,6 +70,13 @@ egui feasibility check.
 target selection, settings, calibration/recenter, lifecycle and errors, cursor-permission
 paths, persistence, handover and dwell per ADR-0006. *Gate:* end-to-end workflows on the
 primary dev OS; integration tests and a manual QA checklist pass.
+
+**6b — Test drive (ADR-0013).** The user uses the app on the dev Mac for real work; each
+issue they report is logged in an issue table (`docs/qa/TEST_DRIVE.md`: date, what happened,
+severity, triage, fix commit or deferral), reproduced, and either fixed (regression test where
+it can be tested headless) or explicitly deferred to a named phase. Fixes only, no new
+features. *Gate:* every logged issue fixed or deferred with a reason; quality gates green; the
+user says the app is ready for Phase 7.
 
 **7 — Multiplatform / release.** Validate macOS (Apple Silicon, permissions), Windows (cursor
 injection, capture), Linux (X11/Wayland limits). Packaging, signing/notarization, licenses,

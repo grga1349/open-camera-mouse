@@ -1,11 +1,12 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 DONE, Phase 7 NEXT)
+Last updated: 2026-11-15 (Phase 6 DONE, Phase 6b test drive NEXT)
 
 ## Branch / commit
 
 Branch: `rewrite/rust`. Last code commit `7e9a2bb` (Phase 6 D7 part 1), CI run 43746097717
-green on 3 OS + cargo-deny. Task 0008 close-out (docs only) may be uncommitted: see `git status`.
+green on 3 OS + cargo-deny. Phase 6 close-out `2146984` pushed; the Phase 6b ADR + handoff may
+be uncommitted: see `git status`.
 
 ## Milestone
 
@@ -14,8 +15,8 @@ slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0
 persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
 UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) done.
 D7 done: runtime, end-to-end headless tests, recorder, and manual QA on the dev Mac with the
-user (`docs/qa/MANUAL_QA.md` rows 1–18 pass, 2026-11-15). **Phase 7 (multiplatform / release)
-is NEXT; no task file yet.**
+user (`docs/qa/MANUAL_QA.md` rows 1–18 pass, 2026-11-15). **Phase 6b (test drive, ADR-0013) is
+NEXT: the user uses the app and we fix what comes up, before Phase 7. No task file yet.**
 
 ## What exists now
 
@@ -72,10 +73,12 @@ is NEXT; no task file yet.**
 
 ## Immediate next action
 
-Start Phase 7 (multiplatform / release) per `docs/ROADMAP.md`: the coordinator writes
-`tasks/active/0009-phase-7-…md` from the Phase 7 deliverables and gate. Carry-overs: MANUAL_QA
-rows 19–20 (`.app` permission paths) in Phase 7; row 21 (reduced motion) and the `OCM_RECORD`
-threshold re-measurement in Phase 8 (user, 2026-11-15). Font stays egui default (user: later).
+Start Phase 6b (test drive, ADR-0013) per `docs/ROADMAP.md`: write `tasks/active/0009-phase-6b-test-drive.md`
+from its deliverables and gate, create `docs/qa/TEST_DRIVE.md` (issue log), then take the
+user's reports one by one: reproduce, fix with a regression test or defer to a named phase.
+Phase 7 follows when the user says the app is ready. Carry-overs unchanged: MANUAL_QA rows 19–20
+in Phase 7; row 21 (reduced motion) and `OCM_RECORD` threshold re-measurement in Phase 8.
+Font stays egui default (user: later).
 
 ## Open risks
 

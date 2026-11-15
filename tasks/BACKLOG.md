@@ -7,7 +7,7 @@ not completion evidence, passing verification commands are.
 
 ## Active
 
-(none — Phase 7 is next per `docs/ROADMAP.md`; its coordinator writes the task file)
+(none — Phase 6b (test drive, ADR-0013) is next per `docs/ROADMAP.md`; its coordinator writes the task file)
 
 ## Done
 
