@@ -1,11 +1,11 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6b, task 0009; slice 2b committed 54386f4 (ADR-0017); next 2d)
+Last updated: 2026-11-15 (Phase 6b, task 0009; slice 2b done and pushed (54386f4); next session = slice 2d)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last commit = slice 2a (ADR-0016), pushed 2026-11-15. CI was red since
-`eb667e3` on 3 OS (stale `recommended_params_are_the_measured_candidate`); 2a fixes it — verify.
+Branch: `rewrite/rust`. Last commits = slice 2b `54386f4` (ADR-0017) + handoff, pushed
+2026-11-15; CI for 2a (`f458e92`) green, 2b's run was in progress at handoff — verify.
 
 ## Milestone
 
@@ -76,9 +76,9 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Slice 2b done in code (ADR-0017: tracker floor + eigen ratio, 1€ filter, Main-monitor scale,
-steady zone 5 px default, device-checked: jitter largely resolved), committed `54386f4` and pushed (verify CI). Next: 2d (#2 turn
-losses, `turn_extreme` synthetic gap) per the task file. Recordings are diagnosis-only (no repo
+Slice 2b done (ADR-0017), committed `54386f4` and pushed; verify CI first. Next session:
+slice 2d (#2 losses on head turns, synthetic gap `appearance.rs` `turn_extreme`). Brief and
+local diagnosis tools are in `agent/HANDOFF.md`. Recordings are diagnosis-only (no repo
 code/numbers). Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the threshold re-measurement in Phase 8.
 
 ## Open risks

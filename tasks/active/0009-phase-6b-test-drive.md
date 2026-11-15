@@ -216,6 +216,11 @@ nothing moves: pure measurement noise, A §1 distinction (1) vs (2)); S1 still 4
 
 ### 2d — Tracking continuity (#2, and #3 "could be better")
 
+2026-11-15 adjustment: there is no `replay_bench`; "Replay" checks below are local diagnosis.
+Gates are synthetic: `appearance.rs` (raise `turn_extreme` from 31/90), the fixture corpus
+(`wrong_lock`/`false_tracking` 0), and controller tests. Remaining real failure (S2 after 2b):
+`AppearanceChanged` during turns, ZNCC ≈ 0.85 → < 0.70, recovery 25–72 frames.
+
 1. Baselines in the `replay_bench` table first (cheap): **2018-like** (10×10 window, level 3,
    no appearance gate, 35 px displacement guard holding the previous point — B §RE; it should
    rarely "lose" but may drift: S9 return error tells), recommended (B-LK18), hw 15 + gate 0.6
