@@ -3,28 +3,18 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-15 (Phase 6 ACTIVE, D7 part 1 done, D7 part 2 = manual QA next)
+## As of 2026-11-15 (Phase 6 DONE, Phase 7 NEXT)
 
-**Branch:** `rewrite/rust`. Task `tasks/active/0008-phase-6-desktop-app.md`. **D7 part 1 done**
-(runtime + headless end-to-end tests + recorder + `docs/qa/MANUAL_QA.md`), details in the task
-file Progress entry. Gates green locally: fmt, clippy `-D warnings` (+ Windows target), workspace
-tests (desktop 68, app-core controller 37), `check-core-deps.sh`. **Uncommitted unless the
-commit log says otherwise** — check `git status`. Work rhythm (user): one slice per session.
+**Branch:** `rewrite/rust`. Task 0008 (Phase 6, desktop app) closed: `tasks/done/0008-…`.
+Last code commit `7e9a2bb`, CI 43746097717 green. Manual QA on the dev Mac with the user:
+`docs/qa/MANUAL_QA.md` rows 1–18 pass. The close-out is docs only (QA results, task move,
+BACKLOG, ROADMAP, agent state). **Uncommitted unless the commit log says otherwise**.
 
-**Runtime shape:** `apps/desktop/src/runtime.rs`. Camera on a worker thread (`ThreadedCamera`),
-controller + pointer on the main thread in `eframe::App::logic` (runs while minimised, 100 ms
-throttle). An `app-core` bug was fixed on the way (observation vs due takeover, regression
-test in `crates/app-core/tests/controller.rs`).
-
-**Next session:** D7 part 2, needs the user at the Mac: run MANUAL_QA rows 1–18 and record
-results with date; rows 19–20 need a `.app`: **user decided Phase 7** (record them `n/a: Phase 7`); a few
-`OCM_RECORD=<dir>` sessions to re-measure re-detection arming / R-P4 bound / dwell radius.
-Then close task 0008 against acceptance criteria 1–11 (CI run ID for the closing commit).
-
-**Screenshots without clicks (debug builds):** `OCM_DEV_SETTINGS=<file>` and
-`OCM_DEV_OPTIONS=pointer|clicking|camera|general`; bounds via `osascript` System Events, then
-`screencapture -x -R x,y,w,h`. A real click needs a posted CGEvent; ask first, it moves the
-user's cursor.
+**Next session:** start Phase 7 (multiplatform / release) from `docs/ROADMAP.md`: write its
+task file in `tasks/active/` from the Phase 7 deliverables and gate (no pre-written task).
+Phase 7 carry-over: MANUAL_QA rows 19–20 (`.app` permissions). Phase 8 carry-over (user
+decision 2026-11-15): row 21 (reduced motion) and `OCM_RECORD` threshold re-measurement
+(re-detection arming, R-P4 bound, dwell radius). Work rhythm (user): one slice per session.
 
 **User direction (don't drift):** start from 2018 (ADR-0006) but improve on it, taking the best of
 2018 and legacy. Ship proven improvements as options, off by default. Design: monochrome; neon
@@ -33,8 +23,12 @@ two fixed-size windows; no auto-recenter; hotkeys fixed (F11/F12; F10/F12 on mac
 white centre circle + 5 s countdown badge; resume from pause goes through recenter; Recenter ends
 a pause. Preview is colour. Font: later.
 
-**Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only (no new
-crates in this slice). No `gh` CLI: check CI with `curl -s "https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust&per_page=1"`
+**Screenshots without clicks (debug builds):** `OCM_DEV_SETTINGS=<file>` and
+`OCM_DEV_OPTIONS=pointer|clicking|camera|general`; bounds via `osascript` System Events, then
+`screencapture -x -R x,y,w,h`.
+
+**Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only. No `gh`
+CLI: check CI with `curl -s "https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust&per_page=1"`
 then `/actions/runs/<id>/jobs`.
 
 **Blockers:** none.

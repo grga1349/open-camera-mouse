@@ -7,14 +7,13 @@ not completion evidence, passing verification commands are.
 
 ## Active
 
-| ID | Title | Status |
-|---|---|---|
-| 0008 | Phase 6 — desktop app | ACTIVE — `tasks/active/0008-phase-6-desktop-app.md`, slices D0–D7 + D6b; D0–D6b + D7 part 1 (runtime, tests) done, next D7 part 2 (manual QA with the user) |
+(none — Phase 7 is next per `docs/ROADMAP.md`; its coordinator writes the task file)
 
 ## Done
 
 | ID | Title | Status |
 |---|---|---|
+| 0008 | Phase 6 — desktop app | DONE — D0–D7 + D6b, final code `7e9a2bb` CI 43746097717 green on 3 OS + cargo-deny; manual QA rows 1–18 pass 2026-11-15 (`docs/qa/MANUAL_QA.md`); ADR-0012 |
 | 0007 | Phase 5 — design system | DONE — lab v3 approved 2026-11-12 (Carbon/Paper, neon-green thin-ring marker, yellow primary buttons); `docs/design/EGUI_FEASIBILITY.md` |
 | 0006 | Phase 4 — tracking improvements | DONE — E0–E4 (`f68f042`…`0074611`), E4 CI 43131916361 green, close-out `66768c9` CI 43132339284 green on 3 OS + cargo-deny; ADR-0010, -0011, `docs/research/TRACKING_IMPROVEMENTS.md` |
 | 0005 | Phase 3 — tracking baseline | DONE — `4038fce`, CI run 43119858155 green on 3 OS + cargo-deny; ADR-0009, `docs/research/TRACKING_BASELINE.md` |

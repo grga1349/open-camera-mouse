@@ -17,9 +17,9 @@ the phase.
 | 3 | Tracking baseline | DONE | task 0005; ADR-0009; `docs/research/TRACKING_BASELINE.md`; CI green |
 | 4 | Tracking improvements | DONE | task 0006; ADR-0010, -0011; `docs/research/TRACKING_IMPROVEMENTS.md` |
 | 5 | Design system | DONE | task 0007; `docs/design/design-lab.html` (approved v3), `EGUI_FEASIBILITY.md` |
-| 6 | Desktop app | **ACTIVE** | task 0008 |
-| 7 | Multiplatform / release | — | |
-| 8 | Hardening / product readiness | — | |
+| 6 | Desktop app | DONE | task 0008; ADR-0012; `docs/qa/MANUAL_QA.md` (rows 1–18 pass); CI green |
+| 7 | Multiplatform / release | NEXT | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
+| 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 
 ## Standing inputs for every phase from 2 on
 

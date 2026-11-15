@@ -1,20 +1,21 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6b + D7 part 1 done, D7 manual QA next)
+Last updated: 2026-11-15 (Phase 6 DONE, Phase 7 NEXT)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last pushed code commit `4f4e006` (Phase 6 D6b), CI run 43730995361
-green. D7 part 1 (runtime) is in the working tree: see `git status`, commit status in HANDOFF.
+Branch: `rewrite/rust`. Last code commit `7e9a2bb` (Phase 6 D7 part 1), CI run 43746097717
+green on 3 OS + cargo-deny. Task 0008 close-out (docs only) may be uncommitted: see `git status`.
 
 ## Milestone
 
-Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
+Phases 0–6 DONE. Phase 6 (desktop app): `tasks/done/0008-phase-6-desktop-app.md`,
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
 persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
 UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) done.
-D7 part 1 (runtime, end-to-end headless tests, recorder, QA checklist) done.
-**D7 part 2 (manual QA on the Mac with the user, `docs/qa/MANUAL_QA.md`) next.**
+D7 done: runtime, end-to-end headless tests, recorder, and manual QA on the dev Mac with the
+user (`docs/qa/MANUAL_QA.md` rows 1–18 pass, 2026-11-15). **Phase 7 (multiplatform / release)
+is NEXT; no task file yet.**
 
 ## What exists now
 
@@ -71,27 +72,26 @@ D7 part 1 (runtime, end-to-end headless tests, recorder, QA checklist) done.
 
 ## Immediate next action
 
-Task 0008 **D7 part 2**: with the user, run `docs/qa/MANUAL_QA.md` rows 1–18 on the dev Mac
-and record results; rows 19–20 (`.app`) deferred to Phase 7 (user, 2026-11-15); record sessions with
-`OCM_RECORD` and re-measure open thresholds. Then close task 0008 (acceptance criteria 1–11).
-Font stays egui default (user, 2026-11-15: later).
+Start Phase 7 (multiplatform / release) per `docs/ROADMAP.md`: the coordinator writes
+`tasks/active/0009-phase-7-…md` from the Phase 7 deliverables and gate. Carry-overs: MANUAL_QA
+rows 19–20 (`.app` permission paths) in Phase 7; row 21 (reduced motion) and the `OCM_RECORD`
+threshold re-measurement in Phase 8 (user, 2026-11-15). Font stays egui default (user: later).
 
 ## Open risks
 
-- Synthetic-only tracker evidence; re-measure all thresholds on Phase 6 recordings.
+- Synthetic-only tracker evidence; re-measure all thresholds on `OCM_RECORD` recordings (Phase 8).
 - Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).
 - `nokhwa` macOS bindings pull `block` 0.1.6 (future-incompat warning); MJPEG-only cameras unsupported (ADR-0012).
 - Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
-- Hotkeys: registration verified on the dev Mac, but a press from a background app was not
-  observed yet (D7 manual QA); `Fn` needed on Mac laptop keyboards; Windows/X11 on device Phase 7.
+- Hotkeys: F10/F12 from a background app verified on the dev Mac (QA 2026-11-15); whether `Fn`
+  is needed on a Mac laptop keyboard not noted; Windows/X11 on device Phase 7.
 - Camera crate panics on external webcams (P1): caught, but untested on device until Phase 7; Wayland pointer and window placement (P10/P11).
 - `CGPreflightPostEventAccess` ≈10 ms: never call per frame (runtime polls it every 3 s).
-- Minimised window: eframe throttles `logic` to 100 ms → pointer updates at ~10 Hz. Check in
-  manual QA (row 13); if unusable, move controller + pointer to a dedicated thread (macOS
-  pointer would need a main-thread hop).
+- Minimised window: eframe throttles `logic` to 100 ms → pointer at ~10 Hz; judged usable in
+  manual QA (row 13). Revisit in Phase 8 latency budgets if needed.
 - The desktop is the displays' bounding box: with uneven monitors the cursor sticks to display
   edges where the box has dead zones (snap). Fine for v1; revisit if users find it odd.
 - UI: D6b screenshot-checked Options (all tabs, Paper, Larger controls) and Tracking (Stopped)
-  only; running states need a look in D7 manual QA (row 18). Searching animation ignores reduced motion. Font =
+  only; running states passed manual QA row 18. Searching animation ignores reduced motion. Font =
   egui default, no bold (faux-bold buttons); revisit later (Inter candidate). Debug-only
   `OCM_DEV_SETTINGS` / `OCM_DEV_OPTIONS` env vars exist for screenshot checks.

@@ -403,3 +403,11 @@ Plus the CI run ID for the closing commit.
   **Left for D7 part 2 (needs the user at the Mac):** run MANUAL_QA.md rows 1–18 and record
   them; rows 19–20 (`.app`) wait for Phase 7 (user decision 2026-11-15); record a few
   sessions with `OCM_RECORD` and re-measure (re-detection arming, R-P4 bound, dwell radius).
+- 2026-11-15: **D7 part 2 done, task closed.** Manual QA on the dev Mac with the user
+  (`docs/qa/MANUAL_QA.md`, build `7e9a2bb`): rows 1–18 pass, incl. global F10/F12 from another
+  app (open risk closed) and the minimised ~10 Hz pointer (usable, no thread move needed).
+  Rows 19–20 `n/a: Phase 7` (`.app`). User decision: row 21 (reduced motion) and the
+  `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4 bound, dwell radius) move to
+  Phase 8. Acceptance: 1 (manual QA rows 2–14; pause on F10 on macOS per D5 decision), 2–10
+  (headless tests, slices D0–D7), 11 (CI run 43746097717 green on `7e9a2bb`, 3 OS + cargo-deny).
+  Status: DONE.
