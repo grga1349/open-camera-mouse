@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6 done)
+Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6 done, D6b next)
 
 ## Branch / commit
 
@@ -12,7 +12,8 @@ green on macOS, Windows, Linux + cargo-deny.
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
 persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
-UI, headless-tested) done. D7 (runtime integration and QA) next.
+UI, headless-tested) done. **D6b (design checkup, user request) next**, then D7 (runtime
+integration and QA).
 
 ## What exists now
 
@@ -62,13 +63,12 @@ UI, headless-tested) done. D7 (runtime integration and QA) next.
 
 ## Immediate next action
 
-Task 0008 slice D7: runtime integration and QA (task file §Objective D7). Camera thread →
-`Input::Frame` → controller → execute `Effect`s (`OpenCamera`/`CloseCamera` on `NokhwaCamera`,
-`MovePointer`/`Click` on `SystemPointer`), observe `position()` before each step, poll
-`access()` every few s, `desktop()` about once a second, `request_repaint` on a new frame.
-Hook point: `Shell::input` in `apps/desktop/src/app.rs` (it drops the `Step` today). Then the
-fake-camera/fake-pointer end-to-end test, frame recorder, `docs/qa/MANUAL_QA.md`, `.app` bundle
-for permission QA. First ask the user for the D6 visual review (see HANDOFF).
+Task 0008 slice **D6b — design checkup** (task file §Objective D6b has the gap list with the
+lab's CSS values): restyle switch, slider, tabs, segmented control, fields, buttons with key
+chips; fix the scroll bar covering values and the welcome card alignment; check Paper and
+Larger controls on screen; side-by-side screenshots lab vs app. Font = open decision (maybe
+later). Then D7: runtime (hook point `Shell::input` in `apps/desktop/src/app.rs`, which drops
+the controller `Step` today).
 
 ## Open risks
 

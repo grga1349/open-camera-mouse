@@ -3,7 +3,7 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-15 (Phase 6 ACTIVE, D0–D6 done)
+## As of 2026-11-15 (Phase 6 ACTIVE, D0–D6 done, D6b next)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
 slices D0–D7. **D6 done**: committed `b5336d3`, pushed, CI run 43728203292 green (macOS,
@@ -17,11 +17,15 @@ variants, recenter ring + badge, status line per state, four Options tabs, save 
 Details, test list, found-and-fixed bugs and **choices made without the lab** are in the task
 file Progress entry for D6. Tell the user about those choices if they haven't seen them.
 
-**Owed from D6:** a visual review by the user (`cargo run -p open-camera-mouse`: the Stopped
-card, Options tabs, both themes, Larger controls, Text size). Only Stopped/Starting can be seen
-until D7 wires the camera.
+**On-screen check with the user (end of session):** both windows work, but the user wants the
+widgets to match the lab: switch and slider sizes/shapes differ a lot, tabs must not show a
+button on hover; font maybe later. Recorded as **slice D6b — design checkup** in the task file
+with the lab's exact CSS values per widget.
 
-**Next session:** D7 — runtime integration and QA (CURRENT_STATE "Immediate next action").
+**Next session:** D6b (design checkup), then D7 (runtime integration and QA).
+Screenshots work (`screencapture -x -R x,y,w,h`, window bounds via `osascript` System Events).
+A real click needs a posted CGEvent (Swift one-liner tool; AppleScript `click at` only sends an
+accessibility press). Ask before driving clicks: the user may be using the app at the same time.
 
 **Carry to D7:** runtime order observe `position()` → controller → `move_to`; poll `access()`
 every few s (never per frame); manual QA: F10/F12 pressed with another app focused (only

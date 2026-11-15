@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12; D0–D6 done 2026-11-15)
+Status: ACTIVE (2026-11-12; D0–D6 done 2026-11-15; D6b design checkup next)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -72,6 +72,36 @@ crates. `apps/desktop` is one window with a status label and a button.
   (icon + text) per state. Options tabs: Pointer, Clicking, Camera, General. Painted icons, no SVG
   crate. Text scale, larger controls. The desktop crate only renders `app-core` output and sends
   commands.
+- **D6b — Design checkup (added 2026-11-15, user).** Bring the egui widgets in line with the
+  approved lab, compared side by side (lab in a browser vs the app, same state, same theme,
+  screenshots). Gaps the user and the D6 screenshots found, with the lab's CSS values:
+  - **Switch**: 44×24 track, radius 12, knob 18 px; off = `--surface-2` track, `--line-strong`
+    border, `--muted` knob; on = `--text` track and border, `--bg` knob. "ON"/"OFF" in mono at
+    0.78 em, muted. (D6: 42×22, knob in text colour when off.)
+  - **Slider**: 4 px track, radius 2, filled part `--text`, rest `--line-strong`; round thumb
+    18 px (`--text` fill, 3 px `--bg` border, 1 px `--text` ring), 26 px with larger controls;
+    row height `--hit`. (D6: egui's rectangular handle, rail nearly invisible on black.)
+  - **Tabs**: no button frame or fill on hover or when selected; muted text, `--text` on hover
+    and when selected; selected = 3 px `--text` underline; one `--line` border under the row;
+    padding 0 11 px, gap 2, left-aligned (and must still fit at 130 % + larger controls).
+  - **Segmented (Dark/Light)**: full width, equal halves, divider between, selected = `--text`
+    fill with `--bg` text, height `--hit`.
+  - **Fields**: number fields and the camera select at `--hit` height, `--surface-2`,
+    `--line-strong` border, radius 6, numbers in mono; capture-format readout `--surface-2`
+    with `--line` border, muted mono.
+  - **Buttons**: semibold labels; the key as a `kbd` chip (mono 0.76 em, 1 px border, 75 %
+    opacity) instead of plain "Start  F10".
+  - **Help text** 0.88 em muted.
+  - Seen in D6 screenshots: the floating scroll bar covers right-aligned values; the welcome
+    card isn't vertically centred and its button is left-aligned; Paper theme and Larger
+    controls not yet seen on screen; Light didn't seem to apply in one manual try (re-check).
+  - **Font** (open decision, may stay for later): the lab uses the system UI font; egui's
+    default Ubuntu-Light looks thin and has no `→`. Option: embed one OFL font (e.g. Inter,
+    regular + semibold) with `include_bytes!` and record its licence for Phase 7.
+  Method: headless Chrome screenshot of `docs/design/design-lab.html` (deep link
+  `#state=…&tab=…&theme=…`) next to `screencapture -R` of the app; a real click needs a posted
+  CGEvent (a tiny Swift tool in the scratchpad worked; AppleScript `click at` only sends an
+  accessibility press). Agree with the user before driving clicks: it moves their real cursor.
 - **D7 — Runtime integration and QA.** Runtime loop (camera thread → controller → pointer sink,
   repaint on new frame). End-to-end integration test with a fake camera (scripted synthetic
   motion) and a fake pointer sink: select → track → cursor moves right for head-right → lose →
@@ -308,3 +338,9 @@ Plus the CI run ID for the closing commit.
   preview; overlays now use a detached child `Ui`), panel margins set to the 16 px token.
   Options window and Paper theme not yet seen on screen: user review owed.
   Committed `b5336d3`; CI run 43728203292 green (macOS, Windows, Linux, cargo-deny).
+- 2026-11-15: **On-screen check of D6 with the user** (Screen Recording granted): both windows
+  open, Options next to Tracking, Pointer/Camera/General tabs render, camera list shows the
+  FaceTime HD Camera. User: switches and sliders differ a lot from the lab in size and shape,
+  tabs must not show a button on hover, a nicer font maybe later. **New slice D6b (design
+  checkup) before D7**, gaps listed under §Objective D6b.
+
