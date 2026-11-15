@@ -4,9 +4,8 @@ Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D4 done)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last pushed commit `0b5a595` (D3 handoff; D3 code `7d39825`, CI run
-43721527313 green). **D4 is in the working tree, uncommitted** until the user says to commit;
-then push and check CI (Linux pointer code has only been checked via a scratch crate).
+Branch: `rewrite/rust`, pushed. Latest code commit `67bbb99` (Phase 6 D4), CI run 43723451495
+green on macOS, Windows, Linux + cargo-deny.
 
 ## Milestone
 
@@ -53,7 +52,7 @@ persistence), D3 (camera adapter) and D4 (pointer adapter) done. D5 (global hotk
 
 ## Immediate next action
 
-Commit/push D4 if the user agrees, confirm CI (esp. Linux). Then task 0008 slice D5: global
+Task 0008 slice D5: global
 F11/F12 via `global-hotkey` in `platform` → `ToggleStart`/`Recenter`; registration failure shown
 in the UI (P13: macOS F11 = Show Desktop); in-window F11/F12 fallback. Update ADR-0012's
 hotkey row; check licences.

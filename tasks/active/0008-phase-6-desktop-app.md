@@ -255,3 +255,4 @@ Plus the CI run ID for the closing commit.
   P6/P7, DEPENDENCIES updated.
   Carry to D7: runtime order observe → controller → move; poll `access()` every few seconds,
   never per frame; click on device and Accessibility for a `.app` in manual QA.
+  Committed `67bbb99`; CI run 43723451495 green (macOS, Windows, Linux, cargo-deny).

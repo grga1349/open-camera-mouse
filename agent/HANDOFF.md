@@ -6,9 +6,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 ## As of 2026-11-15 (Phase 6 ACTIVE, D0–D4 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D4 done in the working tree, NOT committed yet** (waiting for the user's yes).
-After committing, push and check CI: the Linux pointer module was only clippy-checked in a
-scratch crate, because `platform` can't cross-build for Linux on the Mac (nokhwa bindgen).
+slices D0–D7. **D4 done**: committed `67bbb99`, pushed, CI run 43723451495 green (macOS,
+Windows, Linux + cargo-deny): the first real Linux build of the pointer code.
 Work rhythm (user): **one slice per session**, then hand off.
 
 **Done this session (D4):**
