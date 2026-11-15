@@ -95,3 +95,11 @@ uses `min_margin` 0.03, `confirm_frames` 3 (consecutive finds within 0.01 · wid
 `min_context_zncc` 0.7 (41×41 window around the find vs the selection; refused the hand/shirt
 wrong locks seen in replay). `RedetectParams::default()` keeps the Phase 4 E4 values (1, None).
 Evidence: `crates/app-core/tests/replay.rs` on a local `OCM_RECORD` session (not committed).
+
+## Amendment 2026-11-15 (test drive #2, ADR-0017)
+
+`recommended()` lowers the texture floor `min_eigen` from 1.0 to **0.25** and adds
+`min_eigen_ratio: Some(0.05)` (λ_min ≥ 0.05·λ_max at level 0, rejecting aperture-problem
+targets such as gratings). A faint nose texture under sensor noise sat around the old floor and
+flapped Lost ↔ Tracking every few frames. The pin test and
+`recommended_tracker_never_tracks_flat_occluded_or_wrong_targets` cover the change.

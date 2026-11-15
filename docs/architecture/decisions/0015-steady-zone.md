@@ -1,6 +1,6 @@
 # ADR-0015: Steady zone (cursor dead zone)
 
-Status: Accepted (user request, test drive #5); **effect not yet good enough** (see below)
+Status: Accepted (user request, test drive #5); default amended by ADR-0017 (5 px, on)
 Date: 2026-11-15
 
 ## Context
@@ -24,3 +24,9 @@ held position. Options → Pointer → "Steady zone".
   mapping scales by the whole multi-monitor desktop (2 × 2560 wide → ≈ 48 screen px per camera
   px), so jitter is larger than the zone. To revisit in test-drive part 2 (gain per display,
   adaptive filtering such as the 1€ filter, larger default).
+
+## Amendment 2026-11-15 (ADR-0017)
+
+Default `steady_px` is now **5** (on), behind the 1€ filter and the per-display scale, so a
+still head moves the cursor by exactly 0 px. An axis pinned at a screen limit bypasses the
+zone so screen edges stay reachable. Users with a saved `steady_px = 0` keep it.

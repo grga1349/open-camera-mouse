@@ -135,7 +135,45 @@ fn recommended_params_are_the_measured_candidate_as_amended() {
     r.min_margin = 0.03;
     r.confirm_frames = 3;
     r.min_context_zncc = Some(0.7);
+    // ADR-0017 (test drive #2): texture floor 0.25 + eigenvalue ratio 0.05; the appearance
+    // gate decides losses.
+    want.min_eigen = 0.25;
+    want.min_eigen_ratio = Some(0.05);
     assert_eq!(tracking_core::lk::LkParams::recommended(), want);
+}
+
+/// ADR-0017: with the texture test lowered to a floor, the appearance gate alone must keep
+/// flat regions, occluders and lookalikes from being reported as tracked.
+#[test]
+fn recommended_tracker_never_tracks_flat_occluded_or_wrong_targets() {
+    for name in [
+        "textureless",
+        "occlusion_full",
+        "occlusion_partial",
+        "edge_left",
+        "edge_top",
+        "fast_40px",
+        "distractor_similar",
+        "distractor_late_twin",
+        "distractor_twin",
+        "repeated_texture",
+    ] {
+        let seq = scene(name).render(320, 240);
+        let steps = run(
+            &mut LkTracker::new(tracking_core::lk::LkParams::recommended()),
+            &seq,
+        );
+        let m = metrics(&seq, &steps);
+        assert_eq!(m.wrong_lock, 0, "{name}: {m:?}");
+        assert_eq!(m.false_tracking, 0, "{name}: {m:?}");
+        if name == "textureless" {
+            let tracking = steps[1..]
+                .iter()
+                .filter(|s| s.status == TrackStatus::Tracking)
+                .count();
+            assert_eq!(tracking, 0, "flat region reported as tracked");
+        }
+    }
 }
 
 #[test]

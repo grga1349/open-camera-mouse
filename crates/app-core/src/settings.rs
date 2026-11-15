@@ -70,7 +70,8 @@ pub struct Settings {
     pub smoothing: f32,
     /// "Steady zone" (test drive #5, ADR-0015), screen px: head movement that would move the
     /// cursor less than this doesn't move it, so it can be held perfectly still. 0 = off
-    /// (2018). The cursor follows larger moves one to one, trailing by at most this.
+    /// (2018); default 5 (ADR-0017). The cursor follows larger moves one to one, trailing by
+    /// at most this, except on an axis pinned at a screen limit, which reaches the edge.
     pub steady_px: u32,
     pub limits: ScreenLimits,
     /// "Main monitor" (test drive #4, ADR-0014): the display whose centre the cursor goes to
@@ -102,7 +103,8 @@ impl Default for Settings {
             gain_y: 6.0,
             link_gain: true,
             smoothing: 0.05,
-            steady_px: 0,
+            // ADR-0017 (test drive #5): on by default, after the 1€ filter.
+            steady_px: 5,
             limits: ScreenLimits::default(),
             recenter_display: None,
             dwell: DwellSettings::default(),

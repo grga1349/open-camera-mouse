@@ -433,7 +433,10 @@ impl<C: CameraLink> Engine<C> {
     }
 
     /// Records raw frames and controller events (dev / diagnostics, `recorder`).
-    pub fn with_recorder(mut self, recorder: Option<Recorder>) -> Self {
+    pub fn with_recorder(mut self, mut recorder: Option<Recorder>) -> Self {
+        if let Some(r) = &mut recorder {
+            r.settings(self.controller.settings());
+        }
         self.recorder = recorder;
         self
     }
@@ -467,6 +470,9 @@ impl<C: CameraLink> Engine<C> {
                 let t = self.at(self.clock.now_us());
                 // The UI validated them; a rejection here would be a bug, so keep the old ones.
                 if let Ok(step) = self.controller.update_settings(s, t) {
+                    if let Some(r) = &mut self.recorder {
+                        r.settings(self.controller.settings());
+                    }
                     self.perform(step);
                 }
             }
@@ -573,6 +579,9 @@ impl<C: CameraLink> Engine<C> {
         let Some(p) = &mut self.pointer else { return };
         let input = match p.desktop() {
             Ok(d) if self.desktop.as_ref() != Some(&d) => {
+                if let Some(r) = &mut self.recorder {
+                    r.desktop(self.t_us, &d);
+                }
                 self.desktop = Some(d.clone());
                 Input::DesktopChanged(d)
             }

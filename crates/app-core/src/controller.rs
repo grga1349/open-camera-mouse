@@ -33,10 +33,11 @@ use pointer_core::dwell::{Dwell, DwellParams};
 use pointer_core::handover::{
     HandoverParams, InactivityTimer, REACQUIRE_MAX_JUMP_FRAC, mouse_moved_away, within_jump_bound,
 };
-use pointer_core::limits::{Limits, apply_limits, drift_offset};
+use pointer_core::limits::{Limits, Pin, apply_limits, drift_offset};
+use pointer_core::one_euro::{OneEuro, OneEuroParams};
 use pointer_core::smoothing::Smoother;
 use pointer_core::steady::SteadyZone;
-use pointer_core::{DesktopRect, FrameSize, Gain, map_raw};
+use pointer_core::{DesktopRect, FrameSize, Gain, map_raw_scaled, scale_reference};
 use tracking_core::lk::{LkParams, LkTracker};
 use tracking_core::{
     Diagnostics, GrayFrame, LossReason, Point2, TrackError, TrackOutput, TrackStatus, Tracker,
@@ -282,6 +283,8 @@ pub struct Controller {
     offset: Point2,
     last_commanded: Option<Point2>,
     last_observed: Option<Point2>,
+    /// Camera-space 1€ filter on the tracked point, before mapping (ADR-0017).
+    one_euro: OneEuro,
     smoother: Smoother,
     steady: SteadyZone,
     dwell: Dwell,
@@ -357,6 +360,7 @@ impl Controller {
             offset: Point2::default(),
             last_commanded: None,
             last_observed: None,
+            one_euro: OneEuro::default(),
             smoother: Smoother::default(),
             steady: SteadyZone::default(),
             dwell: Dwell::default(),
@@ -707,6 +711,7 @@ impl Controller {
         self.control = Control::Mouse(None);
         self.last_commanded = None;
         self.smoother.reset();
+        self.one_euro.reset();
         self.steady.reset();
         self.dwell.reset();
     }
@@ -819,6 +824,7 @@ impl Controller {
         {
             self.control = Control::Camera;
             self.smoother.reset_to(target, now_us);
+            self.one_euro.reset();
             self.steady.reset_to(target);
             self.dwell.reset();
             self.move_pointer(target, step);
@@ -880,8 +886,9 @@ impl Controller {
                 let s = gain * screen / frame;
                 if s > 0.0 { 1.0 / s } else { 0.0 }
             };
-            let ix = inv(self.settings.gain_x, self.desktop.width, size.width);
-            let iy = inv(self.settings.gain_y, self.desktop.height, size.height);
+            let r = self.scale_reference();
+            let ix = inv(self.settings.gain_x, r.width, size.width);
+            let iy = inv(self.settings.gain_y, r.height, size.height);
             self.offset = Point2::new(
                 c.x - position.x + (home.x - d.x) * ix,
                 c.y - position.y + (home.y - d.y) * iy,
@@ -889,20 +896,31 @@ impl Controller {
         }
         self.control = Control::Camera;
         self.smoother.reset_to(home, now_us);
+        self.one_euro.reset();
         self.steady.reset_to(home);
         self.dwell.reset();
         self.move_pointer(home, step);
+    }
+
+    /// The display whose size sets the mapping scale (ADR-0017).
+    fn scale_reference(&self) -> DesktopRect {
+        scale_reference(
+            &self.displays,
+            self.settings.recenter_display.map(|i| i as usize),
+            self.desktop,
+        )
     }
 
     fn map_unlimited(&self, p: Point2) -> Point2 {
         let Some(frame) = &self.frame else {
             return self.home();
         };
-        map_raw(
+        map_raw_scaled(
             p,
             self.offset,
             frame_size(frame),
             self.desktop,
+            self.scale_reference(),
             Gain {
                 x: self.settings.gain_x,
                 y: self.settings.gain_y,
@@ -919,15 +937,25 @@ impl Controller {
     /// dwell. The steady zone only holds what is sent out; the smoother keeps following.
     fn drive(&mut self, p: Point2, now_us: u64, step: &mut Step) {
         let last_us = self.smoother.last_us().unwrap_or(now_us);
+        let p = self.one_euro.update(p, now_us, &OneEuroParams::default());
         let raw = self.map_unlimited(p);
         let smoothed = self.smoother.update(raw, now_us, self.settings.smoothing);
         let limited = apply_limits(smoothed, self.desktop, limits(&self.settings));
         // 2018 keeps the clamped position as the filter state.
         self.smoother.set_current(limited.position);
         self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us));
-        let cursor = self
+        let mut cursor = self
             .steady
             .update(limited.position, self.settings.steady_px as f32);
+        // At a screen limit the edge itself must be reachable (menu bar, corners): a pinned
+        // axis isn't held back by the steady zone's trailing radius (ADR-0017).
+        if limited.x != Pin::Free {
+            cursor.x = limited.position.x;
+        }
+        if limited.y != Pin::Free {
+            cursor.y = limited.position.y;
+        }
+        self.steady.reset_to(cursor);
         self.move_pointer(cursor, step);
         if !self.settings.dwell.enabled {
             return;

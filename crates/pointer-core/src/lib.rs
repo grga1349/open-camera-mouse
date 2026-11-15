@@ -9,6 +9,7 @@
 pub mod dwell;
 pub mod handover;
 pub mod limits;
+pub mod one_euro;
 pub mod smoothing;
 pub mod steady;
 
@@ -72,13 +73,50 @@ pub fn map_raw(
     desktop: DesktopRect,
     gain: Gain,
 ) -> Point2 {
+    map_raw_scaled(p, offset, frame, desktop, desktop, gain)
+}
+
+/// [`map_raw`] with the scale taken from `reference`'s size instead of the whole desktop's
+/// (ADR-0017): `desk_center + (p + offset − img_center) · gain · ref_size / img_size`. With one
+/// display and `reference = desktop` it is exactly the 2018 mapping.
+pub fn map_raw_scaled(
+    p: Point2,
+    offset: Point2,
+    frame: FrameSize,
+    desktop: DesktopRect,
+    reference: DesktopRect,
+    gain: Gain,
+) -> Point2 {
     let c = desktop.center();
-    let sx = gain.x * desktop.width / frame.width;
-    let sy = gain.y * desktop.height / frame.height;
+    let sx = gain.x * reference.width / frame.width;
+    let sy = gain.y * reference.height / frame.height;
     Point2::new(
         c.x + (p.x + offset.x - frame.width / 2.0) * sx,
         c.y + (p.y + offset.y - frame.height / 2.0) * sy,
     )
+}
+
+/// The display whose size sets the mapping scale (ADR-0017, test drive #5): the "Main
+/// monitor" (`main`, an index into `displays`) when set and present, otherwise the largest
+/// display by area (the first of equals), otherwise the whole desktop. Scaling by the whole
+/// desktop (2018) made one camera pixel ≈ 37 screen px on a 1440 + 2560 px setup at gain 6,
+/// so tracker noise at rest became visible cursor shake.
+pub fn scale_reference(
+    displays: &[DesktopRect],
+    main: Option<usize>,
+    desktop: DesktopRect,
+) -> DesktopRect {
+    main.and_then(|i| displays.get(i).copied())
+        .or_else(|| {
+            displays.iter().copied().reduce(|a, b| {
+                if b.width * b.height > a.width * a.height {
+                    b
+                } else {
+                    a
+                }
+            })
+        })
+        .unwrap_or(desktop)
 }
 
 /// [`map_raw`] clamped to the virtual desktop.
@@ -106,6 +144,63 @@ mod tests {
         width: 1920.0,
         height: 1080.0,
     };
+
+    #[test]
+    fn scale_reference_is_the_main_display_else_the_largest() {
+        let laptop = DesktopRect {
+            x: 0.0,
+            y: 0.0,
+            width: 1440.0,
+            height: 900.0,
+        };
+        let external = DesktopRect {
+            x: 1440.0,
+            y: -540.0,
+            width: 2560.0,
+            height: 1440.0,
+        };
+        let both = DesktopRect {
+            x: 0.0,
+            y: -540.0,
+            width: 4000.0,
+            height: 1440.0,
+        };
+        let d = [laptop, external];
+        assert_eq!(scale_reference(&d, Some(0), both), laptop);
+        assert_eq!(scale_reference(&d, Some(1), both), external);
+        assert_eq!(scale_reference(&d, None, both), external);
+        // A Main monitor that is gone falls back to the largest.
+        assert_eq!(scale_reference(&d, Some(5), both), external);
+        assert_eq!(scale_reference(&[], None, both), both);
+    }
+
+    #[test]
+    fn scaled_mapping_uses_the_reference_size_around_the_desktop_centre() {
+        let reference = DesktopRect {
+            x: 0.0,
+            y: 0.0,
+            width: 960.0,
+            height: 540.0,
+        };
+        let g = Gain::default();
+        let p = Point2::new(330.0, 250.0);
+        let full = map_raw(p, Point2::default(), FRAME, DESK, g);
+        let half = map_raw_scaled(p, Point2::default(), FRAME, DESK, reference, g);
+        let c = DESK.center();
+        assert!(
+            ((half.x - c.x) * 2.0 - (full.x - c.x)).abs() < 1e-3,
+            "{half:?} {full:?}"
+        );
+        assert!(
+            ((half.y - c.y) * 2.0 - (full.y - c.y)).abs() < 1e-3,
+            "{half:?} {full:?}"
+        );
+        assert_eq!(
+            map_raw_scaled(p, Point2::default(), FRAME, DESK, DESK, g),
+            full,
+            "reference = desktop is the 2018 mapping"
+        );
+    }
 
     #[test]
     fn frame_center_maps_to_desktop_center() {

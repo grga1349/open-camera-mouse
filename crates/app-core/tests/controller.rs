@@ -55,6 +55,23 @@ fn noise(x: f32, y: f32, seed: u32) -> f32 {
 /// A raw camera frame (`w`×`h`) whose display-space (mirrored) content is the scene shifted
 /// by `(dx, dy)`: `dx > 0` is the user's head moving to their right.
 fn raw_frame(w: u32, h: u32, dx: f32, dy: f32, seed: u32, ts: u64) -> CameraFrame {
+    raw_frame_with(w, h, dx, dy, seed, ts, 200.0, 0.0)
+}
+
+/// [`raw_frame`] with the texture's contrast (grey levels, 200 = strong) and per-pixel sensor
+/// noise (uniform, ± `sensor` grey levels, different every frame), for faint targets like a
+/// nose tip (test drive #2).
+#[allow(clippy::too_many_arguments)]
+fn raw_frame_with(
+    w: u32,
+    h: u32,
+    dx: f32,
+    dy: f32,
+    seed: u32,
+    ts: u64,
+    contrast: f32,
+    sensor: f32,
+) -> CameraFrame {
     let mut data = Vec::with_capacity((w * h) as usize);
     for y in 0..h {
         for x in 0..w {
@@ -66,7 +83,13 @@ fn raw_frame(w: u32, h: u32, dx: f32, dy: f32, seed: u32, ts: u64) -> CameraFram
             } else {
                 noise(disp_x - dx, y as f32 - dy, seed)
             };
-            data.push((30.0 + 200.0 * v) as u8);
+            let n = if sensor > 0.0 {
+                sensor * (2.0 * hash(i64::from(x), i64::from(y), (ts / 1000) as u32) - 1.0)
+            } else {
+                0.0
+            };
+            // Contrast 200 gives exactly the original `30 + 200·v` frames.
+            data.push((130.0 - contrast / 2.0 + contrast * v + n) as u8);
         }
     }
     CameraFrame {
@@ -370,10 +393,12 @@ fn head_right_moves_the_cursor_right() {
         assert!((p.y - CENTER.y).abs() < 3.0, "{p:?}");
         last = p;
     }
-    // Smoothing (R-P2) lags a little; once the head is still the cursor settles at
-    // 5 px of head motion × gain 6 × (1920 / 640) = 90 px.
-    let last = r.hold(300_000, 5.0, SCENE).pointer_target().unwrap();
-    assert!((last.x - (CENTER.x + 90.0)).abs() < 3.0, "{last:?}");
+    // Filtering lags a little; once the head is still the cursor settles at 5 px of head
+    // motion × gain 6 × (1920 / 640) = 90 px, short of it by at most the steady zone
+    // (5 px, ADR-0017), never past it.
+    let last = r.hold(500_000, 5.0, SCENE).pointer_target().unwrap();
+    let short = CENTER.x + 90.0 - last.x;
+    assert!((-0.5..STEADY + 1.0).contains(&short), "{last:?}");
     let t = r.c.view(r.now).marker.unwrap();
     assert!((t.position.x - 325.0).abs() < 0.5, "{t:?}");
 }
@@ -867,15 +892,22 @@ fn sweep(r: &mut Rig, from: f32, to: f32) -> Step {
     all
 }
 
+/// Steady-zone radius in the default settings (ADR-0017).
+const STEADY: f32 = 5.0;
+
+/// Smoothing 0 turns off the 2018 smoother only; the 1€ filter (ADR-0017) still runs, and
+/// settles a 2 px step (2 × gain 6 × 1920/640 = 36 px) within half a second.
 #[test]
-fn zero_smoothing_follows_the_head_in_one_frame() {
+fn zero_smoothing_settles_a_step_within_half_a_second() {
     let mut r = Rig::tracking_with(Settings {
         smoothing: 0.0,
         ..Settings::default()
     });
-    let p = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
-    // 2 px × gain 6 × 1920/640 = 36 px, no lag.
-    assert!((p.x - (CENTER.x + 36.0)).abs() < 2.0, "{p:?}");
+    let first = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
+    assert!(first.x > CENTER.x, "moves on the first frame: {first:?}");
+    let p = r.hold(500_000, 2.0, SCENE).pointer_target().unwrap();
+    let short = CENTER.x + 36.0 - p.x;
+    assert!((-0.5..STEADY + 1.0).contains(&short), "{p:?}");
 }
 
 #[test]
@@ -883,8 +915,9 @@ fn default_smoothing_lags_then_settles() {
     let mut r = Rig::tracking();
     let first = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
     assert!(first.x > CENTER.x && first.x < CENTER.x + 34.0, "{first:?}");
-    let settled = r.hold(300_000, 2.0, SCENE).pointer_target().unwrap();
-    assert!((settled.x - (CENTER.x + 36.0)).abs() < 2.0, "{settled:?}");
+    let settled = r.hold(500_000, 2.0, SCENE).pointer_target().unwrap();
+    let short = CENTER.x + 36.0 - settled.x;
+    assert!((-0.5..STEADY + 1.0).contains(&short), "{settled:?}");
 }
 
 /// Limits keep the cursor inside the insets; while pinned, the offset drifts back so the
@@ -908,11 +941,12 @@ fn screen_limits_pin_the_cursor_and_drift_recentres_the_mapping() {
         "cursor past the limit: {m:?}"
     );
     assert_eq!(m.last().unwrap().x, edge, "pinned at the right limit");
-    // Holding the head there: the offset drifts ~14.3 image px/s toward the centre, so
-    // after 2 s the cursor has come off the edge.
+    // Holding the head there: the offset drifts ~14.3 image px/s toward the centre until
+    // the target is back inside the limit. The cursor then stays within the steady zone of
+    // the edge (ADR-0017): a held head doesn't move it.
     let s = r.hold(2_000_000, 50.0, SCENE);
     let last = s.pointer_target().unwrap();
-    assert!(last.x < edge && last.x > edge - 40.0, "{last:?}");
+    assert!(last.x <= edge && last.x > edge - 40.0, "{last:?}");
     // Head back to centre: the cursor is now left of the desktop centre (mapping shifted).
     let back = sweep(&mut r, 50.0, 0.0).pointer_target().unwrap();
     assert!(back.x < CENTER.x - 50.0, "{back:?}");
@@ -1102,18 +1136,19 @@ fn recenter_on_a_display_starts_at_its_centre_and_still_reaches_the_others() {
     assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
     assert_eq!(s.pointer_target(), Some(RIGHT.center()));
 
-    // Same mapping scale as before, only shifted: head 5 px left moves the cursor
-    // 5 · gain 6 · 4480 / 640 = 210 px left of the home point.
+    // The scale comes from the Main monitor's size (ADR-0017), shifted to its centre: head
+    // 5 px left moves the cursor 5 · gain 6 · 2560 / 640 = 120 px left of the home point.
     let s = r.hold(2_000_000, -5.0, SCENE);
     let last = *moves(&s).last().unwrap();
-    let want = Point2::new(RIGHT.center().x - 210.0, RIGHT.center().y);
-    assert!(dist(last, want) < 3.0, "{last:?} vs {want:?}");
+    let want = Point2::new(RIGHT.center().x - 120.0, RIGHT.center().y);
+    assert!(dist(last, want) < STEADY + 1.0, "{last:?} vs {want:?}");
 
-    // Far enough left, the cursor crosses onto the left display (head turned in 2 px steps).
-    for i in 1..=20 {
+    // Far enough left, the cursor crosses onto the left display (head turned in 2 px steps):
+    // 75 px · 24 = 1800 px left of 3200 is on the left display.
+    for i in 1..=35 {
         r.frame(-5.0 - 2.0 * i as f32, 0.0, SCENE);
     }
-    let s = r.hold(2_000_000, -45.0, SCENE);
+    let s = r.hold(2_000_000, -75.0, SCENE);
     assert_eq!(r.c.state(), AppState::Tracking);
     let last = *moves(&s).last().unwrap();
     assert!(last.x < LEFT.width, "{last:?} still on the right display");
@@ -1174,8 +1209,12 @@ fn steady_zone_holds_the_cursor_still_against_head_jitter() {
 
 #[test]
 fn without_steady_zone_head_jitter_moves_the_cursor() {
-    // Control for the test above: the jitter is real at the cursor without the zone.
-    let mut r = Rig::tracking();
+    // Control for the test above: with the zone off, filtered jitter still reaches the
+    // cursor; the zone is what makes it exactly zero.
+    let mut r = Rig::tracking_with(Settings {
+        steady_px: 0,
+        ..Settings::default()
+    });
     r.hold(500_000, 0.0, SCENE);
     let mut targets = Vec::new();
     for i in 0..90 {
@@ -1185,5 +1224,134 @@ fn without_steady_zone_head_jitter_moves_the_cursor() {
     let xs: Vec<f32> = targets.iter().map(|p| p.x).collect();
     let spread =
         xs.iter().cloned().fold(f32::MIN, f32::max) - xs.iter().cloned().fold(f32::MAX, f32::min);
-    assert!(spread > 2.0, "spread {spread}");
+    assert!(spread > 0.0, "spread {spread}");
+}
+
+// ---- test drive failure points (task 0009, diagnosed on local recordings 2026-11-15) ----
+//
+// Each test reproduces one failure seen on the user's camera with synthetic frames. The
+// recordings themselves are never committed; these tests are the record.
+
+/// A faint target like a nose tip: texture contrast 13 grey levels plus ±3 levels of sensor
+/// noise puts LK's texture measure (`min_eigen`, threshold 1.0) at ≈ 1.0–1.25, where the user's
+/// recording (S2) sat while the selected point matched its reference at ZNCC 0.93–0.98.
+const FAINT_CONTRAST: f32 = 13.0;
+const SENSOR_NOISE: f32 = 3.0;
+
+impl Rig {
+    fn faint_frame(&mut self, dx: f32, dy: f32) -> Step {
+        self.now += FRAME_US;
+        let f = raw_frame_with(W, H, dx, dy, SCENE, self.now, FAINT_CONTRAST, SENSOR_NOISE);
+        self.input(Input::Frame(f))
+    }
+}
+
+fn loss_count(states: &[AppState]) -> usize {
+    states
+        .windows(2)
+        .filter(|w| w[0] != AppState::Lost && w[1] == AppState::Lost)
+        .count()
+}
+
+/// #2 (S2): with the head still, the faint target flipped Lost ↔ Tracking every 2–3 frames
+/// (with recovery on; without recovery the first dip is a permanent loss). A still, matching
+/// target must stay tracked.
+#[test]
+fn a_faint_still_target_is_tracked_without_losses() {
+    for recovery in [false, true] {
+        let mut r = Rig::new(Settings {
+            loss_recovery: recovery,
+            ..Settings::default()
+        });
+        r.cmd(Command::ToggleStart);
+        r.faint_frame(0.0, 0.0);
+        r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
+        assert_eq!(r.c.state(), AppState::Tracking);
+        let mut states = vec![AppState::Tracking];
+        for _ in 0..90 {
+            r.faint_frame(0.0, 0.0);
+            states.push(r.c.state());
+        }
+        let lost = states.iter().filter(|s| **s == AppState::Lost).count();
+        assert_eq!(
+            (loss_count(&states), lost),
+            (0, 0),
+            "recovery {recovery}: losses / lost frames over 3 s still"
+        );
+        let m = r.c.view(r.now).marker.unwrap().position;
+        assert!(
+            dist(m, Point2::new(320.0, 240.0)) < 1.0,
+            "marker drifted to {m:?}"
+        );
+    }
+}
+
+/// The user's desktop: a 1440×900 laptop screen and a 2560×1440 display to its right,
+/// 540 px higher (bounding box 4000×1440).
+fn users_desktop() -> Desktop {
+    let laptop = DesktopRect {
+        x: 0.0,
+        y: 0.0,
+        width: 1440.0,
+        height: 900.0,
+    };
+    let external = DesktopRect {
+        x: 1440.0,
+        y: -540.0,
+        width: 2560.0,
+        height: 1440.0,
+    };
+    Desktop {
+        bounds: DesktopRect {
+            x: 0.0,
+            y: -540.0,
+            width: 4000.0,
+            height: 1440.0,
+        },
+        displays: vec![laptop, external],
+    }
+}
+
+/// Head micro-movement at rest as measured in S1: ≈ 0.08 px rms per frame in camera pixels
+/// (uniform in ±0.14), deterministic.
+fn rest_tremor(i: u64) -> (f32, f32) {
+    let u = |seed| 0.28 * (hash(i as i64, 0, seed) - 0.5);
+    (u(501), u(502))
+}
+
+/// #5 (S1): sitting still, the cursor shook ≈ 2.6 px rms frame to frame on the user's two
+/// displays: 0.08 px of camera-space movement × gain 6 × 4000 / 640 ≈ 37 screen px per camera
+/// px, and default smoothing removed almost none of it. At rest the cursor must not move at
+/// all (user, 2026-11-15: "jitter has to be 0"). ADR-0017: 1€ filter in camera space, scale by
+/// the main display, 5 px steady zone.
+#[test]
+fn the_cursor_does_not_move_at_rest_on_a_wide_desktop() {
+    let mut r = Rig::new(Settings::default());
+    r.input(Input::DesktopChanged(users_desktop()));
+    r.cmd(Command::ToggleStart);
+    r.frame(0.0, 0.0, SCENE);
+    r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
+    r.hold(HANDOVER_US, 0.0, SCENE);
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+    let mut cursor = Vec::new();
+    for i in 0..300 {
+        let (dx, dy) = rest_tremor(i);
+        let p = r.frame(dx, dy, SCENE).pointer_target();
+        // The first second settles; the next 9 s are measured.
+        if i >= 30 {
+            cursor.push(p.expect("camera moves the pointer every tracked frame"));
+        }
+    }
+    let moved = cursor.windows(2).filter(|w| w[0] != w[1]).count();
+    assert_eq!(
+        moved,
+        0,
+        "cursor moved on {moved} of {} frames at rest",
+        cursor.len()
+    );
+
+    // A deliberate small move (1 camera px ≈ 24 screen px here) still moves the cursor.
+    let before = *cursor.last().unwrap();
+    let after = r.hold(1_000_000, 1.0, SCENE).pointer_target().unwrap();
+    assert!(after.x - before.x > 15.0, "{before:?} → {after:?}");
 }

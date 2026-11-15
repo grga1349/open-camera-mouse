@@ -34,6 +34,10 @@ pub struct LkParams {
     /// Minimum `λ_min(G) / |W|` (intensity² per px²) for a trackable window. Not a 2018 value
     /// (2018 only rejected a numerically singular G); chosen on the Phase 3 corpus.
     pub min_eigen: f32,
+    /// Minimum `λ_min / λ_max` of `G` at level 0 (ADR-0017): rejects one-directional texture
+    /// (an edge or stripes, the aperture problem) independently of contrast, so the absolute
+    /// `min_eigen` can stay low for faint but two-dimensional texture. `None` = off (B-LK18).
+    pub min_eigen_ratio: Option<f32>,
     /// Outlier guard as a fraction of frame width (Q-R1, ADR-0009). 35/640 = 35 px at 640.
     pub max_motion_frac: f32,
     /// Edge margin for the loss policy as a fraction of frame width. 10/640 = 10 px at 640.
@@ -70,6 +74,13 @@ impl LkParams {
     /// measurement baseline.
     pub fn recommended() -> Self {
         Self {
+            // Test drive #2 (ADR-0017): on a faint real target (nose tip) λ_min/|W| sat at
+            // 1.0–1.25 while the point matched its reference at ZNCC 0.93–0.98, so the 1.0
+            // test turned sensor noise into losses (Lost ↔ Tracking every 2–3 frames with
+            // recovery). With the appearance gate deciding "different surface", the texture
+            // test only has to reject a degenerate solve.
+            min_eigen: 0.25,
+            min_eigen_ratio: Some(0.05),
             min_ref_zncc: Some(0.7),
             gain_bias: true,
             redetect: Some(RedetectParams {
@@ -98,6 +109,7 @@ impl Default for LkParams {
             max_iter: 20,
             epsilon: 0.03,
             min_eigen: 1.0,
+            min_eigen_ratio: None,
             max_motion_frac: 35.0 / 640.0,
             edge_margin_frac: 10.0 / 640.0,
             fb_max_error: None,
@@ -202,9 +214,16 @@ pub fn track_point(
             }
         }
         let det = gxx * gyy - gxy * gxy;
-        let min_eig = (gxx + gyy - ((gxx - gyy).powi(2) + 4.0 * gxy * gxy).sqrt()) / (2.0 * area);
+        let root = ((gxx - gyy).powi(2) + 4.0 * gxy * gxy).sqrt();
+        let min_eig = (gxx + gyy - root) / (2.0 * area);
+        let max_eig = (gxx + gyy + root) / (2.0 * area);
+        // The ratio test applies at level 0 only: coarse levels just skip refinement.
+        let isotropic = l != 0
+            || params
+                .min_eigen_ratio
+                .is_none_or(|r| min_eig >= r * max_eig);
         // Written so NaN (from a non-finite window) also counts as degenerate.
-        let trackable = min_eig >= params.min_eigen && det > f32::EPSILON;
+        let trackable = min_eig >= params.min_eigen && det > f32::EPSILON && isotropic;
         if !trackable {
             if l == 0 {
                 return FlowResult::Failed {

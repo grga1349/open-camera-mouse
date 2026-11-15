@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6b test drive ACTIVE, task 0009; slice 2a done + pushed, CI to verify; next 2b)
+Last updated: 2026-11-15 (Phase 6b, task 0009; slice 2b done in code (ADR-0017), uncommitted; device check pending)
 
 ## Branch / commit
 
@@ -76,9 +76,11 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Verify CI green for the slice 2a commit (it fixes the failure red since `eb667e3`). Then 2b (recordings + `replay_bench`), 2c (#5 jitter),
-2d (#2 losses) per `tasks/active/0009-phase-6b-test-drive.md` and `agent/HANDOFF.md`. Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7;
-row 21 and the threshold re-measurement in Phase 8.
+Slice 2b done in code (ADR-0017: tracker floor + eigen ratio, 1€ filter, Main-monitor scale,
+steady zone 5 px default, device-checked: jitter largely resolved), gates green, **uncommitted**. Next: ask to commit, user's on-device
+check (tell them their saved `steady_px = 0` overrides the new default), then 2d (#2 turn
+losses, `turn_extreme` synthetic gap) per the task file. Recordings are diagnosis-only (no repo
+code/numbers). Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the threshold re-measurement in Phase 8.
 
 ## Open risks
 

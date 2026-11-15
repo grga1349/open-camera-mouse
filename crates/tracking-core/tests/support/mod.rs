@@ -144,6 +144,14 @@ pub struct Pose {
     pub bias: f64,
     /// Occluder rectangle `(x0, y0, x1, y1)`, drawn over the target.
     pub occluder: Option<(f64, f64, f64, f64)>,
+    /// Illumination gradient: every pixel's clean value is multiplied by
+    /// `1 + gx·(x − cx) + gy·(y − cy)` around the target centre (light from one side).
+    pub illum_grad: (f64, f64),
+    /// Non-rigid warp of the target texture (2D stand-in for an out-of-plane turn): in
+    /// target-local units the texture is sampled at `l + A·(sin((ly − oy)/P), sin((lx − ox)/P))`
+    /// with `(ox, oy)` the selected offset, so the selected point itself never moves (ground
+    /// truth stays exact) while its surroundings deform. `(A, P)`; `A = 0` is none.
+    pub warp: (f64, f64),
 }
 
 impl Pose {
@@ -155,6 +163,8 @@ impl Pose {
             gain: 1.0,
             bias: 0.0,
             occluder: None,
+            illum_grad: (0.0, 0.0),
+            warp: (0.0, 25.0),
         }
     }
 }
@@ -219,7 +229,20 @@ impl Scene {
         }
     }
 
+    /// The noise-free value at `(x, y)` (reference units) at frame `t`, before the global
+    /// gain/bias: for generator tests.
+    pub fn clean_at(&self, t: usize, x: f64, y: f64) -> f64 {
+        let src = self.source_frame(t);
+        self.clean_value(src, &(self.pose)(src), x, y)
+    }
+
     fn clean_value(&self, t: usize, p: &Pose, x: f64, y: f64) -> f64 {
+        let (gx, gy) = p.illum_grad;
+        let light = 1.0 + gx * (x - p.center.0) + gy * (y - p.center.1);
+        light * self.unlit_value(t, p, x, y)
+    }
+
+    fn unlit_value(&self, t: usize, p: &Pose, x: f64, y: f64) -> f64 {
         if let Some((x0, y0, x1, y1)) = p.occluder
             && x >= x0
             && x <= x1
@@ -247,7 +270,17 @@ impl Scene {
         if w == 0.0 {
             bg
         } else {
-            bg + w * (self.target.eval(lx + 1000.0, ly + 1000.0) - bg)
+            let (a, period) = p.warp;
+            let (ox, oy) = self.select_offset;
+            let (sx, sy) = if a == 0.0 {
+                (lx, ly)
+            } else {
+                (
+                    lx + a * ((ly - oy) / period).sin(),
+                    ly + a * ((lx - ox) / period).sin(),
+                )
+            };
+            bg + w * (self.target.eval(sx + 1000.0, sy + 1000.0) - bg)
         }
     }
 
@@ -314,6 +347,8 @@ impl Scene {
             && pa.angle_rad == pb.angle_rad
             && pa.scale == pb.scale
             && pa.occluder == pb.occluder
+            && pa.illum_grad == pb.illum_grad
+            && pa.warp == pb.warp
             && self.distractor.is_none_or(|d| {
                 (d.frames.0..d.frames.1).contains(&a) == (d.frames.0..d.frames.1).contains(&b)
             })
@@ -672,9 +707,91 @@ pub fn corpus() -> Vec<Scene> {
     v
 }
 
+// ---------------------------------------------------------------------------------------
+// Appearance-change corpus (task 0009 slice 2b): what a real head does to the selected patch
+// besides translating. Separate from `corpus()` so the Phase 3/4 tables and fingerprints
+// stay as they were. 640×480 only (CI time); pinned in `tests/appearance.rs`.
+
+/// 0 → 1 → 0 over `n` frames (out and back).
+fn there_and_back(t: usize, n: usize) -> f64 {
+    (t as f64 * std::f64::consts::PI / n as f64).sin().max(0.0)
+}
+
+/// A head turn as the 2D generator can show it, at strength `k` (1 = moderate): the patch
+/// translates sideways, shrinks (foreshortening), rolls a little, deforms non-rigidly and
+/// the light falls off across it, all out and back over the scene.
+fn turn(t: usize, k: f64) -> Pose {
+    let s = there_and_back(t, 90);
+    Pose {
+        scale: 1.0 - 0.12 * k * s,
+        angle_rad: (6.0 * k).to_radians() * s,
+        illum_grad: (0.003 * k * s, 0.0),
+        warp: (4.0 * k * s, 25.0),
+        ..Pose::at((C0.0 + 90.0 * s, C0.1 + 10.0 * s))
+    }
+}
+
+pub fn appearance_corpus() -> Vec<Scene> {
+    vec![
+        base(
+            "illum_gradient",
+            "light sweeps across the target: gain gradient ±0.004/ref px (≈ ±18 % at the rim)",
+            90,
+            |t| Pose {
+                illum_grad: (
+                    0.004 * (t as f64 * std::f64::consts::TAU / 90.0).sin(),
+                    0.002 * (t as f64 * std::f64::consts::TAU / 45.0).sin(),
+                ),
+                ..Pose::at(sway(t / 3))
+            },
+        ),
+        base(
+            "nonrigid_warp",
+            "texture around the selected point deforms (warp 0 → 5 → 0 ref px, period 25)",
+            90,
+            |t| Pose {
+                warp: (5.0 * there_and_back(t, 90), 25.0),
+                ..Pose::at(sway(t / 3))
+            },
+        ),
+        base(
+            "scale_rotate",
+            "scale 1 → 0.85 and roll 0 → 12° together, out and back",
+            90,
+            |t| {
+                let s = there_and_back(t, 90);
+                Pose {
+                    scale: 1.0 - 0.15 * s,
+                    angle_rad: 12f64.to_radians() * s,
+                    ..Pose::at((C0.0 + 40.0 * s, C0.1))
+                }
+            },
+        ),
+        base(
+            "turn_moderate",
+            "head-turn stand-in: translate + shrink 12 % + roll 6° + warp 4 + light gradient",
+            90,
+            |t| turn(t, 1.0),
+        ),
+        base(
+            "turn_strong",
+            "head-turn stand-in at 2× strength (shrink 24 %, roll 12°, warp 8, gradient 0.006)",
+            90,
+            |t| turn(t, 2.0),
+        ),
+        base(
+            "turn_extreme",
+            "head-turn stand-in at 3× strength (shrink 36 %, roll 18°, warp 12, gradient 0.009)",
+            90,
+            |t| turn(t, 3.0),
+        ),
+    ]
+}
+
 pub fn scene(name: &str) -> Scene {
     corpus()
         .into_iter()
+        .chain(appearance_corpus())
         .find(|s| s.name == name)
         .unwrap_or_else(|| panic!("no scene {name}"))
 }

@@ -76,6 +76,27 @@ scripts/check-core-deps.sh
   timings unchanged (target met); `ui` 15/17 ms p50/p95 while Options is open (likely vsync wait
   of the immediate viewport; misses the 5 ms UI target but can't reach the cursor; revisit only
   if the UI feels slow). Handover works. Not checked: minimised, dwell, CPU %.
+- 2026-11-15 slice 2b DONE in code (uncommitted at handoff; device check pending). The user
+  decided: **recordings are diagnosis-only**. No recordings, benchmark numbers or code that
+  reads recordings go in the repo or CI; each finding becomes a fast synthetic test.
+  `replay_bench`/`replay.rs`, the `toml` dev-dep and the BENCHMARK_* docs were dropped. The
+  replay harness lives only in the session scratchpad. Kept: recorder thread +
+  `desktop.csv`/`settings.toml` (`apps/desktop/src/recorder.rs`), `docs/qa/RECORDING_PROTOCOL.md`,
+  `scripts/record-scenario.sh` (S0–S3), and the synthetic appearance corpus
+  (`tracking-core/tests/appearance.rs`, pinned; `turn_extreme` 31/90 is the open gap). The user
+  recorded S1 (still) and S2 (turns). Diagnosis: (a) #2 `LowConfidence` flapping on a faint
+  texture; (b) #5 jitter = ≈ 0.1 px marker noise × whole-desktop scale. User: "do all three,
+  make them default" and "jitter has to be 0". ADR-0017 records them: LK floor 0.25 + eigen
+  ratio 0.05; 1€ filter (`pointer-core/src/one_euro.rs`); scale by the Main monitor, else the
+  largest display (`scale_reference`, `map_raw_scaled`); steady zone default 5 px (3, raised by the user after the device check: "resolved jittering good part"), and an axis
+  pinned at a screen limit reaches the edge. ADR-0011 and ADR-0015 amended. New tests:
+  `a_faint_still_target_is_tracked_without_losses`,
+  `the_cursor_does_not_move_at_rest_on_a_wide_desktop`, `one_euro` ×6,
+  `scale_reference_*`, `scaled_mapping_*`,
+  `recommended_tracker_never_tracks_flat_occluded_or_wrong_targets`. Five controller tests were
+  restated because steady-zone trailing (≤ 5 px) and the 1€ settle (≈ 0.5 s) are by design.
+  All gates green locally. This merges plan items 2c.1–2c.3 into 2b. Next: on-device check,
+  then 2d (turn losses).
 
 ## Part 2 plan (slices 2a–2d, one per session)
 
@@ -88,8 +109,9 @@ Inputs: `docs/research/HEAD_POINTER_STABILITY_INPUTS.md` (A = online research, B
 2018 RE facts) and `RE_EVIDENCE.md`. Section refs like "A §3" point into that file.
 
 Every item says how it's checked. **CI** = runs in `cargo test` on 3 OS, no camera.
-**Replay** = `#[ignore]` test on the user's recordings (local, faces never committed; the
-resulting *numbers* go into `docs/`). **Device** = the user runs the app with `OCM_PERF=1`.
+**Replay** = local diagnosis on the user's recordings, never committed; the original plan
+below assumed a committed `replay_bench` and number tables. The user dropped that on 2026-11-15:
+each finding becomes a synthetic CI test instead. **Device** = the user runs the app with `OCM_PERF=1`.
 
 ### 2a — Frame path and performance (#6), ADR-0016
 
@@ -145,7 +167,7 @@ Checks:
 
 ### 2b — Benchmark recordings and metrics harness (prerequisite for 2c, 2d)
 
-1. `docs/qa/BENCHMARK_PROTOCOL.md`: one recording per scenario, stored **outside the repo and
+1. `docs/qa/BENCHMARK_PROTOCOL.md` (2026-11-15: cut to S0 static, S1 still, S2 turns, S3 corners + return, ≈ 2 min; the list below is the original plan): one recording per scenario, stored **outside the repo and
    outside /tmp** (`~/ocm-recordings/<scenario>-<date>/`; the first recording was lost with
    /tmp). Scenarios: **S0 static target 30 s** (a printed photo or textured object in front of the camera,
 nothing moves: pure measurement noise, A §1 distinction (1) vs (2)); S1 still 45 s looking at the main screen centre; S2 slow yaw ×5; S3 slow
@@ -168,7 +190,7 @@ nothing moves: pure measurement noise, A §1 distinction (1) vs (2)); S1 still 4
 
 ### 2c — Cursor stability (#5)
 
-1. **Mapping reference** (Replay S1, S5): scale by desktop width (today, = 2018) vs the main
+1. **Mapping reference** (Replay S1, S3): scale by desktop width (today, = 2018) vs the main
    display's width vs the display under the cursor. Expected: 2× less wander on 2 × 2560
    (only arithmetic so far). Changing the default departs from 2018 → ask the user with the
    numbers, ADR-0017 either way.
@@ -186,7 +208,7 @@ nothing moves: pure measurement noise, A §1 distinction (1) vs (2)); S1 still 4
    that meets the targets wins.
 5. Accessibility checks (B §6): dwell success / accidental clicks on S1 with each variant
    (replay counts dwell `Click` effects); no movement trapping at low speed (S2 slow onset).
-- Proposed targets (Replay): S1 P95 wander ≤ 3 px on the user's desktop; S6 added lag ≤ 1
+- Proposed targets (Replay): S1 P95 wander ≤ 3 px on the user's desktop; S2 added lag ≤ 1
   frame vs unfiltered. Ships as an option ("Smoothing: 2018 / Adaptive"), off by default
   unless the user decides otherwise after trying it.
 - Stop: if 1€ can't get S1 under ~5 px without > 2 frames lag on S6, try velocity-dependent

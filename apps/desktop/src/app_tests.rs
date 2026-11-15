@@ -678,7 +678,11 @@ fn pointer_tab_controls() {
     h.run_steps(4);
     assert_eq!(settings(&h).smoothing, 0.5);
 
-    assert_eq!(settings(&h).steady_px, 0, "steady zone off by default");
+    assert_eq!(
+        settings(&h).steady_px,
+        5,
+        "steady zone on by default (ADR-0017)"
+    );
     h.get_by_label("Steady zone").set_value_accesskit(6.0);
     h.run_steps(4);
     assert_eq!(settings(&h).steady_px, 6);
