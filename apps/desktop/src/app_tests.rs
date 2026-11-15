@@ -3,59 +3,17 @@
 //! deadlines; frames are synthetic (no camera).
 
 use super::*;
-use app_core::ports::{CameraError, CameraFrame, CaptureFormat, GrayFrame, Point2};
+use app_core::ports::{CameraError, CameraFrame, CaptureFormat, Point2};
 use app_core::{AppState, MarkerKind, PointerOwner};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
 use crate::preview::{PREVIEW_LABEL, fit_rect, to_screen};
 
-const W: u32 = 640;
-const H: u32 = 480;
-const FRAME_US: u64 = 33_333;
-const SCENE: u32 = 7;
-const FLAT: u32 = 99;
-
-// ---- synthetic frames (as in app-core's controller tests) ----
-
-fn hash(i: i64, j: i64, seed: u32) -> f32 {
-    let mut z = (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
-        ^ (j as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9)
-        ^ u64::from(seed).wrapping_mul(0xD6E8_FEB8_6659_FD93);
-    z ^= z >> 29;
-    z = z.wrapping_mul(0x94D0_49BB_1331_11EB);
-    z ^= z >> 32;
-    (z >> 40) as f32 / (1u64 << 24) as f32
-}
-
-/// Value noise with 4 px cells: fine enough for re-detection to arm.
-fn noise(x: f32, y: f32, seed: u32) -> f32 {
-    let (gx, gy) = (x / 4.0, y / 4.0);
-    let (x0, y0) = (gx.floor(), gy.floor());
-    let (fx, fy) = (gx - x0, gy - y0);
-    let (i, j) = (x0 as i64, y0 as i64);
-    let a = hash(i, j, seed) * (1.0 - fx) + hash(i + 1, j, seed) * fx;
-    let b = hash(i, j + 1, seed) * (1.0 - fx) + hash(i + 1, j + 1, seed) * fx;
-    a * (1.0 - fy) + b * fy
-}
+use crate::test_frames::{FLAT, FRAME_US, H, SCENE, W, shifted};
 
 fn raw_frame(w: u32, h: u32, seed: u32, ts: u64) -> CameraFrame {
-    let mut data = Vec::with_capacity((w * h) as usize);
-    for y in 0..h {
-        for x in 0..w {
-            let v = if seed == FLAT {
-                0.5
-            } else {
-                noise((w - 1 - x) as f32, y as f32, seed)
-            };
-            data.push((30.0 + 200.0 * v) as u8);
-        }
-    }
-    CameraFrame {
-        luma: GrayFrame::from_vec(w, h, data).unwrap(),
-        rgb: None,
-        timestamp_us: ts,
-    }
+    shifted(w, h, 0.0, 0.0, seed, ts)
 }
 
 // ---- shell rigs ----

@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12; D0–D6b done 2026-11-15; D7 runtime integration next)
+Status: ACTIVE (2026-11-12; D0–D6b done 2026-11-15; D7 runtime + tests done, manual QA with the user next)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -368,3 +368,38 @@ Plus the CI run ID for the closing commit.
   number fields centre their value (lab: left). Gates green: fmt, clippy, workspace tests
   (desktop 53), check-core-deps.
   Committed `4f4e006`; CI run 43730995361 green; user reviewed on screen and approved.
+- 2026-11-15: **D7 part 1 done: runtime, headless end-to-end tests, recorder, QA checklist.**
+  `apps/desktop/src/runtime.rs`: `CameraLink` trait; `ThreadedCamera` (worker thread owns the
+  camera via a factory, so it needn't be `Send`; session numbers drop stale messages after a
+  close/reopen; frames coalesced to the newest, ≤ 3 in flight; `wake` = `request_repaint`;
+  `Drop` quits and joins so the camera is closed on exit); `Runtime` on the main thread (the
+  macOS pointer isn't `Send`), driven from **`eframe::App::logic`**, which eframe 0.37 calls
+  even while the window is minimised or hidden (then throttled to 100 ms). Order per pump:
+  queued effects → access poll every 3 s (`ACCESS_POLL_US`) → desktop every 1 s → per frame
+  observe cursor then frame then move → `Tick`. The `Shell` now queues `Step` effects/events
+  (`take_effects`, `take_events`); UI clicks are flushed at the end of the UI pass. Global
+  hotkeys and save-on-change moved into `logic` (work while minimised). "Check again" goes
+  through the runtime; "Open settings" on macOS calls `CGRequestPostEventAccess` first so the
+  app is listed under Accessibility. Window wakes: 100 ms during countdowns/pending save,
+  1 s idle.
+  **Bug found and fixed in `app-core`:** when the 4 s handover deadline fell due inside a
+  `PointerObserved` input, the controller took over (commanding the cursor to the centre)
+  and then compared the *pre-move* observation with that command → straight back to
+  Handover, so the camera never took the cursor in the real runtime order. `handle` no longer
+  fires deadlines before a `PointerObserved`; regression test
+  `an_observation_before_a_due_takeover_does_not_cancel_it` (fails without the fix).
+  `recorder.rs`: `OCM_RECORD=<dir>` → raw luma PGM per frame + `frames.csv` + `events.csv`
+  (any build, opt-in, face data stays local). `docs/qa/MANUAL_QA.md`: 21-row macOS checklist
+  (rows for `.app`-only permission paths marked) + recording guidance.
+  Tests: 14 runtime tests (`runtime_tests.rs`: end-to-end select → track → head right moves
+  the cursor right → lose → pause → recenter → resume on a negative-origin desktop; handover
+  4 s; dwell once; unplug → Disconnected + retry; camera permission denied; pointer denied
+  then granted picked up by the poll; access polled 3–5× in 10 s; desktop reaches the
+  controller; no pointer backend → Unsupported; camera change reopens with the device;
+  worker: open/stream/disconnect, open failure, stale session dropped, coalescing) + 1
+  recorder + 1 app-core. Synthetic frames shared in `test_frames.rs`. Gates green: fmt,
+  clippy `-D warnings` (also `x86_64-pc-windows-msvc`), workspace tests (desktop 68,
+  controller 37), check-core-deps. App launches and idles on the dev Mac (smoke only).
+  **Left for D7 part 2 (needs the user at the Mac):** run MANUAL_QA.md rows 1–18 and record
+  them; rows 19–20 (`.app`) wait for Phase 7 (user decision 2026-11-15); record a few
+  sessions with `OCM_RECORD` and re-measure (re-detection arming, R-P4 bound, dwell radius).

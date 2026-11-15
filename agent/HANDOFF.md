@@ -3,33 +3,28 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-15 (Phase 6 ACTIVE, D0–D6b done, D7 next)
+## As of 2026-11-15 (Phase 6 ACTIVE, D7 part 1 done, D7 part 2 = manual QA next)
 
-**Branch:** `rewrite/rust`. Task `tasks/active/0008-phase-6-desktop-app.md`. **D6b done**: committed
-`4f4e006`, pushed, CI run 43730995361 green, user approved on screen. Widgets restyled to the lab's CSS and
-checked by screenshots against headless-Chrome lab captures. Details in the task file Progress
-entry for D6b. Gates green locally: fmt, clippy `-D warnings`, workspace tests (desktop 53),
-`check-core-deps.sh`. Work rhythm (user): **one slice per session**, then hand off.
+**Branch:** `rewrite/rust`. Task `tasks/active/0008-phase-6-desktop-app.md`. **D7 part 1 done**
+(runtime + headless end-to-end tests + recorder + `docs/qa/MANUAL_QA.md`), details in the task
+file Progress entry. Gates green locally: fmt, clippy `-D warnings` (+ Windows target), workspace
+tests (desktop 68, app-core controller 37), `check-core-deps.sh`. **Uncommitted unless the
+commit log says otherwise** — check `git status`. Work rhythm (user): one slice per session.
 
-**Font:** user decided 2026-11-15 to leave it for later (egui default; buttons faux-bold).
-Candidate when revisited: Inter Regular + SemiBold embedded (OFL).
+**Runtime shape:** `apps/desktop/src/runtime.rs`. Camera on a worker thread (`ThreadedCamera`),
+controller + pointer on the main thread in `eframe::App::logic` (runs while minimised, 100 ms
+throttle). An `app-core` bug was fixed on the way (observation vs due takeover, regression
+test in `crates/app-core/tests/controller.rs`).
 
-**Next session:** D7 (runtime integration and QA). Hook point `Shell::input` in
-`apps/desktop/src/app.rs`.
+**Next session:** D7 part 2, needs the user at the Mac: run MANUAL_QA rows 1–18 and record
+results with date; rows 19–20 need a `.app`: **user decided Phase 7** (record them `n/a: Phase 7`); a few
+`OCM_RECORD=<dir>` sessions to re-measure re-detection arming / R-P4 bound / dwell radius.
+Then close task 0008 against acceptance criteria 1–11 (CI run ID for the closing commit).
 
-**Screenshots without clicks (debug builds):** `OCM_DEV_SETTINGS=<file>` (use a copy, not the
-real settings) and `OCM_DEV_OPTIONS=pointer|clicking|camera|general`; bounds via `osascript`
-System Events for the process's windows, then `screencapture -x -R x,y,w,h`. Lab:
-`Google Chrome --headless=new --screenshot … design-lab.html#state=first-run&tab=…&theme=…`.
-A real click needs a posted CGEvent; ask first, it moves the user's cursor.
-
-**Carry to D7:** runtime order observe `position()` → controller → `move_to`; poll `access()`
-every few s (never per frame); manual QA: F10/F12 pressed with another app focused (only
-registration was verified), `Fn` on Mac laptops, dwell click on device, Accessibility grant for
-a `.app`, camera unplug → `CameraDisconnected`, camera LED off after close (nokhwa #224),
-camera permission denial in a `.app` (P2), camera-settings deep link for the permission card
-(none in `platform` yet), reduced motion for the searching animation, look at running states
-on screen (only Stopped + Options were screenshot-checked).
+**Screenshots without clicks (debug builds):** `OCM_DEV_SETTINGS=<file>` and
+`OCM_DEV_OPTIONS=pointer|clicking|camera|general`; bounds via `osascript` System Events, then
+`screencapture -x -R x,y,w,h`. A real click needs a posted CGEvent; ask first, it moves the
+user's cursor.
 
 **User direction (don't drift):** start from 2018 (ADR-0006) but improve on it, taking the best of
 2018 and legacy. Ship proven improvements as options, off by default. Design: monochrome; neon
@@ -38,8 +33,8 @@ two fixed-size windows; no auto-recenter; hotkeys fixed (F11/F12; F10/F12 on mac
 white centre circle + 5 s countdown badge; resume from pause goes through recenter; Recenter ends
 a pause. Preview is colour. Font: later.
 
-**Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only. No `gh` CLI
-here: check CI with `curl -s "https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust&per_page=1"`
-(public API), then `/actions/runs/<id>/jobs`.
+**Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. `cargo-deny` runs in CI only (no new
+crates in this slice). No `gh` CLI: check CI with `curl -s "https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs?branch=rewrite/rust&per_page=1"`
+then `/actions/runs/<id>/jobs`.
 
 **Blockers:** none.

@@ -4,7 +4,9 @@
 
 use std::time::Instant;
 
-use app_core::{Command, Controller, DesktopRect, Input, PointerAccess, Settings, Theme};
+use app_core::{
+    Command, Controller, DesktopRect, Effect, Event, Input, PointerAccess, Settings, Step, Theme,
+};
 use eframe::egui::{
     self, Align, ColorImage, Layout, RichText, ScrollArea, TextureHandle, TextureOptions, Ui, Vec2,
 };
@@ -99,6 +101,10 @@ pub struct Shell {
     pub cameras: Vec<CameraDevice>,
     /// Requests only the platform can serve (pointer permission). Drained by the app.
     pub platform_actions: Vec<Action>,
+    /// Controller effects not yet performed; the runtime drains them (`take_effects`).
+    effects: Vec<Effect>,
+    /// Controller events not yet seen by the runtime (the frame recorder logs them).
+    events: Vec<Event>,
     texture: Option<TextureHandle>,
     uploaded_seq: u64,
     fps: FpsMeter,
@@ -149,6 +155,8 @@ impl Shell {
             wants_camera_list: false,
             cameras: Vec::new(),
             platform_actions: Vec::new(),
+            effects: Vec::new(),
+            events: Vec::new(),
             texture: None,
             uploaded_seq: 0,
             fps: FpsMeter::default(),
@@ -165,8 +173,24 @@ impl Shell {
 
     pub fn input(&mut self, input: Input) {
         let now = self.now_us();
-        // Effects (open camera, move pointer, click) are executed by the runtime, task 0008 D7.
-        let _step = self.controller.handle(input, now);
+        let step = self.controller.handle(input, now);
+        self.queue(step);
+    }
+
+    /// Keeps a step's effects (open camera, move pointer, click) for the runtime, in order.
+    fn queue(&mut self, step: Step) {
+        self.effects.extend(step.effects);
+        self.events.extend(step.events);
+    }
+
+    /// Effects the controller asked for since the last call, in order (`runtime::Runtime`).
+    pub fn take_effects(&mut self) -> Vec<Effect> {
+        std::mem::take(&mut self.effects)
+    }
+
+    /// Events since the last call (state changes, selections), for the frame recorder.
+    pub fn take_events(&mut self) -> Vec<Event> {
+        std::mem::take(&mut self.events)
     }
 
     pub fn command(&mut self, c: Command) {
@@ -193,7 +217,11 @@ impl Shell {
     pub fn set_settings(&mut self, new: Settings) {
         let now = self.now_us();
         match self.controller.update_settings(new, now) {
-            Ok(_step) => self.dirty_since = Some(now),
+            Ok(step) => {
+                // A camera change reopens the camera: the runtime performs it.
+                self.queue(step);
+                self.dirty_since = Some(now);
+            }
             Err(e) => self.notice = Some(format!("That setting wasn't applied: {e}.")),
         }
     }

@@ -1,11 +1,11 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6b done, D7 next)
+Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6b + D7 part 1 done, D7 manual QA next)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`, pushed. Latest code commit `4f4e006` (Phase 6 D6b), CI run 43730995361
-green. User reviewed the restyled UI on screen and approved (2026-11-15).
+Branch: `rewrite/rust`. Last pushed code commit `4f4e006` (Phase 6 D6b), CI run 43730995361
+green. D7 part 1 (runtime) is in the working tree: see `git status`, commit status in HANDOFF.
 
 ## Milestone
 
@@ -13,7 +13,8 @@ Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-d
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
 persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
 UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) done.
-**D7 (runtime integration and QA) next.**
+D7 part 1 (runtime, end-to-end headless tests, recorder, QA checklist) done.
+**D7 part 2 (manual QA on the Mac with the user, `docs/qa/MANUAL_QA.md`) next.**
 
 ## What exists now
 
@@ -58,6 +59,11 @@ UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) 
   painted to the lab CSS (`widgets::Button` with key chips, switch, slider, tabs, segmented,
   readout); `theme::primary_colors` is the only yellow. The runtime is
   missing: controller `Effect`s are dropped, so a manual run stops at "Starting camera…".
+- Runtime (D7): `apps/desktop/src/runtime.rs` — `ThreadedCamera` worker (factory-made camera,
+  session numbers, newest-frame coalescing) + `Runtime` on the main thread, pumped from
+  `eframe::App::logic` (runs while minimised, ~10 Hz then). Access polled every 3 s, desktop
+  every 1 s, cursor observed before each frame. `recorder.rs` (`OCM_RECORD=<dir>`). Fixed an
+  `app-core` ordering bug (observation vs due takeover). 14 runtime tests with fakes.
 
 ## Toolchain
 
@@ -65,9 +71,10 @@ UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) 
 
 ## Immediate next action
 
-Task 0008 slice **D7 — runtime integration and QA** (task file §Objective D7). Hook point:
-`Shell::input` in `apps/desktop/src/app.rs` drops the controller `Step` today. Font stays
-egui default (user, 2026-11-15: later).
+Task 0008 **D7 part 2**: with the user, run `docs/qa/MANUAL_QA.md` rows 1–18 on the dev Mac
+and record results; rows 19–20 (`.app`) deferred to Phase 7 (user, 2026-11-15); record sessions with
+`OCM_RECORD` and re-measure open thresholds. Then close task 0008 (acceptance criteria 1–11).
+Font stays egui default (user, 2026-11-15: later).
 
 ## Open risks
 
@@ -78,10 +85,13 @@ egui default (user, 2026-11-15: later).
 - Hotkeys: registration verified on the dev Mac, but a press from a background app was not
   observed yet (D7 manual QA); `Fn` needed on Mac laptop keyboards; Windows/X11 on device Phase 7.
 - Camera crate panics on external webcams (P1): caught, but untested on device until Phase 7; Wayland pointer and window placement (P10/P11).
-- `CGPreflightPostEventAccess` ≈10 ms: never call per frame (D7 runtime polls it every few s).
+- `CGPreflightPostEventAccess` ≈10 ms: never call per frame (runtime polls it every 3 s).
+- Minimised window: eframe throttles `logic` to 100 ms → pointer updates at ~10 Hz. Check in
+  manual QA (row 13); if unusable, move controller + pointer to a dedicated thread (macOS
+  pointer would need a main-thread hop).
 - The desktop is the displays' bounding box: with uneven monitors the cursor sticks to display
   edges where the box has dead zones (snap). Fine for v1; revisit if users find it odd.
 - UI: D6b screenshot-checked Options (all tabs, Paper, Larger controls) and Tracking (Stopped)
-  only; running states need a look in D7. Searching animation ignores reduced motion. Font =
+  only; running states need a look in D7 manual QA (row 18). Searching animation ignores reduced motion. Font =
   egui default, no bold (faux-bold buttons); revisit later (Inter candidate). Debug-only
   `OCM_DEV_SETTINGS` / `OCM_DEV_OPTIONS` env vars exist for screenshot checks.

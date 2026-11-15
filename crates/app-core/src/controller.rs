@@ -387,7 +387,12 @@ impl Controller {
     pub fn handle(&mut self, input: Input, now_us: u64) -> Step {
         let owner_before = self.pointer_owner();
         let mut step = Step::default();
-        self.fire_deadlines(now_us, &mut step);
+        // An observation was taken before anything this call commands: firing a due takeover
+        // first would compare it with the takeover's own move and hand control straight back
+        // to the mouse. Deadlines still fire after it, below.
+        if !matches!(input, Input::PointerObserved(_)) {
+            self.fire_deadlines(now_us, &mut step);
+        }
         match input {
             Input::Command(c) => self.on_command(c, now_us, &mut step),
             Input::Frame(f) => self.on_frame(f, now_us, &mut step),

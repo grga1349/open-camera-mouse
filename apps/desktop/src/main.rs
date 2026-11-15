@@ -1,22 +1,36 @@
 //! Desktop shell: renders `app-core` state and sends `app-core` commands. Nothing else.
 //!
 //! Two fixed-size windows per the approved design lab (task 0007): Tracking (root viewport)
-//! and Options (`show_viewport_immediate`). The runtime loop that runs the camera and moves
-//! the pointer is task 0008 D7; until then `Effect`s from the controller aren't executed.
+//! and Options (`show_viewport_immediate`). The camera, the pointer and the hotkeys are
+//! driven from `App::logic` by [`runtime::Runtime`], which eframe calls even while the windows
+//! are minimised (task 0008 D7).
 
 mod app;
 mod icons;
 mod options;
 mod preview;
+mod recorder;
+mod runtime;
 mod status;
+#[cfg(test)]
+mod test_frames;
 mod theme;
 mod widgets;
 
-use app::{Shell, options_ui, options_viewport, tracking_ui, tracking_viewport};
-use app_core::Settings;
+use std::time::Duration;
+
+use app::{Clock, Shell, options_ui, options_viewport, tracking_ui, tracking_viewport};
+use app_core::ports::{CameraSource, PointerSink};
+use app_core::{AppState, PointerOwner, Settings};
 use eframe::egui;
 use platform::hotkeys::{GlobalHotkeys, Hotkey, Source};
+use runtime::{Runtime, ThreadedCamera};
 use status::Action;
+
+/// Idle repaint, so permission and display polls run while nothing else happens.
+const IDLE_REPAINT: Duration = Duration::from_secs(1);
+/// Repaint while a countdown is on screen (recenter, handover).
+const COUNTDOWN_REPAINT: Duration = Duration::from_millis(100);
 
 fn main() -> eframe::Result {
     let (settings, notice, store) = load_settings();
@@ -35,9 +49,29 @@ fn main() -> eframe::Result {
             let all_ok = Hotkey::ALL.iter().all(|k| hotkeys.status(*k).is_active());
             let mut shell = Shell::new(settings, notice, lines.to_vec(), all_ok, store);
             dev_open_options(&mut shell);
-            Ok(Box::new(DesktopApp { shell, hotkeys }))
+            let runtime = start_runtime(&shell, &cc.egui_ctx);
+            Ok(Box::new(DesktopApp {
+                shell,
+                hotkeys,
+                runtime,
+            }))
         }),
     )
+}
+
+/// The camera worker (timestamps on the controller's clock) and the system pointer.
+fn start_runtime(shell: &Shell, ctx: &egui::Context) -> Runtime<ThreadedCamera> {
+    let epoch = match shell.clock {
+        Clock::System(epoch) => epoch,
+        Clock::Manual(_) => std::time::Instant::now(),
+    };
+    let factory: runtime::CameraFactory = Box::new(move |device| {
+        Box::new(platform::NokhwaCamera::new(device, epoch)) as Box<dyn CameraSource>
+    });
+    let wake = ctx.clone();
+    let camera = ThreadedCamera::spawn(factory, move || wake.request_repaint());
+    let pointer = platform::SystemPointer::new().map(|p| Box::new(p) as Box<dyn PointerSink>);
+    Runtime::new(camera, pointer).with_recorder(recorder::Recorder::from_env())
 }
 
 /// Debug builds only, for side-by-side design checks against the lab without clicking
@@ -86,6 +120,7 @@ struct DesktopApp {
     shell: Shell,
     /// Kept alive for the app's lifetime; dropping it unregisters the hotkeys.
     hotkeys: GlobalHotkeys,
+    runtime: Runtime<ThreadedCamera>,
 }
 
 impl DesktopApp {
@@ -94,18 +129,16 @@ impl DesktopApp {
         for a in std::mem::take(&mut self.shell.platform_actions) {
             match a {
                 Action::OpenPointerSettings => {
+                    // macOS lists the app under Accessibility only after it asked once.
+                    #[cfg(target_os = "macos")]
+                    if let Ok(p) = platform::SystemPointer::new() {
+                        let _ = p.request_access();
+                    }
                     if let Err(e) = platform::SystemPointer::open_access_settings() {
                         self.shell.notice = Some(format!("Couldn't open the settings: {e}."));
                     }
                 }
-                Action::CheckPointerAccess => {
-                    // A one-off check; the D7 runtime also polls every few seconds.
-                    let access = match platform::SystemPointer::new() {
-                        Ok(p) => app_core::ports::PointerSink::access(&p),
-                        Err(_) => app_core::PointerAccess::Unsupported,
-                    };
-                    self.shell.pointer_access(access);
-                }
+                Action::CheckPointerAccess => self.runtime.check_access(&mut self.shell),
                 Action::Start | Action::ChooseCamera | Action::CopyDetails => {}
             }
         }
@@ -117,11 +150,30 @@ impl DesktopApp {
 }
 
 impl eframe::App for DesktopApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let ctx = ui.ctx().clone();
+    /// Runs before `ui`, and also while the windows are minimised or hidden: hotkeys, camera,
+    /// controller and pointer live here, never in the UI pass.
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         for key in self.hotkeys.drain() {
             self.shell.hotkey(key, Source::Global);
         }
+        self.runtime.pump(&mut self.shell);
+        self.platform_actions();
+        self.shell.save_if_due(false);
+        // Countdowns (recenter, handover) are controller deadlines; keep them moving. Camera
+        // frames wake the loop by themselves.
+        let state = self.shell.controller.state();
+        if state == AppState::Recentering
+            || self.shell.controller.pointer_owner() == PointerOwner::Handover
+            || self.shell.save_pending()
+        {
+            ctx.request_repaint_after(COUNTDOWN_REPAINT);
+        } else {
+            ctx.request_repaint_after(IDLE_REPAINT);
+        }
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
         self.shell.apply_style(&ctx);
         let margin = egui::Frame::central_panel(&ctx.global_style()).inner_margin(16);
         egui::CentralPanel::default()
@@ -148,19 +200,9 @@ impl eframe::App for DesktopApp {
                 },
             );
         }
+        // Clicks in this pass (Start, Check again, …): perform them now, not a frame later.
         self.platform_actions();
-
-        self.shell.save_if_due(false);
-        if self.shell.save_pending() {
-            ctx.request_repaint_after(std::time::Duration::from_millis(100));
-        }
-        // Countdowns (recenter, handover) are controller deadlines; keep the text moving.
-        let state = self.shell.controller.state();
-        if state == app_core::AppState::Recentering
-            || self.shell.controller.pointer_owner() == app_core::PointerOwner::Handover
-        {
-            ctx.request_repaint_after(std::time::Duration::from_millis(100));
-        }
+        self.runtime.flush(&mut self.shell);
     }
 }
 

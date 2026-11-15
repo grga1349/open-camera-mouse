@@ -333,6 +333,30 @@ fn click_select_waits_for_a_still_mouse_then_centres_the_cursor() {
     }));
 }
 
+/// The runtime's order (task 0008 D7): observe the cursor, then the frame, every frame. An
+/// observation taken just before the takeover deadline must not cancel the takeover by being
+/// compared with the takeover's own move (found by the D7 runtime test).
+#[test]
+fn an_observation_before_a_due_takeover_does_not_cancel_it() {
+    let mut r = Rig::started();
+    let mouse = Point2::new(100.0, 100.0);
+    r.input(Input::PointerObserved(Some(mouse)));
+    r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
+    let mut cursor = mouse;
+    let end = r.now + HANDOVER_US + 10 * FRAME_US;
+    while r.now < end {
+        r.now += FRAME_US;
+        r.input(Input::PointerObserved(Some(cursor)));
+        let f = raw_frame(W, H, 0.0, 0.0, SCENE, r.now);
+        let s = r.input(Input::Frame(f));
+        if let Some(p) = s.pointer_target() {
+            cursor = p;
+        }
+    }
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+    assert_eq!(cursor, CENTER);
+}
+
 #[test]
 fn head_right_moves_the_cursor_right() {
     let mut r = Rig::tracking();
