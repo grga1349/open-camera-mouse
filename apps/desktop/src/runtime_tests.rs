@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use app_core::ports::{
-    CameraError, CameraFrame, CameraSource, CaptureFormat, CaptureRequest, Point2,
+    CameraError, CameraFrame, CameraSource, CaptureFormat, CaptureRequest, Desktop, Point2,
 };
 use app_core::{AppState, Command, DesktopRect, PointerOwner, Settings};
 use platform::hotkeys::{Hotkey, Registration};
@@ -77,8 +77,11 @@ impl PointerSink for FakePointer {
         Some(self.0.borrow().cursor)
     }
 
-    fn desktop(&mut self) -> Result<DesktopRect, PointerError> {
-        Ok(DESKTOP)
+    fn desktop(&mut self) -> Result<Desktop, PointerError> {
+        Ok(Desktop {
+            bounds: DESKTOP,
+            displays: vec![DESKTOP],
+        })
     }
 }
 

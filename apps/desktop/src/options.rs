@@ -4,7 +4,7 @@
 
 use app_core::ports::CaptureFormat;
 use app_core::settings::ranges;
-use app_core::{Settings, Theme};
+use app_core::{DesktopRect, Settings, Theme};
 use eframe::egui::{self, Align, Layout, RichText, ScrollArea, Ui};
 use platform::CameraDevice;
 
@@ -34,6 +34,8 @@ pub struct Facts<'a> {
     pub capture: Option<CaptureFormat>,
     /// One line per hotkey: key, action and whether it works in other apps (task 0008 D5).
     pub hotkey_lines: &'a [String],
+    /// The displays in "Main monitor" order (left to right), from the controller.
+    pub displays: &'a [DesktopRect],
 }
 
 /// "Restore defaults": behaviour back to the defaults; the chosen camera and the
@@ -77,7 +79,7 @@ pub fn show(ui: &mut Ui, s: &mut Settings, tab: &mut Tab, facts: &Facts<'_>) -> 
                 // Lab `.panel { gap: 16px }` between fields.
                 ui.spacing_mut().item_spacing.y = 8.0;
                 match tab {
-                    Tab::Pointer => pointer(ui, s),
+                    Tab::Pointer => pointer(ui, s, facts),
                     Tab::Clicking => clicking(ui, s),
                     Tab::Camera => camera(ui, s, facts),
                     Tab::General => general(ui, s, facts),
@@ -116,7 +118,7 @@ fn space(ui: &mut Ui) {
     ui.add_space(8.0);
 }
 
-fn pointer(ui: &mut Ui, s: &mut Settings) {
+fn pointer(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
     let before = (s.gain_x, s.gain_y);
     slider_row(
         ui,
@@ -157,6 +159,30 @@ fn pointer(ui: &mut Ui, s: &mut Settings) {
         Some("Higher is steadier but slower to follow. Default 0.05"),
     );
     space(ui);
+    // Test drive #5 (ADR-0015).
+    let mut px = s.steady_px as f32;
+    let r = slider_row(
+        ui,
+        "Steady zone",
+        &mut px,
+        (*ranges::STEADY_PX.start() as f32)..=(*ranges::STEADY_PX.end() as f32),
+        1.0,
+        |v| {
+            if v < 0.5 {
+                "Off".to_owned()
+            } else {
+                format!("{v:.0} px")
+            }
+        },
+        Some(
+            "Small head movements inside this distance don't move the pointer, so it holds \
+             perfectly still. Larger moves are followed. Default off",
+        ),
+    );
+    if r.changed() {
+        s.steady_px = px.round() as u32;
+    }
+    space(ui);
     ui.horizontal(|ui| {
         field_label(ui, "Screen limits");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -192,6 +218,59 @@ fn pointer(ui: &mut Ui, s: &mut Settings) {
     help(
         ui,
         "Keep the pointer this far from each screen edge. Default 0",
+    );
+    // Only with several monitors: with one there is nothing to choose.
+    if facts.displays.len() > 1 {
+        space(ui);
+        main_monitor(ui, s, facts.displays);
+    }
+}
+
+/// One monitor's name in "Main monitor": its number left to right, size, and "primary" for
+/// the display at the global origin (macOS main display, Windows primary monitor).
+pub fn display_name(i: usize, d: &DesktopRect) -> String {
+    let primary = if d.x == 0.0 && d.y == 0.0 {
+        " · primary"
+    } else {
+        ""
+    };
+    format!(
+        "Monitor {} · {} × {}{primary}",
+        i + 1,
+        d.width.round(),
+        d.height.round()
+    )
+}
+
+/// "Main monitor" (test drive #4, ADR-0014): the monitor recenter and pause put the cursor
+/// on. Shown only with more than one monitor.
+fn main_monitor(ui: &mut Ui, s: &mut Settings, displays: &[DesktopRect]) {
+    const ALL: &str = "Centre of all monitors";
+    let l = field_label(ui, "Main monitor");
+    let current = match s.recenter_display {
+        None => ALL.to_owned(),
+        Some(i) => displays
+            .get(i as usize)
+            .map(|d| display_name(i as usize, d))
+            .unwrap_or_else(|| format!("Monitor {} (not connected)", i + 1)),
+    };
+    let h = ui.spacing().interact_size.y;
+    egui::ComboBox::from_id_salt("main_monitor")
+        .selected_text(current)
+        .width(ui.available_width())
+        .height(h * 6.0)
+        .show_ui(ui, |ui| {
+            ui.selectable_value(&mut s.recenter_display, None, ALL);
+            for (i, d) in displays.iter().enumerate() {
+                ui.selectable_value(&mut s.recenter_display, Some(i as u32), display_name(i, d));
+            }
+        })
+        .response
+        .labelled_by(l.id);
+    help(
+        ui,
+        "Recenter and pause put the pointer in the middle of this monitor. Monitors are \
+         numbered left to right. The pointer can still reach every monitor.",
     );
 }
 

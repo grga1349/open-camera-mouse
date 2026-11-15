@@ -9,7 +9,7 @@
 use std::process::Command;
 use std::time::Instant;
 
-use app_core::ports::{DesktopRect, Point2, PointerAccess, PointerError, PointerSink};
+use app_core::ports::{Desktop, DesktopRect, Point2, PointerAccess, PointerError, PointerSink};
 use objc2_core_foundation::{CFRetained, CGPoint};
 use objc2_core_graphics::{
     CGDirectDisplayID, CGDisplayBounds, CGError, CGEvent, CGEventSource, CGEventSourceStateID,
@@ -139,9 +139,14 @@ impl PointerSink for SystemPointer {
         Self::raw_position().map(|p| self.echo.report(p, self.now_us()))
     }
 
-    fn desktop(&mut self) -> Result<DesktopRect, PointerError> {
+    fn desktop(&mut self) -> Result<Desktop, PointerError> {
         self.displays = active_displays()?;
-        bounding(&self.displays).ok_or_else(|| PointerError::Backend("no active display".into()))
+        let bounds = bounding(&self.displays)
+            .ok_or_else(|| PointerError::Backend("no active display".into()))?;
+        Ok(Desktop {
+            bounds,
+            displays: self.displays.clone(),
+        })
     }
 }
 

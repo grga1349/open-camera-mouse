@@ -4,12 +4,13 @@
 //! ADR-0008), dt-aware [`smoothing`] (R-P2), screen [`limits`] with offset drift, [`dwell`]
 //! clicking (R-K1/R-K2) and the [`handover`]/jump-bound rules (R-A2, R-P4). Each piece is
 //! pure and takes time as an argument; `app-core` composes them per frame as
-//! map → smooth → limit → drift → dwell.
+//! map → smooth → limit → drift → [`steady`] zone → dwell.
 
 pub mod dwell;
 pub mod handover;
 pub mod limits;
 pub mod smoothing;
+pub mod steady;
 
 use tracking_core::Point2;
 

@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 
 use app_core::ports::{
-    CameraError, CameraFrame, CaptureFormat, CaptureRequest, PointerError, RgbFrame,
+    CameraError, CameraFrame, CaptureFormat, CaptureRequest, Desktop, PointerError, RgbFrame,
 };
 use app_core::{
     AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MarkerKind,
@@ -617,7 +617,13 @@ fn recovery_on_searches_and_resumes_within_the_jump_bound() {
     assert!(matches!(v.track, Some(TrackStatus::Lost(reason)) if reason != LossReason::Searching));
     assert_eq!(v.pointer, PointerOwner::Mouse);
 
-    // Back where it was: control returns at once, without a jump.
+    // Back where it was: two finds aren't enough (three consecutive confirm, test drive
+    // #3), the third resumes and control returns at once, without a jump.
+    for _ in 0..2 {
+        let s = r.frame(0.0, 0.0, SCENE);
+        assert!(state_changes(&s).is_empty(), "not confirmed yet");
+        assert_eq!(r.c.state(), AppState::Lost);
+    }
     let s = r.frame(0.0, 0.0, SCENE);
     assert_eq!(
         state_changes(&s),
@@ -629,6 +635,20 @@ fn recovery_on_searches_and_resumes_within_the_jump_bound() {
 }
 
 #[test]
+fn recovery_needs_consecutive_finds_in_one_place() {
+    let mut r = Rig::tracking_with(with_recovery());
+    r.occlude();
+    // Found, then gone, then found: the count starts over, no resume after 3 frames.
+    r.frame(0.0, 0.0, SCENE);
+    r.frame(0.0, 0.0, OCCLUDER);
+    r.frame(0.0, 0.0, SCENE);
+    r.frame(0.0, 0.0, SCENE);
+    assert_eq!(r.c.state(), AppState::Lost);
+    r.frame(0.0, 0.0, SCENE);
+    assert_eq!(r.c.state(), AppState::Tracking);
+}
+
+#[test]
 fn recovery_beyond_the_jump_bound_goes_through_handover() {
     let mut r = Rig::tracking_with(with_recovery());
     let before = r.frame(0.0, 0.0, SCENE).pointer_target().unwrap();
@@ -636,6 +656,9 @@ fn recovery_beyond_the_jump_bound_goes_through_handover() {
     r.occlude();
     r.frame(0.0, 0.0, OCCLUDER);
     // Reappears 40 px to the right: 40 × 18 = 720 screen px, far over the 54 px bound.
+    // Confirmed on the third consecutive find.
+    r.frame(40.0, 0.0, SCENE);
+    r.frame(40.0, 0.0, SCENE);
     let s = r.frame(40.0, 0.0, SCENE);
     assert_eq!(
         state_changes(&s),
@@ -1015,4 +1038,152 @@ fn stopping_clears_the_colour_preview() {
     assert!(r.c.preview_rgb().is_some());
     r.cmd(Command::Stop);
     assert!(r.c.preview_rgb().is_none());
+}
+
+// ---- "Main monitor": recenter on a chosen display (test drive #4, ADR-0014) ----
+
+/// Two displays side by side: the main one (1920×1080 at the origin) and a larger one to its
+/// right. Bounding box 4480×1440, centre (2240, 720).
+const LEFT: DesktopRect = DesktopRect {
+    x: 0.0,
+    y: 0.0,
+    width: 1920.0,
+    height: 1080.0,
+};
+const RIGHT: DesktopRect = DesktopRect {
+    x: 1920.0,
+    y: 0.0,
+    width: 2560.0,
+    height: 1440.0,
+};
+const BOTH: DesktopRect = DesktopRect {
+    x: 0.0,
+    y: 0.0,
+    width: 4480.0,
+    height: 1440.0,
+};
+
+fn two_displays(recenter_display: Option<u32>) -> Rig {
+    let mut r = Rig::started_with(Settings {
+        recenter_display,
+        ..Settings::default()
+    });
+    // The adapter's order is arbitrary; the controller numbers displays left to right.
+    r.input(Input::DesktopChanged(Desktop {
+        bounds: BOTH,
+        displays: vec![RIGHT, LEFT],
+    }));
+    r
+}
+
+fn recentered(r: &mut Rig) -> Step {
+    r.cmd(Command::Recenter);
+    r.now += RECENTER_US;
+    r.input(Input::Tick)
+}
+
+#[test]
+fn displays_are_numbered_left_to_right() {
+    let r = two_displays(None);
+    assert_eq!(r.c.displays(), &[LEFT, RIGHT]);
+}
+
+#[test]
+fn recenter_without_a_display_choice_uses_the_centre_of_all_displays() {
+    let mut r = two_displays(None);
+    let s = recentered(&mut r);
+    assert_eq!(s.pointer_target(), Some(BOTH.center()));
+}
+
+#[test]
+fn recenter_on_a_display_starts_at_its_centre_and_still_reaches_the_others() {
+    let mut r = two_displays(Some(1));
+    let s = recentered(&mut r);
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+    assert_eq!(s.pointer_target(), Some(RIGHT.center()));
+
+    // Same mapping scale as before, only shifted: head 5 px left moves the cursor
+    // 5 · gain 6 · 4480 / 640 = 210 px left of the home point.
+    let s = r.hold(2_000_000, -5.0, SCENE);
+    let last = *moves(&s).last().unwrap();
+    let want = Point2::new(RIGHT.center().x - 210.0, RIGHT.center().y);
+    assert!(dist(last, want) < 3.0, "{last:?} vs {want:?}");
+
+    // Far enough left, the cursor crosses onto the left display (head turned in 2 px steps).
+    for i in 1..=20 {
+        r.frame(-5.0 - 2.0 * i as f32, 0.0, SCENE);
+    }
+    let s = r.hold(2_000_000, -45.0, SCENE);
+    assert_eq!(r.c.state(), AppState::Tracking);
+    let last = *moves(&s).last().unwrap();
+    assert!(last.x < LEFT.width, "{last:?} still on the right display");
+}
+
+#[test]
+fn pause_puts_the_cursor_on_the_chosen_display() {
+    let mut r = two_displays(Some(0));
+    recentered(&mut r);
+    let s = r.cmd(Command::ToggleStart);
+    assert_eq!(r.c.state(), AppState::Paused);
+    assert_eq!(moves(&s), vec![LEFT.center()]);
+}
+
+#[test]
+fn recenter_on_an_unplugged_display_falls_back_to_the_centre_of_all() {
+    let mut r = two_displays(Some(1));
+    r.input(Input::DesktopChanged(Desktop {
+        bounds: LEFT,
+        displays: vec![LEFT],
+    }));
+    let s = recentered(&mut r);
+    assert_eq!(s.pointer_target(), Some(LEFT.center()));
+    // The setting is kept for when the display comes back.
+    assert_eq!(r.c.settings().recenter_display, Some(1));
+}
+
+// ---- steady zone (test drive #5, ADR-0015) ----
+
+#[test]
+fn steady_zone_holds_the_cursor_still_against_head_jitter() {
+    let mut r = Rig::tracking_with(Settings {
+        steady_px: 6,
+        ..Settings::default()
+    });
+    // Settle, then sub-pixel head jitter: ±0.2 camera px ≈ ±3.6 screen px at gain 6.
+    r.hold(500_000, 0.0, SCENE);
+    let mut targets = Vec::new();
+    for i in 0..90 {
+        let j = if i % 2 == 0 { 0.2 } else { -0.2 };
+        let jy = if i % 3 == 0 { 0.15 } else { -0.1 };
+        targets.extend(moves(&r.frame(j, jy, SCENE)));
+    }
+    let first = targets[0];
+    assert!(
+        targets.iter().all(|&p| p == first),
+        "cursor moved while the head only jittered: {targets:?}"
+    );
+
+    // A deliberate turn (head 5 px right ≈ 90 screen px) is followed.
+    for i in 1..=5 {
+        r.frame(i as f32, 0.0, SCENE);
+    }
+    let s = r.hold(1_000_000, 5.0, SCENE);
+    let last = *moves(&s).last().unwrap();
+    assert!(last.x - first.x > 75.0, "{last:?} vs {first:?}");
+}
+
+#[test]
+fn without_steady_zone_head_jitter_moves_the_cursor() {
+    // Control for the test above: the jitter is real at the cursor without the zone.
+    let mut r = Rig::tracking();
+    r.hold(500_000, 0.0, SCENE);
+    let mut targets = Vec::new();
+    for i in 0..90 {
+        let j = if i % 2 == 0 { 0.2 } else { -0.2 };
+        targets.extend(moves(&r.frame(j, 0.0, SCENE)));
+    }
+    let xs: Vec<f32> = targets.iter().map(|p| p.x).collect();
+    let spread =
+        xs.iter().cloned().fold(f32::MIN, f32::max) - xs.iter().cloned().fold(f32::MAX, f32::min);
+    assert!(spread > 2.0, "spread {spread}");
 }

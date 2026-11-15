@@ -74,6 +74,15 @@ impl LkParams {
             gain_bias: true,
             redetect: Some(RedetectParams {
                 max_radius_frac: Some(0.25),
+                // Test drive #3 (ADR-0011 amendment 2026-11-15): on a real face the best
+                // distinct other peak scores 0.90–0.94 against 0.99 for the selected spot, so
+                // a 0.1 margin never armed. 0.03 still rejects true ties; three consistent
+                // finds guard against a lookalike.
+                min_margin: 0.03,
+                confirm_frames: 3,
+                // Recording 2026-11-15: right finds 0.73–0.96, wrong ones (hand, shirt)
+                // 0.27–0.66; same 0.7 as the appearance gate.
+                min_context_zncc: Some(0.7),
                 ..RedetectParams::default()
             }),
             ..Self::default()
@@ -376,6 +385,12 @@ pub struct LkTracker {
     searching: bool,
     /// Last reported position while searching.
     last: Point2,
+    /// Zero-mean, unit-norm level-0 window of twice the half size around the selection
+    /// (only with [`RedetectParams::min_context_zncc`]). Empty = no context check.
+    context: Vec<f32>,
+    /// Re-detection finds not yet confirmed: the latest position and how many consecutive
+    /// frames found it ([`RedetectParams::confirm_frames`]).
+    pending: Option<(Point2, u32)>,
 }
 
 /// Fills `out` with the `(2·hw + 1)²` bilinear window around `c`, zero-mean and unit-norm.
@@ -503,6 +518,7 @@ impl LkTracker {
             if self.searcher.is_ready() {
                 // E4: keep the reference and search this frame right away.
                 self.searching = true;
+                self.pending = None;
                 self.last = a;
                 return self.redetect_step(reason, diagnostics);
             }
@@ -531,7 +547,52 @@ impl LkTracker {
         };
         let w = self.size.0 as f32;
         let region = rp.max_radius_frac.map(|f| (self.last, f * w));
-        match self.searcher.search(&self.prev, &rp, region) {
+        let mut found = self.searcher.search(&self.prev, &rp, region);
+        // Context check: the surroundings must look like the selection's too.
+        if let (SearchResult::Found { position, score }, Some(min)) = (found, rp.min_context_zncc)
+            && !self.context.is_empty()
+        {
+            let z = zncc_against(
+                &self.prev.level(0).img,
+                position,
+                2 * self.params.half_window,
+                &self.context,
+            );
+            if z.is_nan() || z < min {
+                found = SearchResult::NotFound {
+                    best: score,
+                    second: -1.0,
+                };
+            }
+        }
+        // Confirmation: consecutive finds close to each other.
+        let found = match found {
+            SearchResult::Found { position, score } => {
+                let near = |p: Point2| {
+                    (p.x - position.x).hypot(p.y - position.y)
+                        <= crate::redetect::CONFIRM_RADIUS_FRAC * w
+                };
+                let n = match self.pending {
+                    Some((p, n)) if near(p) => n + 1,
+                    _ => 1,
+                };
+                if n >= rp.confirm_frames {
+                    self.pending = None;
+                    found
+                } else {
+                    self.pending = Some((position, n));
+                    SearchResult::NotFound {
+                        best: score,
+                        second: -1.0,
+                    }
+                }
+            }
+            nf @ SearchResult::NotFound { .. } => {
+                self.pending = None;
+                nf
+            }
+        };
+        match found {
             SearchResult::Found { position, score } => {
                 self.searching = false;
                 self.point = Some(position);
@@ -566,6 +627,7 @@ impl Tracker for LkTracker {
         self.point = Some(point);
         self.size = (frame.width(), frame.height());
         self.searching = false;
+        self.pending = None;
         self.searcher.clear();
         if let Some(rp) = self.params.redetect {
             self.searcher
@@ -578,6 +640,17 @@ impl Tracker for LkTracker {
             );
             if !own {
                 self.searcher.clear();
+            }
+            self.context.clear();
+            if rp.min_context_zncc.is_some()
+                && !normalized_window(
+                    &self.prev.level(0).img,
+                    point,
+                    2 * self.params.half_window,
+                    &mut self.context,
+                )
+            {
+                self.context.clear();
             }
         }
         if self.params.min_ref_zncc.is_some()
@@ -655,6 +728,7 @@ impl Tracker for LkTracker {
     fn reset(&mut self) {
         self.point = None;
         self.searching = false;
+        self.pending = None;
     }
 }
 
@@ -1013,6 +1087,65 @@ mod tests {
             TrackStatus::Tracking,
             "LK resumes from the match"
         );
+    }
+
+    /// The recommended tracker's re-detection (test drive #3): a find resumes only on the
+    /// third consecutive frame.
+    #[test]
+    fn recommended_redetect_confirms_over_three_frames() {
+        let n = crate::redetect::tests::noise;
+        let sel = Point2::new(160.0, 120.0);
+        let mut t = LkTracker::new(LkParams::recommended());
+        t.select(&noise_frame(320, 240, n), sel).unwrap();
+        assert!(t.redetect_armed());
+        lose(&mut t);
+        let moved = noise_frame(320, 240, |x, y| n(x - 30.0, y + 20.0));
+        for _ in 0..2 {
+            assert_eq!(
+                t.step(&moved).unwrap().status,
+                TrackStatus::Lost(LossReason::Searching)
+            );
+        }
+        assert_eq!(t.step(&moved).unwrap().status, TrackStatus::Tracking);
+    }
+
+    /// The selected window pasted into different surroundings (a hand or a shirt fold that
+    /// happens to match the small template): found without the context check, refused with it.
+    #[test]
+    fn redetect_context_check_refuses_a_lookalike_in_other_surroundings() {
+        let n = crate::redetect::tests::noise;
+        let sel = Point2::new(160.0, 120.0);
+        let (dx, dy) = (30.0f32, -20.0f32);
+        // A 31×31 copy of the selection's surroundings 36 px away (enough for the coarse
+        // search to find it), everything else other texture: the 21×21 window matches
+        // exactly, the 41×41 context only shares ≈ 31²/41² of its area.
+        let half = 15.0;
+        let paste = noise_frame(320, 240, |x, y| {
+            let (sx, sy) = (x - dx, y - dy);
+            if (sx - sel.x).abs() <= half && (sy - sel.y).abs() <= half {
+                n(sx, sy)
+            } else {
+                n(x + 1000.0, y + 700.0)
+            }
+        });
+        let run = |min_context_zncc: Option<f32>| {
+            // The recommended search, one confirming frame, context check on or off.
+            let mut p = LkParams::recommended();
+            if let Some(r) = p.redetect.as_mut() {
+                r.confirm_frames = 1;
+                r.min_context_zncc = min_context_zncc;
+            }
+            let mut t = LkTracker::new(p);
+            t.select(&noise_frame(320, 240, n), sel).unwrap();
+            lose(&mut t);
+            t.step(&paste).unwrap().status
+        };
+        assert_eq!(
+            run(None),
+            TrackStatus::Tracking,
+            "control: the window alone matches"
+        );
+        assert_eq!(run(Some(0.7)), TrackStatus::Lost(LossReason::Searching));
     }
 
     #[test]

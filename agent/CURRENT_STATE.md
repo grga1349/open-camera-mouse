@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 DONE, Phase 6b test drive NEXT)
+Last updated: 2026-11-15 (Phase 6b test drive ACTIVE, task 0009; part 1 committed)
 
 ## Branch / commit
 
@@ -73,12 +73,12 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Start Phase 6b (test drive, ADR-0013) per `docs/ROADMAP.md`: write `tasks/active/0009-phase-6b-test-drive.md`
-from its deliverables and gate, create `docs/qa/TEST_DRIVE.md` (issue log), then take the
-user's reports one by one: reproduce, fix with a regression test or defer to a named phase.
-Phase 7 follows when the user says the app is ready. Carry-overs unchanged: MANUAL_QA rows 19–20
-in Phase 7; row 21 (reduced motion) and `OCM_RECORD` threshold re-measurement in Phase 8.
-Font stays egui default (user: later).
+Phase 6b part 2, per `agent/HANDOFF.md`: #2 (losses) and #5 (jitter) are the user's top
+priority. Start from the research report (`docs/research/TEST_DRIVE_RESEARCH_PROMPT.md`), the
+per-display gain lead for #5, and a scripted `OCM_RECORD` benchmark for #2. Part 1 (#1, #3, #4,
+steady zone) is committed but the full gates weren't re-run locally; let CI or scoped runs check.
+Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the threshold re-measurement
+in Phase 8.
 
 ## Open risks
 

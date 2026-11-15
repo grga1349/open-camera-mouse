@@ -35,6 +35,7 @@ use pointer_core::handover::{
 };
 use pointer_core::limits::{Limits, apply_limits, drift_offset};
 use pointer_core::smoothing::Smoother;
+use pointer_core::steady::SteadyZone;
 use pointer_core::{DesktopRect, FrameSize, Gain, map_raw};
 use tracking_core::lk::{LkParams, LkTracker};
 use tracking_core::{
@@ -43,7 +44,9 @@ use tracking_core::{
 };
 
 use crate::color::{RgbFrame, downsample_rgb_to_width, ingest_rgb};
-use crate::ports::{CameraError, CameraFrame, CaptureFormat, CaptureRequest, PointerError};
+use crate::ports::{
+    CameraError, CameraFrame, CaptureFormat, CaptureRequest, Desktop, PointerError,
+};
 use crate::settings::{Settings, SettingsError};
 
 /// Guided recenter countdown (R-A3, user decision 2026-11-12: 5-4-3-2-1).
@@ -130,7 +133,7 @@ pub enum Input {
     PointerAccess(PointerAccess),
     /// A `MovePointer` effect failed.
     PointerFailed(PointerError),
-    DesktopChanged(DesktopRect),
+    DesktopChanged(Desktop),
     /// Time passed; lets deadlines (recenter, handover) fire without a frame.
     Tick,
 }
@@ -262,6 +265,8 @@ enum Control {
 pub struct Controller {
     settings: Settings,
     desktop: DesktopRect,
+    /// The displays, sorted left to right then top to bottom (the "Main monitor" order).
+    displays: Vec<DesktopRect>,
     handover: HandoverParams,
     state: AppState,
     control: Control,
@@ -278,6 +283,7 @@ pub struct Controller {
     last_commanded: Option<Point2>,
     last_observed: Option<Point2>,
     smoother: Smoother,
+    steady: SteadyZone,
     dwell: Dwell,
     capture: Option<CaptureFormat>,
     error: Option<String>,
@@ -320,6 +326,12 @@ fn dwell_params(settings: &Settings) -> DwellParams {
     }
 }
 
+/// Left to right, then top to bottom: the order a user reads their monitors in.
+fn sorted_displays(mut d: Vec<DesktopRect>) -> Vec<DesktopRect> {
+    d.sort_by(|a, b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+    d
+}
+
 fn frame_center(f: &GrayFrame) -> Point2 {
     Point2::new(f.width() as f32 / 2.0, f.height() as f32 / 2.0)
 }
@@ -332,6 +344,7 @@ impl Controller {
             tracker: LkTracker::new(tracker_params(&settings)),
             settings,
             desktop,
+            displays: Vec::new(),
             handover: HandoverParams::default(),
             state: AppState::Stopped,
             control: Control::Mouse(None),
@@ -345,6 +358,7 @@ impl Controller {
             last_commanded: None,
             last_observed: None,
             smoother: Smoother::default(),
+            steady: SteadyZone::default(),
             dwell: Dwell::default(),
             capture: None,
             error: None,
@@ -357,6 +371,20 @@ impl Controller {
 
     pub fn settings(&self) -> &Settings {
         &self.settings
+    }
+
+    /// The displays in "Main monitor" order (left to right, then top to bottom).
+    pub fn displays(&self) -> &[DesktopRect] {
+        &self.displays
+    }
+
+    /// Where recenter and pause put the cursor: the chosen display's centre, or the centre of
+    /// the whole desktop (2018) when none is chosen or it's gone (ADR-0014).
+    pub fn home(&self) -> Point2 {
+        self.settings
+            .recenter_display
+            .and_then(|i| self.displays.get(i as usize))
+            .map_or_else(|| self.desktop.center(), DesktopRect::center)
     }
 
     /// The latest canonical (mirrored, ≤ 640 wide) luma frame, the one the tracker sees.
@@ -414,7 +442,10 @@ impl Controller {
                 }
                 self.error = Some(e.to_string());
             }
-            Input::DesktopChanged(d) => self.desktop = d,
+            Input::DesktopChanged(d) => {
+                self.desktop = d.bounds;
+                self.displays = sorted_displays(d.displays);
+            }
             Input::Tick => {}
         }
         // A deadline may have become due through this input (e.g. the first frame after the
@@ -676,13 +707,15 @@ impl Controller {
         self.control = Control::Mouse(None);
         self.last_commanded = None;
         self.smoother.reset();
+        self.steady.reset();
         self.dwell.reset();
     }
 
-    /// 2018 pause: release control, invalidate tracking, cursor to desktop centre.
+    /// 2018 pause: release control, invalidate tracking, cursor to the home point (desktop
+    /// centre unless "Main monitor" picks a display).
     fn pause(&mut self, step: &mut Step) {
         self.drop_target();
-        self.move_pointer(self.desktop.center(), step);
+        self.move_pointer(self.home(), step);
         self.last_commanded = None;
         self.set_state(AppState::Paused, step);
     }
@@ -786,6 +819,7 @@ impl Controller {
         {
             self.control = Control::Camera;
             self.smoother.reset_to(target, now_us);
+            self.steady.reset_to(target);
             self.dwell.reset();
             self.move_pointer(target, step);
         } else {
@@ -832,23 +866,37 @@ impl Controller {
         self.take_over(c, now_us, step);
     }
 
-    /// Camera takes control (2018 `AutoCenterScheme 0`): `position` maps to the desktop
-    /// centre and the cursor moves there.
+    /// Camera takes control (2018 `AutoCenterScheme 0`): `position` maps to the home point
+    /// (the desktop centre, or the "Main monitor" display's centre, ADR-0014) and the cursor
+    /// moves there. The mapping still spans the whole desktop: only the offset shifts.
     fn take_over(&mut self, position: Point2, now_us: u64, step: &mut Step) {
+        let home = self.home();
         if let Some(frame) = &self.frame {
             let c = frame_center(frame);
-            self.offset = Point2::new(c.x - position.x, c.y - position.y);
+            let size = frame_size(frame);
+            let d = self.desktop.center();
+            // Frame px per screen px of the mapping (inverse of `map_raw`'s scale).
+            let inv = |gain: f32, screen: f32, frame: f32| {
+                let s = gain * screen / frame;
+                if s > 0.0 { 1.0 / s } else { 0.0 }
+            };
+            let ix = inv(self.settings.gain_x, self.desktop.width, size.width);
+            let iy = inv(self.settings.gain_y, self.desktop.height, size.height);
+            self.offset = Point2::new(
+                c.x - position.x + (home.x - d.x) * ix,
+                c.y - position.y + (home.y - d.y) * iy,
+            );
         }
         self.control = Control::Camera;
-        let center = self.desktop.center();
-        self.smoother.reset_to(center, now_us);
+        self.smoother.reset_to(home, now_us);
+        self.steady.reset_to(home);
         self.dwell.reset();
-        self.move_pointer(center, step);
+        self.move_pointer(home, step);
     }
 
     fn map_unlimited(&self, p: Point2) -> Point2 {
         let Some(frame) = &self.frame else {
-            return self.desktop.center();
+            return self.home();
         };
         map_raw(
             p,
@@ -867,7 +915,8 @@ impl Controller {
         apply_limits(self.map_unlimited(p), self.desktop, limits(&self.settings)).position
     }
 
-    /// One camera-controlled pointer update: map → smooth → limits → drift → dwell.
+    /// One camera-controlled pointer update: map → smooth → limits → drift → steady zone →
+    /// dwell. The steady zone only holds what is sent out; the smoother keeps following.
     fn drive(&mut self, p: Point2, now_us: u64, step: &mut Step) {
         let last_us = self.smoother.last_us().unwrap_or(now_us);
         let raw = self.map_unlimited(p);
@@ -876,14 +925,17 @@ impl Controller {
         // 2018 keeps the clamped position as the filter state.
         self.smoother.set_current(limited.position);
         self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us));
-        self.move_pointer(limited.position, step);
+        let cursor = self
+            .steady
+            .update(limited.position, self.settings.steady_px as f32);
+        self.move_pointer(cursor, step);
         if !self.settings.dwell.enabled {
             return;
         }
         let params = dwell_params(&self.settings);
         if let Some(at) = self
             .dwell
-            .update(limited.position, now_us, true, &params, self.desktop)
+            .update(cursor, now_us, true, &params, self.desktop)
             && !matches!(
                 self.access,
                 PointerAccess::Denied | PointerAccess::Unsupported

@@ -33,7 +33,20 @@ pub struct RedetectParams {
     /// ADR-0009 units) of the last known position. `None` = whole frame. The selection-time
     /// self-test always searches the whole frame.
     pub max_radius_frac: Option<f32>,
+    /// Tracking resumes only after this many consecutive frames find the target within
+    /// [`CONFIRM_RADIUS_FRAC`] of the previous find (test drive #3). `1` = resume on the first
+    /// match (Phase 4 E4).
+    pub confirm_frames: u32,
+    /// Context check (test drive #3): a find must also reach this ZNCC between the window of
+    /// twice the half size (41×41 at `hw` 10) around it and the same window in the selection
+    /// frame. A small skin template can match a hand or a shirt fold at 0.9+; its
+    /// surroundings don't. `None` = off (Phase 4 E4).
+    pub min_context_zncc: Option<f32>,
 }
+
+/// Largest move between consecutive confirming finds, as a fraction of frame width
+/// (6.4 px at 640: head motion between two frames, not a jump to another peak).
+pub const CONFIRM_RADIUS_FRAC: f32 = 0.01;
 
 impl Default for RedetectParams {
     fn default() -> Self {
@@ -43,6 +56,8 @@ impl Default for RedetectParams {
             search_level: 2,
             candidates: 16,
             max_radius_frac: None,
+            confirm_frames: 1,
+            min_context_zncc: None,
         }
     }
 }

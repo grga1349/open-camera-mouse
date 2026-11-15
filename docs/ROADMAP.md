@@ -18,7 +18,7 @@ the phase.
 | 4 | Tracking improvements | DONE | task 0006; ADR-0010, -0011; `docs/research/TRACKING_IMPROVEMENTS.md` |
 | 5 | Design system | DONE | task 0007; `docs/design/design-lab.html` (approved v3), `EGUI_FEASIBILITY.md` |
 | 6 | Desktop app | DONE | task 0008; ADR-0012; `docs/qa/MANUAL_QA.md` (rows 1–18 pass); CI green |
-| 6b | Test drive (ADR-0013) | NEXT | |
+| 6b | Test drive (ADR-0013) | ACTIVE | task 0009; `docs/qa/TEST_DRIVE.md` |
 | 7 | Multiplatform / release | — | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
 | 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 

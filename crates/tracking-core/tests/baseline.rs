@@ -125,6 +125,8 @@ fn variants() -> Vec<(&'static str, LkParams)> {
             candidates,
             search_level,
             max_radius_frac,
+            confirm_frames: 1,
+            min_context_zncc: None,
         }),
         ..d
     };

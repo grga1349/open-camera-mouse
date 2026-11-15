@@ -650,12 +650,62 @@ fn pointer_tab_controls() {
     h.run_steps(4);
     assert_eq!(settings(&h).smoothing, 0.5);
 
+    assert_eq!(settings(&h).steady_px, 0, "steady zone off by default");
+    h.get_by_label("Steady zone").set_value_accesskit(6.0);
+    h.run_steps(4);
+    assert_eq!(settings(&h).steady_px, 6);
+
     for (label, want) in [("Left", 10), ("Right", 20), ("Top", 30), ("Bottom", 40)] {
         h.get_by_label(label).set_value_accesskit(f64::from(want));
         h.run_steps(4);
     }
     let l = settings(&h).limits;
     assert_eq!((l.left, l.right, l.top, l.bottom), (10, 20, 30, 40));
+}
+
+#[test]
+fn main_monitor_lists_the_monitors_left_to_right() {
+    let mut sh = stopped();
+    let left = app_core::DesktopRect {
+        x: 0.0,
+        y: 0.0,
+        width: 1920.0,
+        height: 1080.0,
+    };
+    let right = app_core::DesktopRect {
+        x: 1920.0,
+        y: 0.0,
+        width: 2560.0,
+        height: 1440.0,
+    };
+    sh.input(Input::DesktopChanged(app_core::ports::Desktop {
+        bounds: app_core::DesktopRect {
+            width: 4480.0,
+            height: 1440.0,
+            ..left
+        },
+        displays: vec![right, left],
+    }));
+    // A tall window: at 620 px the field is below the fold; this test is about the list.
+    let mut h = options_window_sized(sh, Vec2::new(OPTIONS_SIZE[0], 1000.0));
+    assert_eq!(
+        settings(&h).recenter_display,
+        None,
+        "default: centre of all"
+    );
+    h.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Main monitor")
+        .click();
+    h.run_steps(4);
+    h.get_by_label("Monitor 1 · 1920 × 1080 · primary");
+    h.get_by_label("Monitor 2 · 2560 × 1440").click();
+    h.run_steps(4);
+    assert_eq!(settings(&h).recenter_display, Some(1));
+}
+
+#[test]
+fn main_monitor_is_hidden_with_one_monitor() {
+    let h = options_window_sized(stopped(), Vec2::new(OPTIONS_SIZE[0], 1000.0));
+    assert!(h.query_by_label("Main monitor").is_none());
 }
 
 #[test]

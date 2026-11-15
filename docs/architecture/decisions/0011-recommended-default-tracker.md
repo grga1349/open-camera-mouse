@@ -86,3 +86,12 @@ until Phase 6 recordings re-measure them. User direction: improve on 2018 and ta
   LK refine against the selection pyramid); a fixed template versus pose change.
 - ADR-0004 is resolved: LK with the Phase 4 extensions is the engine. B-NCC stays a frozen
   comparator for the test suite only.
+
+## Amendment 2026-11-15 (test drive #3)
+
+On a real face re-detection never armed: the selection's own peak scores ≈ 0.99 and the best
+distinct other peak 0.90–0.94, so the 0.1 margin self-test always failed. `recommended()` now
+uses `min_margin` 0.03, `confirm_frames` 3 (consecutive finds within 0.01 · width) and
+`min_context_zncc` 0.7 (41×41 window around the find vs the selection; refused the hand/shirt
+wrong locks seen in replay). `RedetectParams::default()` keeps the Phase 4 E4 values (1, None).
+Evidence: `crates/app-core/tests/replay.rs` on a local `OCM_RECORD` session (not committed).

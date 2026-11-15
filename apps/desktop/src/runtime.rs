@@ -26,10 +26,10 @@ use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::thread::{self, JoinHandle};
 
 use app_core::ports::{
-    CameraError, CameraFrame, CameraSource, CaptureFormat, CaptureRequest, PointerError,
+    CameraError, CameraFrame, CameraSource, CaptureFormat, CaptureRequest, Desktop, PointerError,
     PointerSink,
 };
-use app_core::{DesktopRect, Effect, Input, PointerAccess};
+use app_core::{Effect, Input, PointerAccess};
 
 use crate::app::Shell;
 use crate::recorder::Recorder;
@@ -273,7 +273,7 @@ pub struct Runtime<C: CameraLink> {
     pointer_error: Option<PointerError>,
     access_due_us: Option<u64>,
     desktop_due_us: Option<u64>,
-    desktop: Option<DesktopRect>,
+    desktop: Option<Desktop>,
     recorder: Option<Recorder>,
 }
 
@@ -361,8 +361,8 @@ impl<C: CameraLink> Runtime<C> {
     fn poll_desktop(&mut self, shell: &mut Shell) {
         let Some(p) = &mut self.pointer else { return };
         match p.desktop() {
-            Ok(d) if self.desktop != Some(d) => {
-                self.desktop = Some(d);
+            Ok(d) if self.desktop.as_ref() != Some(&d) => {
+                self.desktop = Some(d.clone());
                 shell.input(Input::DesktopChanged(d));
             }
             Ok(_) => {}

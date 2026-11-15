@@ -68,7 +68,17 @@ pub struct Settings {
     /// 2018 `Damping = 0.95` is `smoothing = 0.05`. Must stay below 1 (1 would freeze the
     /// pointer, L-1).
     pub smoothing: f32,
+    /// "Steady zone" (test drive #5, ADR-0015), screen px: head movement that would move the
+    /// cursor less than this doesn't move it, so it can be held perfectly still. 0 = off
+    /// (2018). The cursor follows larger moves one to one, trailing by at most this.
+    pub steady_px: u32,
     pub limits: ScreenLimits,
+    /// "Main monitor" (test drive #4, ADR-0014): the display whose centre the cursor goes to
+    /// on recenter and pause, as an index into the displays sorted left to right (then top to
+    /// bottom). `None` = the centre of all displays together (2018). An index with no display
+    /// behind it (monitor unplugged) falls back to `None` without changing the setting.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recenter_display: Option<u32>,
     pub dwell: DwellSettings,
     /// Camera device id from the platform adapter; `None` = system default.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -92,7 +102,9 @@ impl Default for Settings {
             gain_y: 6.0,
             link_gain: true,
             smoothing: 0.05,
+            steady_px: 0,
             limits: ScreenLimits::default(),
+            recenter_display: None,
             dwell: DwellSettings::default(),
             camera: None,
             mirror: true,
@@ -121,6 +133,7 @@ pub mod ranges {
     pub const GAIN: RangeInclusive<f32> = 1.0..=20.0;
     pub const SMOOTHING: RangeInclusive<f32> = 0.0..=0.95;
     pub const LIMIT_PX: RangeInclusive<u32> = 0..=1000;
+    pub const STEADY_PX: RangeInclusive<u32> = 0..=40;
     pub const DWELL_S: RangeInclusive<f32> = 0.3..=3.0;
     pub const REFRACTORY_S: RangeInclusive<f32> = 0.5..=5.0;
     pub const DWELL_RADIUS_FRAC: RangeInclusive<f32> = 0.01..=0.15;
@@ -176,6 +189,7 @@ impl Settings {
         }
         check_f32("gain_y", self.gain_y, ranges::GAIN)?;
         check_f32("smoothing", self.smoothing, ranges::SMOOTHING)?;
+        check_u32("steady_px", self.steady_px, ranges::STEADY_PX)?;
         let l = self.limits;
         check_u32("limits.left", l.left, ranges::LIMIT_PX)?;
         check_u32("limits.right", l.right, ranges::LIMIT_PX)?;
@@ -213,6 +227,7 @@ impl Settings {
                 "gain_x" => s.gain_x = d.gain_x,
                 "gain_y" => s.gain_y = d.gain_y,
                 "smoothing" => s.smoothing = d.smoothing,
+                "steady_px" => s.steady_px = d.steady_px,
                 "limits.left" => s.limits.left = d.limits.left,
                 "limits.right" => s.limits.right = d.limits.right,
                 "limits.top" => s.limits.top = d.limits.top,

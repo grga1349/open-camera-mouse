@@ -30,6 +30,8 @@ pub const PREVIEW_LABEL: &str =
 
 const CAMERA_BG: Color32 = Color32::from_gray(10);
 const SCRIM: Color32 = Color32::from_black_alpha(140);
+/// Corner radius of the preview area, the picture and its overlays (lab radius 8).
+const PREVIEW_RADIUS: f32 = 8.0;
 const LABEL_BG: Color32 = Color32::from_black_alpha(190);
 
 /// The largest rectangle of the frame's aspect ratio centred in `area`.
@@ -87,19 +89,17 @@ pub fn show(ui: &mut Ui, view: &View, status: &Status, extras: &Extras<'_>) -> O
     let painter = ui.painter_at(area);
     let mut out = Output::default();
 
-    painter.rect_filled(area, 8.0, CAMERA_BG);
+    painter.rect_filled(area, PREVIEW_RADIUS, CAMERA_BG);
     if status.camera != Camera::Off
         && let Some(tex) = extras.texture
     {
-        painter.image(
-            tex.id(),
-            drawn,
-            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-            Color32::WHITE,
-        );
+        // Test drive #1: the picture gets the same light radius as its frame.
+        egui::Image::from_texture(tex)
+            .corner_radius(PREVIEW_RADIUS)
+            .paint_at(ui, drawn);
     }
     if matches!(status.camera, Camera::Dimmed | Camera::Frozen) {
-        painter.rect_filled(drawn, 0.0, SCRIM);
+        painter.rect_filled(drawn, PREVIEW_RADIUS, SCRIM);
     }
 
     let scale = drawn.width() / frame.0.max(1) as f32;
@@ -198,7 +198,7 @@ pub fn show(ui: &mut Ui, view: &View, status: &Status, extras: &Extras<'_>) -> O
     // Lab `.overlay.scrim`: the theme background at 82 % over the picture.
     let scrim = theme::current(ui).bg.gamma_multiply(0.82);
     if status.loading {
-        painter.rect_filled(area, 8.0, scrim);
+        painter.rect_filled(area, PREVIEW_RADIUS, scrim);
         overlay(ui, area, "loading", |ui| {
             let t = theme::current(ui);
             ui.add(egui::Spinner::new().size(30.0).color(t.text));
@@ -206,7 +206,7 @@ pub fn show(ui: &mut Ui, view: &View, status: &Status, extras: &Extras<'_>) -> O
         });
     }
     if let Some(card) = &status.card {
-        painter.rect_filled(area, 8.0, scrim);
+        painter.rect_filled(area, PREVIEW_RADIUS, scrim);
         overlay(ui, area, "card", |ui| {
             out.action = show_card(ui, card);
         });

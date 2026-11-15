@@ -12,7 +12,7 @@
 
 use std::time::Instant;
 
-use app_core::ports::{DesktopRect, Point2, PointerAccess, PointerError, PointerSink};
+use app_core::ports::{Desktop, DesktopRect, Point2, PointerAccess, PointerError, PointerSink};
 use windows_sys::Win32::Foundation::{LPARAM, POINT, RECT};
 use windows_sys::Win32::Graphics::Gdi::{
     EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO,
@@ -142,9 +142,14 @@ impl PointerSink for SystemPointer {
         Self::raw_position().map(|p| self.echo.report(p, self.now_us()))
     }
 
-    fn desktop(&mut self) -> Result<DesktopRect, PointerError> {
+    fn desktop(&mut self) -> Result<Desktop, PointerError> {
         self.displays = monitors()?;
-        bounding(&self.displays).ok_or_else(|| PointerError::Backend("no monitor".into()))
+        let bounds =
+            bounding(&self.displays).ok_or_else(|| PointerError::Backend("no monitor".into()))?;
+        Ok(Desktop {
+            bounds,
+            displays: self.displays.clone(),
+        })
     }
 }
 

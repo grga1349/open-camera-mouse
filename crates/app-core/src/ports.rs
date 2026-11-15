@@ -76,6 +76,15 @@ pub enum PointerError {
     Backend(String),
 }
 
+/// The display layout: the virtual desktop's bounding rectangle (R-P5) and each display's
+/// own bounds, in the same global coordinates.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Desktop {
+    pub bounds: DesktopRect,
+    /// Every active display, in the adapter's order (the controller sorts them).
+    pub displays: Vec<DesktopRect>,
+}
+
 /// System pointer control, in virtual-desktop screen coordinates (the OS's global pointer
 /// space: origin at the primary display's top-left, y down, may be negative on other displays).
 pub trait PointerSink {
@@ -91,7 +100,7 @@ pub trait PointerSink {
     /// where a recent `move_to` put it is reported as the requested point, so snapping and
     /// late-landing moves never look like the user taking over.
     fn position(&self) -> Option<Point2>;
-    /// Re-reads the display layout and returns the virtual desktop's bounding rectangle
-    /// (R-P5). Poll it (about once a second) to feed `Input::DesktopChanged`.
-    fn desktop(&mut self) -> Result<DesktopRect, PointerError>;
+    /// Re-reads the display layout: the virtual desktop's bounding rectangle (R-P5) and the
+    /// displays. Poll it (about once a second) to feed `Input::DesktopChanged`.
+    fn desktop(&mut self) -> Result<Desktop, PointerError>;
 }

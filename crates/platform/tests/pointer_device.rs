@@ -41,7 +41,7 @@ fn moves_land_and_read_back_as_requested() {
         PointerAccess::Granted,
         "grant Accessibility to the terminal running the test"
     );
-    let desktop = ptr.desktop().expect("desktop");
+    let desktop = ptr.desktop().expect("desktop").bounds;
     println!("desktop: {desktop:?}");
     let start = raw();
 
