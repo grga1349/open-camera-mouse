@@ -4,6 +4,8 @@ use thiserror::Error;
 pub use tracking_core::{GrayFrame, Point2};
 
 pub use crate::color::RgbFrame;
+pub use crate::controller::PointerAccess;
+pub use pointer_core::DesktopRect;
 
 /// What the app asks the camera for (ADR-0008, Q-R6): 640×480 at 30 fps, nearest match.
 /// Adapters report what they actually got in [`CaptureFormat`]; the app never assumes the
@@ -74,10 +76,22 @@ pub enum PointerError {
     Backend(String),
 }
 
-/// System pointer control, in virtual-desktop screen coordinates.
+/// System pointer control, in virtual-desktop screen coordinates (the OS's global pointer
+/// space: origin at the primary display's top-left, y down, may be negative on other displays).
 pub trait PointerSink {
+    /// Whether this process may move the pointer and click. Can be slow (≈10 ms on macOS,
+    /// task 0008 D4): call it at start and when polling for a grant, not per frame.
+    fn access(&self) -> PointerAccess;
+    /// Moves the OS cursor. A point outside every display is moved onto the nearest one.
     fn move_to(&mut self, p: Point2) -> Result<(), PointerError>;
+    /// Left click at `p` (dwell, R-K1).
+    fn click(&mut self, p: Point2) -> Result<(), PointerError>;
     /// Current OS cursor position, used to detect physical mouse movement (handover,
-    /// ADR-0006). `None` if the platform cannot report it (e.g. Wayland).
+    /// ADR-0006). `None` if the platform cannot report it (e.g. Wayland). The cursor resting
+    /// where a recent `move_to` put it is reported as the requested point, so snapping and
+    /// late-landing moves never look like the user taking over.
     fn position(&self) -> Option<Point2>;
+    /// Re-reads the display layout and returns the virtual desktop's bounding rectangle
+    /// (R-P5). Poll it (about once a second) to feed `Input::DesktopChanged`.
+    fn desktop(&mut self) -> Result<DesktopRect, PointerError>;
 }

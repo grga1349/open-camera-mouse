@@ -1,6 +1,6 @@
 # ADR-0012: Phase 6 dependencies and settings persistence
 
-Status: Accepted (persistence D2, camera D3); pointer and hotkey rows are filled in by D4–D5
+Status: Accepted (persistence D2, camera D3, pointer D4); the hotkey row is filled in by D5
 Date: 2026-11-12
 Task: 0008 slice D2. Amends ADR-0007 (what `app-core` may depend on).
 
@@ -66,12 +66,12 @@ small and flat. `toml` was already in the tree through eframe's dependencies.
 | `directories` | 6.0.0 | MIT OR Apache-2.0, but `option-ext` is MPL-2.0 | — | **rejected** |
 | `nokhwa` (`input-native` only, no `decoding`) | 0.10.11 | Apache-2.0 (51 new transitive crates, all permissive, checked 2026-11-15) | platform (all OS) | **adopted** (D3, measured below) |
 | `objc2-av-foundation` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | — | **fallback**, not built (D3): `nokhwa` met every gate; would need `unsafe` + an ADR |
-| `objc2-core-graphics` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | platform (macOS) | candidate, D4 |
-| `objc2-application-services` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | platform (macOS) | candidate, D4 (Accessibility check) |
-| `windows-sys` | 0.61.2 | MIT OR Apache-2.0 | platform (Windows) | candidate, D4 |
-| `x11rb` | 0.14.0 | MIT OR Apache-2.0 | platform (Linux) | candidate, D4 |
+| `objc2-core-graphics` (+ `objc2-core-foundation` for `CGPoint`) | 0.3.2 | Zlib OR Apache-2.0 OR MIT | platform (macOS) | **adopted** (D4): posted events, Accessibility check, display list |
+| `objc2-application-services` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | — | **not needed** (D4): `CGPreflightPostEventAccess` in CoreGraphics checks exactly the permission posting needs |
+| `windows-sys` | 0.61.2 | MIT OR Apache-2.0 | platform (Windows) | **adopted** (D4), compiled in CI; device validation Phase 7 |
+| `x11rb` (`xtest`, `randr`, pure-Rust connection) | 0.13.2, not 0.14.0 | MIT OR Apache-2.0 | platform (Linux) | **adopted** (D4) at 0.13.2, the version winit already pulls in, so no second copy; compiled in CI; device validation Phase 7 |
 | `global-hotkey` | 0.10.0 | Apache-2.0 OR MIT | platform | candidate, D5 |
-| `enigo` | 0.6.1 | MIT | — | fallback only |
+| `enigo` | 0.6.1 | MIT | — | **not used** (D4): we'd still need per-OS code for position, permission, displays and the suppression setting |
 
 D3, D4 and D5 each update their row here (adopted or rejected, with the measurement) and add
 the crate to `platform` per target. Check every new transitive licence before adopting:
@@ -112,6 +112,64 @@ Why not the thin `objc2-av-foundation` adapter now: `nokhwa` passed every gate a
 Windows and Linux with the same code, while the objc2 adapter would need `unsafe`
 (the workspace denies it), a delegate class and its own Windows/Linux counterparts. It stays the
 fallback if P1 panics or the `block` warning become real problems in Phase 7.
+
+## Pointer adapter (task 0008 D4, 2026-11-15)
+
+All four pointer crates were already in `Cargo.lock` through eframe/winit at the same
+versions: D4 added no crate to the lockfile, only edges.
+
+Measured on the dev Mac (macOS 14.7.3 arm64, two displays: 1440×900 main at (0, 0) and
+2560×1440 at (1440, −540)), with a throwaway spike, then the adapter
+(`crates/platform/tests/pointer_device.rs`, `#[ignore]`d):
+
+| Check | `CGWarpMouseCursorPosition` | Posted `MouseMoved` (`CGEventPost`, HID tap) |
+|---|---|---|
+| Needs Accessibility | **no**, works without | **yes**: dropped silently without it, no error |
+| Lands | synchronously, rounded to whole points | asynchronously: 0.3–0.9 ms typical, ~38 ms worst of 60, sub-point precision |
+| Cost per call | ~40 µs | ~3 µs (first call ~25 ms) |
+| Physical mouse while the cursor is held at 30 Hz (user moving the mouse, 6 s) | **0 of 162** samples show the movement: the physical mouse is dead | default source (0.25 s suppression): 5 of 162. **Source with suppression 0: 89 of 163** |
+| Target in a dead zone or off every display | clamped by macOS | clamped by macOS, oddly: (5000, 100) → (1440, 100), not the right display's edge |
+
+Other measurements: `CGPreflightPostEventAccess` costs **≈10.6 ms per call**; reading the
+position (`CGEventCreate` + location) 0.12 µs; listing displays 0.15 ms.
+
+Decision:
+- **macOS: posted events** from a `CGEventSource` (HID system state) with local-event
+  suppression set to 0. Warping is rejected: it needs no permission, but it blocks the physical
+  mouse, so handover (ADR-0006) can't work. Accessibility is therefore required to move the
+  cursor at all (as in 2018). `access()` = `CGPreflightPostEventAccess`; `request_access()` =
+  `CGRequestPostEventAccess` (the system prompt); `open_access_settings()` opens
+  `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility`. A click
+  checks access first (rare, so the 10 ms is affordable) and reports `PermissionDenied`;
+  moves don't (too slow per frame). The runtime (D7) checks `access()` at start and polls it
+  every few seconds while running or waiting for a grant, never per frame. Revoking access
+  mid-run otherwise looks like the user grabbing the mouse until that poll runs.
+- **Windows: `SetCursorPos`** for moves (exact physical pixels, no normalisation to 0–65535
+  needed), `SendInput` left down/up for clicks, `GetCursorPos`, `EnumDisplayMonitors` for
+  displays. No permission; UIPI-blocked or secure-desktop calls become `Backend` errors.
+  Assumes per-monitor DPI awareness (winit's default): Phase 7 validates.
+- **Linux: XTest** (`xtest_fake_input` motion and button 1) over `x11rb`'s pure-Rust
+  connection, `QueryPointer` for the position, RandR 1.5 monitors (root window if RandR can't
+  say). A Wayland session (`XDG_SESSION_TYPE=wayland`, or `WAYLAND_DISPLAY` set with no X11
+  session type) and a missing X display or XTEST extension → `PointerError::Unsupported`
+  from `SystemPointer::new()`. The runtime turns that into `PointerAccess::Unsupported`.
+- **Shared, pure, all OS** (`platform::pointer::geometry`): the controller's desktop is the
+  displays' bounding box (R-P5, negative origins tested). Targets are snapped to the nearest
+  display before they reach the OS, because the OS clamps dead-zone targets in surprising
+  places. The adapter reports positions it caused itself as the requested point (`Echo`):
+  the latest snapped target always, plus earlier targets and the pre-move cursor position
+  for 100 ms. Otherwise a snapped target or a move that lands later than one frame would
+  differ from the commanded point by more than 5 px and trigger a false handover. A user's
+  movement doesn't match those points, so it passes through.
+- `PointerSink` (app-core port) gains `access()`, `click()` and `desktop()`. The runtime must
+  read `position()` **before** the next `move_to` (observe → controller → move), so each
+  observation judges the previous move.
+- `unsafe`: `platform` opts out locally per ADR-0007: one block for `CGGetActiveDisplayList`
+  on macOS, and the Windows module (Win32 calls only), each with a `SAFETY` comment.
+
+Not checked here: the click path on device (D7 manual QA; an automated click would hit
+whatever is under the cursor), Windows and X11 on device (Phase 7), and the macOS
+Accessibility grant for a `.app` rather than the terminal (D7, together with P2).
 
 ## Consequences
 

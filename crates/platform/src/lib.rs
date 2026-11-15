@@ -1,11 +1,12 @@
 //! OS adapters implementing `app-core` ports (ADR-0007).
 //!
-//! One module per OS behind `cfg`, so every target compiles in CI from day one. Pointer and
-//! hotkey adapters land in task 0008 slices D4–D5 (see docs/architecture/PLATFORM_RISKS.md).
-//! [`camera`] (one `nokhwa` adapter for all three OS, D3) and [`settings_store`] are the
-//! same on every OS.
+//! One module per OS behind `cfg`, so every target compiles in CI from day one. [`camera`]
+//! (one `nokhwa` adapter for all three OS, D3) and [`settings_store`] are the same on every
+//! OS; [`pointer`] (D4) has one backend per OS. Hotkeys land in task 0008 D5 (see
+//! docs/architecture/PLATFORM_RISKS.md).
 
 pub mod camera;
+pub mod pointer;
 pub mod settings_store;
 
 #[cfg(target_os = "linux")]
@@ -23,6 +24,7 @@ use macos as imp;
 use windows as imp;
 
 pub use camera::{CameraDevice, NokhwaCamera, list_devices};
+pub use pointer::SystemPointer;
 pub use settings_store::{Loaded, SaveError, Saved, SettingsNotice, SettingsStore};
 
 /// Which OS backend this build uses.

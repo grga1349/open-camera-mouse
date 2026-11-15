@@ -1,3 +1,3 @@
-//! windows adapters. Placeholder until Phase 6/7.
+//! Windows backend name. Adapters: `camera` (nokhwa / Media Foundation), `pointer::windows`.
 
-pub(crate) const BACKEND: &str = "Windows (Media Foundation / SendInput, planned)";
+pub(crate) const BACKEND: &str = "Windows (Media Foundation camera, SetCursorPos / SendInput)";

@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12; D0–D3 done 2026-11-15)
+Status: ACTIVE (2026-11-12; D0–D4 done 2026-11-15)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -91,7 +91,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
 | ~~Crates `app-core` may take~~ **Decided (D2):** `serde` derive only, besides `thiserror` + cores; checked by `check-core-deps.sh` | — | ADR-0012 |
 | ~~Camera backend~~ **Decided (D3):** `nokhwa` 0.10.11 `input-native` (no `decoding`), measured on the dev Mac; `objc2-av-foundation` stays the fallback | — | ADR-0012 |
-| Warp vs posted move | From the D4 test | ADR-0012 / PLATFORM_RISKS P6 |
+| ~~Warp vs posted move~~ **Decided (D4, measured):** posted events from a source with suppression 0 (needs Accessibility). Warp needs no permission but blocks the physical mouse, so handover can't work | — | ADR-0012 §"Pointer adapter" / PLATFORM_RISKS P6 |
 
 ## Non-goals
 
@@ -234,3 +234,24 @@ Plus the CI run ID for the closing commit.
   Not done here: physical unplug (D7 manual QA), camera LED off after close (D7), external
   webcams / Windows / Linux on device (Phase 7), permission denial path in a `.app` (P2, D7).
   Committed `7d39825`; CI run 43721527313 green (macOS, Windows, Linux, cargo-deny).
+- 2026-11-15: **D4 done.** Spike (scratchpad, not committed) on the dev Mac (two displays, the
+  second at (1440, −540)): warp works without Accessibility but the physical mouse is dead while
+  the cursor is held at 30 Hz (0 of 162 samples with the user moving it); posted moves need
+  Accessibility (dropped silently otherwise), land in 0.3–0.9 ms (worst ~38 ms), and with
+  suppression 0 the physical mouse shows through (89 of 163). `CGPreflightPostEventAccess` costs
+  ≈10.6 ms per call. macOS clamps dead-zone targets oddly ((5000, 100) → (1440, 100)).
+  Adapter: `PointerSink` gains `access()`, `click()`, `desktop()`. `platform::pointer`:
+  `geometry` (bounding box, snap to nearest display, `Echo`: the adapter's own positions read
+  back as the requested point, so snapping and late landings don't trigger handover; pure,
+  11 tests), `SystemPointer` for macOS (posted events, suppression 0, preflight / request /
+  System Settings deep link, `CGGetActiveDisplayList`), Windows (`SetCursorPos`, `SendInput`,
+  `EnumDisplayMonitors`) and Linux X11 (`x11rb` 0.13.2 XTest + RandR; Wayland, no display or
+  no XTEST → `Unsupported`), plus `is_wayland` tests. No new crates in `Cargo.lock` (all four
+  were there via eframe/winit). On-device `tests/pointer_device.rs` (`#[ignore]`) passed
+  on the dev Mac (moves, dead-zone snap, read-back, restore). Windows: clippy for
+  `x86_64-pc-windows-msvc` clean locally. Linux: the pointer module was checked with clippy for
+  `x86_64-unknown-linux-gnu` in a scratch crate (the `platform` crate can't cross-build here
+  because of nokhwa's bindgen). CI decides. Gates green locally. ADR-0012, PLATFORM_RISKS
+  P6/P7, DEPENDENCIES updated.
+  Carry to D7: runtime order observe → controller → move; poll `access()` every few seconds,
+  never per frame; click on device and Accessibility for a `.app` in manual QA.

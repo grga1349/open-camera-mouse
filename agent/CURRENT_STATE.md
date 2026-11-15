@@ -1,18 +1,18 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D3 done)
+Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D4 done)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`, pushed. Latest code commit `7d39825` (Phase 6 D3), CI run 43721527313
-green on macOS, Windows, Linux + cargo-deny. Working tree: only this handoff update.
+Branch: `rewrite/rust`. Last pushed commit `0b5a595` (D3 handoff; D3 code `7d39825`, CI run
+43721527313 green). **D4 is in the working tree, uncommitted** until the user says to commit;
+then push and check CI (Linux pointer code has only been checked via a scratch crate).
 
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
-persistence) and D3 (camera adapter) done. D3 = `7d39825`, CI run 43721527313 green on all
-three OS + cargo-deny. D4 next.
+persistence), D3 (camera adapter) and D4 (pointer adapter) done. D5 (global hotkeys) next.
 
 ## What exists now
 
@@ -37,6 +37,13 @@ three OS + cargo-deny. D4 next.
   adapter for all OS), capture thread + latest-frame slot, luma + RGB per frame, failures mapped
   per PLATFORM_RISKS P1/P2/P3/P5. Measured on the dev Mac: 640×480 @ 30.09 fps. `app-core`
   carries the colour image through ingest (`RgbFrame`, `Controller::preview_rgb()`).
+- Pointer (D4, ADR-0012 §"Pointer adapter"): `platform::pointer::SystemPointer` per OS behind
+  the extended `PointerSink` (`access`, `move_to`, `click`, `position`, `desktop`). macOS =
+  posted CGEvents from a source with suppression 0 (needs Accessibility; warp rejected because
+  it blocks the physical mouse, measured). Windows `SetCursorPos`/`SendInput`, Linux X11 XTest
+  (`x11rb` 0.13.2), Wayland → `Unsupported`. Shared pure `geometry`: bounding-box desktop,
+  snap to nearest display, `Echo` so the adapter's own snapped/late moves don't look like
+  handover. On-device test `cargo test -p platform --test pointer_device -- --ignored`.
 - `apps/desktop` is still the Phase 2 skeleton (now loads settings and shows the load notice) (one window, status label, start/stop button),
   adapted to the new controller API.
 
@@ -46,9 +53,10 @@ three OS + cargo-deny. D4 next.
 
 ## Immediate next action
 
-Task 0008 slice D4: pointer adapter on the dev Mac (warp vs posted events, Accessibility P6,
-`position()`, virtual-desktop rect, dwell click P7); Windows/Linux X11 compiled in CI; Wayland
-`Unsupported`. Record the pick in ADR-0012's crate table; check new transitive licences.
+Commit/push D4 if the user agrees, confirm CI (esp. Linux). Then task 0008 slice D5: global
+F11/F12 via `global-hotkey` in `platform` → `ToggleStart`/`Recenter`; registration failure shown
+in the UI (P13: macOS F11 = Show Desktop); in-window F11/F12 fallback. Update ADR-0012's
+hotkey row; check licences.
 
 ## Open risks
 
@@ -58,3 +66,6 @@ Task 0008 slice D4: pointer adapter on the dev Mac (warp vs posted events, Acces
 - Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
 - Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
 - Camera crate panics on external webcams (P1): caught, but untested on device until Phase 7; Wayland pointer and window placement (P10/P11).
+- `CGPreflightPostEventAccess` ≈10 ms: never call per frame (D7 runtime polls it every few s).
+- The desktop is the displays' bounding box: with uneven monitors the cursor sticks to display
+  edges where the box has dead zones (snap). Fine for v1; revisit if users find it odd.

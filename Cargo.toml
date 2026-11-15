@@ -31,6 +31,12 @@ toml = "1.2.1"
 tempfile = "3.27.0"
 # Camera backend (ADR-0012, task 0008 D3): native backends only, no JPEG decoder, no OpenCV.
 nokhwa = { version = "0.10.11", default-features = false, features = ["input-native"] }
+# Pointer adapters (ADR-0012 §"Pointer adapter", task 0008 D4). All three were already in the
+# lockfile through eframe/winit; same versions, so no duplicates.
+objc2-core-graphics = { version = "0.3.2", default-features = false, features = ["std", "CGDirectDisplay", "CGError", "CGEvent", "CGEventSource", "CGEventTypes"] }
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+x11rb = { version = "0.13.2", default-features = false, features = ["randr", "xtest"] }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

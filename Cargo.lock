@@ -2963,9 +2963,13 @@ version = "0.0.0"
 dependencies = [
  "app-core",
  "nokhwa",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
  "tempfile",
  "thiserror 2.0.21",
  "toml",
+ "windows-sys 0.61.2",
+ "x11rb",
 ]
 
 [[package]]
