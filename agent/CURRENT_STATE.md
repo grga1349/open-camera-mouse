@@ -4,8 +4,8 @@ Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6b done, D7 next)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. D6b (design checkup) done in the working tree, gates green locally;
-commit/push pending user approval. Last pushed code commit `b5336d3` (D6), CI 43728203292 green.
+Branch: `rewrite/rust`, pushed. Latest code commit `4f4e006` (Phase 6 D6b), CI run 43730995361
+green. User reviewed the restyled UI on screen and approved (2026-11-15).
 
 ## Milestone
 

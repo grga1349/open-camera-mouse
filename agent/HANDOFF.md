@@ -5,8 +5,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 
 ## As of 2026-11-15 (Phase 6 ACTIVE, D0–D6b done, D7 next)
 
-**Branch:** `rewrite/rust`. Task `tasks/active/0008-phase-6-desktop-app.md`. **D6b done** in the
-working tree (uncommitted until the user says so): widgets restyled to the lab's CSS and
+**Branch:** `rewrite/rust`. Task `tasks/active/0008-phase-6-desktop-app.md`. **D6b done**: committed
+`4f4e006`, pushed, CI run 43730995361 green, user approved on screen. Widgets restyled to the lab's CSS and
 checked by screenshots against headless-Chrome lab captures. Details in the task file Progress
 entry for D6b. Gates green locally: fmt, clippy `-D warnings`, workspace tests (desktop 53),
 `check-core-deps.sh`. Work rhythm (user): **one slice per session**, then hand off.

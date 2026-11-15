@@ -367,4 +367,4 @@ Plus the CI run ID for the closing commit.
   differences: no bold font (left for later, user), no icons inside buttons (D6 choice),
   number fields centre their value (lab: left). Gates green: fmt, clippy, workspace tests
   (desktop 53), check-core-deps.
-
+  Committed `4f4e006`; CI run 43730995361 green; user reviewed on screen and approved.
