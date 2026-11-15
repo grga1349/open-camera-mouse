@@ -2,10 +2,11 @@
 //!
 //! One module per OS behind `cfg`, so every target compiles in CI from day one. [`camera`]
 //! (one `nokhwa` adapter for all three OS, D3) and [`settings_store`] are the same on every
-//! OS; [`pointer`] (D4) has one backend per OS. Hotkeys land in task 0008 D5 (see
-//! docs/architecture/PLATFORM_RISKS.md).
+//! OS; [`pointer`] (D4) has one backend per OS; [`hotkeys`] (D5) wraps `global-hotkey`, which
+//! has its own per-OS backends (PLATFORM_RISKS P12/P13).
 
 pub mod camera;
+pub mod hotkeys;
 pub mod pointer;
 pub mod settings_store;
 
@@ -24,6 +25,7 @@ use macos as imp;
 use windows as imp;
 
 pub use camera::{CameraDevice, NokhwaCamera, list_devices};
+pub use hotkeys::{GlobalHotkeys, Hotkey, KeyRouter, Registration};
 pub use pointer::SystemPointer;
 pub use settings_store::{Loaded, SaveError, Saved, SettingsNotice, SettingsStore};
 

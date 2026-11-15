@@ -47,7 +47,7 @@ Pyramids and float buffers are added in Phase 3 inside tracking-core. The previe
 | Cursor, Windows | `windows-sys` 0.61.2 (`SetCursorPos`, `SendInput` clicks, `GetCursorPos`, `EnumDisplayMonitors`) | MIT OR Apache-2.0 | **Adopted (D4)**, compiled in CI, validated in Phase 7. | `enigo` |
 | Cursor, Linux | `x11rb` 0.13.2 (XTest, RandR; same version winit uses) on X11. Wayland: `Unsupported` for now; `ashpd` RemoteDesktop portal + libei is the Phase 7 candidate | MIT OR Apache-2.0 / MIT | **X11 adopted (D4)**, compiled in CI. Wayland absolute pointer depends on the compositor and needs user consent per session. | Document X11-only for v1 if the portal path fails |
 | Cursor, cross-platform | `enigo` | 0.6.1 (2025-08-28), MIT | Active repo, but the last release is over a year old, and we'd still need per-OS code for reading the position and for permissions. Kept as the fallback, not the default. Not used (D4). | — |
-| Global hotkeys F11/F12 | `global-hotkey` (Tauri) | 0.10.0 (2026-11-09), Apache-2.0 OR MIT | macOS uses Carbon hotkeys (no Accessibility needed, INFERRED). Windows works. Linux supports X11 only. | Wayland: portal GlobalShortcuts via `ashpd`, or in-app keys only |
+| Global hotkeys (F11/F12; F10/F12 on macOS) | `global-hotkey` (Tauri) | 0.10.0 (2026-11-09), Apache-2.0 OR MIT — **adopted D5** (ADR-0012) | macOS Carbon hotkeys, no Accessibility needed (VERIFIED D5: F10/F12 register from a terminal launch; F11 refused, Show Desktop). Windows works. Linux supports X11 only. | Wayland: portal GlobalShortcuts via `ashpd`, or in-app keys only |
 | Property tests | `proptest` 1.12.0 | MIT OR Apache-2.0 | Phase 3 tracker invariants. | — |
 | Snapshot tests | `insta` 1.49.0 | Apache-2.0 | Optional, for diagnostics/golden outputs. | — |
 

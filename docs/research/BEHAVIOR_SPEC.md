@@ -458,6 +458,9 @@ source system.
 - R-A4 Hotkeys: keep legacy's fixed F11 start/stop + F12 recenter unless the user decides
   otherwise. **Decided (user, 2026-11-11): F11 + F12, fixed**. This deviates from 2018's F9/F5,
   see ADR-0006. Per the existing project decision, do not make them configurable without asking.
+  *Amended (user, 2026-11-15, task 0008 D5):* start/stop is **F10 on macOS** (macOS refuses F11:
+  Show Desktop holds it, measured), F11 on Windows and Linux; F12 recenter everywhere. A key the
+  OS refuses still works in the focused window, and the UI says which keys work globally.
 - R-A5 Settings are validated at the API boundary on every update and on load, with schema
   versioning for the persisted file. *Implemented (task 0008 D2, ADR-0012):* out-of-range
   values reset per field; a corrupt file falls back to defaults and is kept aside; a newer

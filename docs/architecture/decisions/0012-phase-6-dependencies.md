@@ -1,6 +1,6 @@
 # ADR-0012: Phase 6 dependencies and settings persistence
 
-Status: Accepted (persistence D2, camera D3, pointer D4); the hotkey row is filled in by D5
+Status: Accepted (persistence D2, camera D3, pointer D4, hotkeys D5)
 Date: 2026-11-12
 Task: 0008 slice D2. Amends ADR-0007 (what `app-core` may depend on).
 
@@ -70,7 +70,7 @@ small and flat. `toml` was already in the tree through eframe's dependencies.
 | `objc2-application-services` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | — | **not needed** (D4): `CGPreflightPostEventAccess` in CoreGraphics checks exactly the permission posting needs |
 | `windows-sys` | 0.61.2 | MIT OR Apache-2.0 | platform (Windows) | **adopted** (D4), compiled in CI; device validation Phase 7 |
 | `x11rb` (`xtest`, `randr`, pure-Rust connection) | 0.13.2, not 0.14.0 | MIT OR Apache-2.0 | platform (Linux) | **adopted** (D4) at 0.13.2, the version winit already pulls in, so no second copy; compiled in CI; device validation Phase 7 |
-| `global-hotkey` | 0.10.0 | Apache-2.0 OR MIT | platform | candidate, D5 |
+| `global-hotkey` (default features off) | 0.10.0 | Apache-2.0 OR MIT (3 new lockfile crates: itself, `crossbeam-channel` 0.5.17, `keyboard-types` 0.8.3, both MIT OR Apache-2.0; checked 2026-11-15) | platform (all OS) | **adopted** (D5, measured below) |
 | `enigo` | 0.6.1 | MIT | — | **not used** (D4): we'd still need per-OS code for position, permission, displays and the suppression setting |
 
 D3, D4 and D5 each update their row here (adopted or rejected, with the measurement) and add
@@ -170,6 +170,45 @@ Decision:
 Not checked here: the click path on device (D7 manual QA; an automated click would hit
 whatever is under the cursor), Windows and X11 on device (Phase 7), and the macOS
 Accessibility grant for a `.app` rather than the terminal (D7, together with P2).
+
+## Global hotkeys (task 0008 D5, 2026-11-15)
+
+`global-hotkey` 0.10.0 in `platform::hotkeys`: macOS Carbon `RegisterEventHotKey` (exclusive),
+Windows `RegisterHotKey`, X11 `XGrabKey`. Its other deps (`objc2-app-kit`, `windows-sys` 0.59,
+`x11rb` 0.13, `xkeysym`, `once_cell`) were already in the lockfile.
+
+Measured on the dev Mac (macOS 14, built-in + default shortcuts):
+
+| Key | Registration | Why |
+|---|---|---|
+| F11 | **refused**, `AlreadyRegistered` | System "Show Desktop" holds it (PLATFORM_RISKS P13, now VERIFIED) |
+| F10 | active | — |
+| F12 | active | — |
+
+Decision (user, 2026-11-15): start / pause is **F10 on macOS**, F11 on Windows and Linux (the
+2018/legacy users' key); recenter F12 everywhere. Still fixed, not configurable. Amends
+ADR-0006's hotkey row and BEHAVIOR_SPEC R-A4.
+
+Design:
+- `GlobalHotkeys::register` never fails. Each key gets a `Registration` (`Active`,
+  `Failed(reason)`, `Unsupported(reason)`) and the window shows one line per key: "works in any
+  app" or "works only in this window: …". A taken key is reported in plain words ("another app
+  or a system shortcut already uses F12").
+- It must be created on the event-loop thread (macOS: main thread; Windows: the hidden hotkey
+  window lives on the calling thread): the eframe app-creator closure. The crate's event
+  handler (set once per process) forwards presses into a channel and calls
+  `egui::Context::request_repaint`, so presses arrive while the window is in the background.
+- On X11 the crate's `register` returns `Ok` even when its connection thread failed to start,
+  so `platform` itself treats Wayland (same test as the pointer adapter) and a missing
+  `DISPLAY` as `Unsupported` without calling it (P12).
+- The window's own key events (`egui::Event::Key`, pressed, not repeat) always work as the
+  fallback. `KeyRouter` (pure, injected clock) merges both sources: a press of the same key from
+  the other source within 300 ms is the same physical press and is dropped, so a focused window
+  never toggles twice.
+
+Not checked here: delivery of a press from the background on device (registration only; D7
+manual QA), Windows and X11 on device (Phase 7), `Fn` needed on Mac laptop keyboards (the
+default media-key layout; document in D7 QA / Phase 8 help).
 
 ## Consequences
 

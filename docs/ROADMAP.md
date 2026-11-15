@@ -25,7 +25,7 @@ the phase.
 
 - `docs/research/BEHAVIOR_SPEC.md` §7 (expected behavior R-*) and §9 (open questions Q-*).
 - ADR-0006: favor Camera Mouse 2018 behavior where practical. Deviations cite defect /
-  unknown / platform / prior user decision. Hotkeys are fixed F11/F12.
+  unknown / platform / prior user decision. Hotkeys are fixed F11/F12 (start/pause F10 on macOS, ADR-0012).
 - ADR-0007 (crate boundaries, Accepted), ADR-0008 (mirror at ingest; 640×480@30) and
   ADR-0004 (tracking candidates, Accepted), ADR-0011 (recommended tracker: `LkParams::recommended()`).
 

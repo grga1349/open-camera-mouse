@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12; D0–D4 done 2026-11-15)
+Status: ACTIVE (2026-11-12; D0–D5 done 2026-11-15)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -91,6 +91,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
 | ~~Crates `app-core` may take~~ **Decided (D2):** `serde` derive only, besides `thiserror` + cores; checked by `check-core-deps.sh` | — | ADR-0012 |
 | ~~Camera backend~~ **Decided (D3):** `nokhwa` 0.10.11 `input-native` (no `decoding`), measured on the dev Mac; `objc2-av-foundation` stays the fallback | — | ADR-0012 |
+| ~~Global hotkey keys~~ **Decided (user, D5, measured):** macOS refuses F11 (Show Desktop) → start/pause is F10 on macOS, F11 on Windows/Linux; F12 everywhere. Fixed, not configurable | — | ADR-0012 §"Global hotkeys", ADR-0006, BEHAVIOR_SPEC R-A4 |
 | ~~Warp vs posted move~~ **Decided (D4, measured):** posted events from a source with suppression 0 (needs Accessibility). Warp needs no permission but blocks the physical mouse, so handover can't work | — | ADR-0012 §"Pointer adapter" / PLATFORM_RISKS P6 |
 
 ## Non-goals
@@ -256,3 +257,18 @@ Plus the CI run ID for the closing commit.
   Carry to D7: runtime order observe → controller → move; poll `access()` every few seconds,
   never per frame; click on device and Accessibility for a `.app` in manual QA.
   Committed `67bbb99`; CI run 43723451495 green (macOS, Windows, Linux, cargo-deny).
+- 2026-11-15: **D5 done (registration verified; background press delivery → D7 QA).**
+  `global-hotkey` 0.10.0 adopted (3 new lockfile crates, all MIT OR Apache-2.0). On the dev Mac
+  F11 registration is refused (`AlreadyRegistered`, Show Desktop: P13 VERIFIED); F10 and F12
+  register. **User decision:** start/pause = F10 on macOS, F11 on Windows/Linux, F12 recenter
+  everywhere (ADR-0012 §"Global hotkeys", ADR-0006 + R-A4 amended). `platform::hotkeys`:
+  `Hotkey` (per-OS key, `from_key_name` matches egui key names), `Registration` per key with
+  plain-words refusal reasons, `GlobalHotkeys` (created in the eframe creator closure on the
+  main thread, event handler → channel + `request_repaint`), Wayland / no `DISPLAY` →
+  `Unsupported` because the crate reports false success on X11, `KeyRouter` (pure, 300 ms
+  cross-source dedup so a focused window never toggles twice). Desktop skeleton: in-window
+  keys through the router, one status line per key, button label from the key name. Tests: 9
+  hotkeys unit + 5 new kittest (in-window toggle, global+window = one command, status lines,
+  refusal wording, `macOS` not recapitalised). Windows clippy clean locally; Linux in CI.
+  Carry to D7 manual QA: press F10/F12 with another app focused → state changes; `Fn` on Mac
+  laptop keyboards; same in a `.app`.

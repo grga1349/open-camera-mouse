@@ -12,7 +12,7 @@ Monochrome UI in two themes, **Carbon** (dark, default) and **Paper** (light), s
 Options → General → Appearance. Two colours only: the target marker is a **thin neon-green ring**
 (`#00ff00`, same in both themes, because it sits on the camera image), and primary buttons are
 **yellow** (Carbon `#ffd60a`, Paper `#f5c518`, black text). Two **fixed-size** native windows:
-**Tracking** (560 × 620 pt: preview, status text line, Pause/Start F11, Recenter F12, Options) and
+**Tracking** (560 × 620 pt: preview, status text line, Pause/Start F11 (F10 on macOS, D5), Recenter F12, Options) and
 **Options** (400 × 620 pt: Pointer / Clicking / Camera / General tabs, Restore defaults, Close). No
 auto-recenter. Options → Camera has a "Find the target again" switch (loss recovery, off by
 default, ADR-0011 amendment). The Searching state and its marker only occur with it on. Status is an icon + text line, never colour alone.

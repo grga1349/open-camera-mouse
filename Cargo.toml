@@ -37,6 +37,8 @@ objc2-core-graphics = { version = "0.3.2", default-features = false, features = 
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 x11rb = { version = "0.13.2", default-features = false, features = ["randr", "xtest"] }
+# Global hotkeys F11/F12 (ADR-0012 §"Global hotkeys", task 0008 D5).
+global-hotkey = { version = "0.10.0", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

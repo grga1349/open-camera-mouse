@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0008 | Phase 6 — desktop app | ACTIVE — `tasks/active/0008-phase-6-desktop-app.md`, slices D0–D7; D0–D4 done, next D5 (global hotkeys F11/F12) |
+| 0008 | Phase 6 — desktop app | ACTIVE — `tasks/active/0008-phase-6-desktop-app.md`, slices D0–D7; D0–D5 done, next D6 (desktop UI per the approved lab) |
 
 ## Done
 
