@@ -16,6 +16,7 @@ use eframe::egui::{
 use crate::icons;
 use crate::status::{Action, Camera, Card, Status, can_pick, seconds};
 use crate::theme;
+use crate::widgets::{self, Kind};
 
 /// The preview area is 4:3 (ADR-0008 canonical 640×480); other frame shapes letterbox.
 pub const AREA_ASPECT: f32 = 4.0 / 3.0;
@@ -194,55 +195,77 @@ pub fn show(ui: &mut Ui, view: &View, status: &Status, extras: &Extras<'_>) -> O
         diagnostics(&painter, area, lines);
     }
 
+    // Lab `.overlay.scrim`: the theme background at 82 % over the picture.
+    let scrim = theme::current(ui).bg.gamma_multiply(0.82);
     if status.loading {
-        painter.rect_filled(area, 8.0, SCRIM);
-        overlay(ui, area, |ui| {
-            ui.add(egui::Spinner::new().size(28.0).color(Color32::WHITE));
-            ui.label(egui::RichText::new("Starting camera…").color(Color32::WHITE));
+        painter.rect_filled(area, 8.0, scrim);
+        overlay(ui, area, "loading", |ui| {
+            let t = theme::current(ui);
+            ui.add(egui::Spinner::new().size(30.0).color(t.text));
+            ui.label(egui::RichText::new("Starting camera…").color(t.text));
         });
     }
     if let Some(card) = &status.card {
-        painter.rect_filled(area, 8.0, SCRIM);
-        overlay(ui, area, |ui| {
+        painter.rect_filled(area, 8.0, scrim);
+        overlay(ui, area, "card", |ui| {
             out.action = show_card(ui, card);
         });
     }
     out
 }
 
-/// Lays out `add` centred over `area`, in a child `Ui` that doesn't move the parent's cursor
-/// (the status line stays below the preview).
-fn overlay(ui: &mut Ui, area: Rect, add: impl FnOnce(&mut Ui)) {
+/// Lays out `add` centred over `area` (both ways), in a child `Ui` that doesn't move the
+/// parent's cursor (the status line stays below the preview). egui lays out top-down in one
+/// pass, so the content's height from the previous pass places it; a changed height asks for
+/// one more pass.
+fn overlay(ui: &mut Ui, area: Rect, key: &str, add: impl FnOnce(&mut Ui)) {
+    let inner = area.shrink(20.0);
+    let id = ui.scope_id().with(("overlay", key));
+    let last_h: Option<f32> = ui.data(|d| d.get_temp(id));
+    let h = last_h.unwrap_or(0.0).min(inner.height());
+    let top = inner.center().y - h / 2.0;
     let mut child = ui.new_child(
         UiBuilder::new()
-            .max_rect(area.shrink(16.0))
-            .layout(Layout::top_down(Align::Center).with_main_align(Align::Center)),
+            .max_rect(Rect::from_min_max(Pos2::new(inner.left(), top), inner.max))
+            .layout(Layout::top_down(Align::Center)),
     );
     add(&mut child);
+    let used = child.min_rect().height();
+    if last_h.is_none_or(|l| (l - used).abs() > 0.5) {
+        ui.data_mut(|d| d.insert_temp(id, used));
+        ui.ctx().request_repaint();
+    }
 }
 
+/// Lab `.card`: `--surface`, `--line-strong` border, radius 8, padding 18 × 20, at most
+/// 360 wide; icon, title (1.1 em), muted body, then the buttons, all left-aligned.
 fn show_card(ui: &mut Ui, card: &Card) -> Option<Action> {
     let t = theme::current(ui);
+    let m = theme::metrics(theme::is_larger(ui));
     let mut action = None;
     egui::Frame::new()
-        .fill(t.bg)
-        .stroke(Stroke::new(1.0, t.line))
+        .fill(t.surface)
+        .stroke(Stroke::new(m.border_w, t.line_strong))
         .corner_radius(8.0)
-        .inner_margin(16.0)
+        .inner_margin(egui::Margin::symmetric(20, 18))
         .show(ui, |ui| {
-            ui.set_max_width(360.0);
-            ui.vertical_centered(|ui| {
+            ui.set_max_width(360.0 - 40.0);
+            ui.with_layout(Layout::top_down(Align::Min), |ui| {
+                ui.spacing_mut().item_spacing.y = 4.0;
                 icons::show(ui, card.icon, 28.0);
-                ui.label(egui::RichText::new(card.title).heading().strong());
-                ui.label(&card.body);
-                ui.horizontal(|ui| {
+                ui.add_space(4.0);
+                let size = ui.style().text_styles[&egui::TextStyle::Body].size * 1.1;
+                ui.label(egui::RichText::new(card.title).size(size).strong());
+                ui.label(egui::RichText::new(&card.body).color(t.muted));
+                ui.add_space(10.0);
+                ui.horizontal_wrapped(|ui| {
                     for b in &card.buttons {
-                        let clicked = if b.primary {
-                            theme::primary_button(ui, b.label).clicked()
+                        let kind = if b.primary {
+                            Kind::Primary
                         } else {
-                            ui.button(b.label).clicked()
+                            Kind::Secondary
                         };
-                        if clicked {
+                        if widgets::Button::new(b.label, kind).show(ui).clicked() {
                             action = Some(b.action);
                         }
                     }

@@ -3,12 +3,11 @@
 //!
 //! The UI is monochrome. Exactly two hues exist and each has one helper here, so the rule is
 //! enforced in one place (Phase 6 acceptance criterion 9): [`marker_green`] for the target
-//! marker and [`primary_button`] for yellow primary buttons.
+//! marker and [`primary_colors`] for yellow primary buttons (painted by `widgets::Button`).
 
 use app_core::Theme;
 use eframe::egui::{
-    self, Color32, CornerRadius, FontId, Margin, Response, RichText, Stroke, Style, TextStyle, Ui,
-    Vec2, Visuals,
+    Color32, CornerRadius, FontId, Margin, Stroke, Style, TextStyle, Ui, Vec2, Visuals,
 };
 
 /// Colour tokens of one theme.
@@ -21,7 +20,7 @@ pub struct Tokens {
     pub line_strong: Color32,
     pub text: Color32,
     pub muted: Color32,
-    /// Primary button fill (yellow). Only [`primary_button`] reads it.
+    /// Primary button fill (yellow). Only [`primary_colors`] reads it.
     primary: Color32,
 }
 
@@ -83,19 +82,10 @@ pub fn marker_green() -> Color32 {
     MARKER_GREEN
 }
 
-/// A primary (yellow, black text) button, for `ui.add` / `ui.add_sized`. The one place
-/// yellow is allowed.
-pub fn primary(ui: &Ui, text: impl Into<String>) -> egui::Button<'static> {
-    let fill = current(ui).primary;
-    egui::Button::new(RichText::new(text.into()).color(PRIMARY_TEXT).strong())
-        .fill(fill)
-        .stroke(Stroke::new(1.0, fill))
-}
-
-/// Adds a [`primary`] button.
-pub fn primary_button(ui: &mut Ui, text: impl Into<String>) -> Response {
-    let b = primary(ui, text);
-    ui.add(b)
+/// Fill and text colour of a primary button (yellow, black text). The one place yellow is
+/// allowed.
+pub fn primary_colors(ui: &Ui) -> (Color32, Color32) {
+    (current(ui).primary, PRIMARY_TEXT)
 }
 
 /// Sizes that change with "Larger controls".

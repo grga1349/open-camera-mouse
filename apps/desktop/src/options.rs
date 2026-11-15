@@ -9,7 +9,7 @@ use eframe::egui::{self, Align, Layout, RichText, ScrollArea, Ui};
 use platform::CameraDevice;
 
 use crate::theme;
-use crate::widgets::{segmented, slider_row, switch, tabs};
+use crate::widgets::{Button, field_label, help, readout, segmented, slider_row, switch, tabs};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Tab {
@@ -48,35 +48,70 @@ pub fn restored(current: &Settings) -> Settings {
     }
 }
 
-/// Draws the window contents. Returns `true` when Close was pressed.
+/// Draws the window contents edge to edge (the caller's panel has no margin): the tab row,
+/// the scrolling body with the lab's 16 px padding (so the scroll bar sits in the margin, not
+/// over the values) and the footer bar. Returns `true` when Close was pressed.
 pub fn show(ui: &mut Ui, s: &mut Settings, tab: &mut Tab, facts: &Facts<'_>) -> bool {
-    tabs(ui, tab, &TABS);
-    ui.separator();
-    let footer_h = ui.spacing().interact_size.y + ui.spacing().item_spacing.y * 2.0 + 8.0;
+    let t = theme::current(ui);
+    let m = theme::metrics(theme::is_larger(ui));
+    // Lab `.tabs`: padding 6 10 0, the row's border runs the full width.
+    egui::Frame::new()
+        .inner_margin(egui::Margin {
+            left: 10,
+            right: 10,
+            top: 6,
+            bottom: 0,
+        })
+        .show(ui, |ui| tabs(ui, tab, &TABS));
+    ui.add_space(-ui.spacing().item_spacing.y);
+
+    let footer_h = m.hit + 20.0 + m.border_w;
     let body_h = (ui.available_height() - footer_h).max(80.0);
     ScrollArea::vertical()
         .max_height(body_h)
         .min_scrolled_height(body_h)
         .auto_shrink([false, false])
-        .show(ui, |ui| match tab {
-            Tab::Pointer => pointer(ui, s),
-            Tab::Clicking => clicking(ui, s),
-            Tab::Camera => camera(ui, s, facts),
-            Tab::General => general(ui, s, facts),
+        .show(ui, |ui| {
+            egui::Frame::new().inner_margin(16).show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                // Lab `.panel { gap: 16px }` between fields.
+                ui.spacing_mut().item_spacing.y = 8.0;
+                match tab {
+                    Tab::Pointer => pointer(ui, s),
+                    Tab::Clicking => clicking(ui, s),
+                    Tab::Camera => camera(ui, s, facts),
+                    Tab::General => general(ui, s, facts),
+                }
+            });
         });
-    ui.separator();
+
+    // Lab `.ow-foot`: `--surface`, a top border, padding 10 16, buttons at both ends.
+    ui.add_space(-ui.spacing().item_spacing.y);
     let mut close = false;
-    ui.horizontal(|ui| {
-        if ui.button("Restore defaults").clicked() {
-            *s = restored(s);
-        }
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            close = theme::primary_button(ui, "Close").clicked();
+    let foot = egui::Frame::new()
+        .fill(t.surface)
+        .inner_margin(egui::Margin::symmetric(16, 10))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                if Button::secondary("Restore defaults").show(ui).clicked() {
+                    *s = restored(s);
+                }
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    close = Button::primary("Close").show(ui).clicked();
+                });
+            });
         });
-    });
+    let r = foot.response.rect;
+    ui.painter().hline(
+        r.x_range(),
+        r.top() + m.border_w / 2.0,
+        egui::Stroke::new(m.border_w, t.line),
+    );
     close
 }
 
+/// The rest of the lab's 16 px gap between fields (item spacing gives the other 8).
 fn space(ui: &mut Ui) {
     ui.add_space(8.0);
 }
@@ -123,12 +158,18 @@ fn pointer(ui: &mut Ui, s: &mut Settings) {
     );
     space(ui);
     ui.horizontal(|ui| {
-        ui.label("Screen limits");
+        field_label(ui, "Screen limits");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.label(RichText::new("px").monospace());
         });
     });
-    egui::Grid::new("limits").num_columns(4).show(ui, |ui| {
+    // Lab `.limits`: four equal columns, a small muted label over each number field.
+    let gap = 8.0;
+    let col_w = (ui.available_width() - 3.0 * gap) / 4.0;
+    let h = ui.spacing().interact_size.y;
+    let muted = theme::current(ui).muted;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = gap;
         let lim = &mut s.limits;
         for (name, v) in [
             ("Left", &mut lim.left),
@@ -136,15 +177,22 @@ fn pointer(ui: &mut Ui, s: &mut Settings) {
             ("Top", &mut lim.top),
             ("Bottom", &mut lim.bottom),
         ] {
-            let l = ui.label(name);
-            ui.add(egui::DragValue::new(v).range(ranges::LIMIT_PX))
-                .labelled_by(l.id);
-            if name == "Right" {
-                ui.end_row();
-            }
+            ui.vertical(|ui| {
+                ui.set_width(col_w);
+                ui.spacing_mut().item_spacing.y = 3.0;
+                let l = ui.label(RichText::new(name).small().color(muted));
+                ui.scope(|ui| {
+                    ui.style_mut().override_text_style = Some(egui::TextStyle::Monospace);
+                    ui.add_sized([col_w, h], egui::DragValue::new(v).range(ranges::LIMIT_PX))
+                        .labelled_by(l.id);
+                });
+            });
         }
     });
-    ui.label(RichText::new("Keep the pointer this far from each screen edge. Default 0").weak());
+    help(
+        ui,
+        "Keep the pointer this far from each screen edge. Default 0",
+    );
 }
 
 fn clicking(ui: &mut Ui, s: &mut Settings) {
@@ -194,7 +242,7 @@ fn clicking(ui: &mut Ui, s: &mut Settings) {
 }
 
 fn camera(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
-    let l = ui.label("Camera");
+    let l = field_label(ui, "Camera");
     let current = match &s.camera {
         None => "System default".to_owned(),
         Some(id) => facts
@@ -205,9 +253,11 @@ fn camera(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
             .unwrap_or_else(|| format!("{id} (not connected)")),
     };
     let width = ui.available_width();
+    let h = ui.spacing().interact_size.y;
     egui::ComboBox::from_id_salt("camera")
         .selected_text(current)
         .width(width)
+        .height(h * 6.0)
         .show_ui(ui, |ui| {
             ui.selectable_value(&mut s.camera, None, "System default");
             for c in facts.cameras {
@@ -224,19 +274,12 @@ fn camera(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
         Some("Head right moves the pointer right"),
     );
     space(ui);
-    ui.label("Capture format");
+    field_label(ui, "Capture format");
     let format = match facts.capture {
         Some(f) => format!("{} × {} · {:.0} fps", f.width, f.height, f.fps),
         None => "Camera not started".to_owned(),
     };
-    egui::Frame::new()
-        .stroke(egui::Stroke::new(1.0, theme::current(ui).line))
-        .corner_radius(6.0)
-        .inner_margin(8.0)
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.label(RichText::new(format).monospace());
-        });
+    readout(ui, &format);
     space(ui);
     switch(
         ui,
@@ -250,7 +293,7 @@ fn camera(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
 }
 
 fn general(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
-    ui.label("Appearance");
+    field_label(ui, "Appearance");
     segmented(
         ui,
         &mut s.theme,
@@ -277,18 +320,16 @@ fn general(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
         Some("Bigger buttons, switches and focus rings"),
     );
     space(ui);
-    ui.label("Keyboard");
+    field_label(ui, "Keyboard");
     for line in facts.hotkey_lines {
-        ui.label(RichText::new(line).weak());
+        help(ui, line);
     }
     space(ui);
-    ui.label("Mouse takeover");
-    ui.label(
-        RichText::new(
-            "Moving the physical mouse gives it control. The camera takes over again after the \
-             mouse is still for 4 s.",
-        )
-        .weak(),
+    field_label(ui, "Mouse takeover");
+    help(
+        ui,
+        "Moving the physical mouse gives it control. The camera takes over again after the \
+         mouse is still for 4 s.",
     );
     space(ui);
     switch(

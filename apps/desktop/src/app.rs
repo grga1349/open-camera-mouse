@@ -14,6 +14,7 @@ use platform::{CameraDevice, SettingsStore};
 use crate::options::{self, Facts, Tab};
 use crate::preview::{self, Extras};
 use crate::status::{self, Action, describe};
+use crate::widgets::{self, Kind};
 use crate::{icons, theme};
 
 /// Wait this long after the last settings change before writing the file, so dragging a
@@ -311,7 +312,8 @@ fn window_hotkeys(ui: &Ui) -> Vec<Hotkey> {
     })
 }
 
-/// A button label with its key, e.g. "Pause  F10".
+/// A button's accessible name with its key, e.g. "Pause  F10" (as `widgets::Button` names it).
+#[cfg(test)]
 pub fn with_key(label: &str, key: Hotkey) -> String {
     format!("{label}  {}", key.key_name())
 }
@@ -397,9 +399,18 @@ pub fn tracking_ui(ui: &mut Ui, shell: &mut Shell) {
                 ui.label(RichText::new(h).weak());
             }
             if !st.buttons.is_empty() {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     for b in &st.buttons {
-                        if ui.button(b.label).clicked() {
+                        let kind = if b.primary {
+                            Kind::Primary
+                        } else {
+                            Kind::Secondary
+                        };
+                        if widgets::Button::new(b.label, kind)
+                            .small()
+                            .show(ui)
+                            .clicked()
+                        {
                             action = Some(b.action);
                         }
                     }
@@ -417,19 +428,15 @@ pub fn tracking_ui(ui: &mut Ui, shell: &mut Shell) {
 
     let state = view.state;
     ui.horizontal(|ui| {
-        let h = ui.spacing().interact_size.y;
         let gap = ui.spacing().item_spacing.x;
         let options_w = 96.0;
         let w = ((ui.available_width() - options_w - 2.0 * gap) / 2.0).max(60.0);
         let start = ui
             .add_enabled_ui(status::start_enabled(state), |ui| {
-                ui.add_sized(
-                    [w, h],
-                    theme::primary(
-                        ui,
-                        with_key(status::start_label(state), Hotkey::ToggleStart),
-                    ),
-                )
+                widgets::Button::primary(status::start_label(state))
+                    .key(start_key)
+                    .width(w)
+                    .show(ui)
             })
             .inner;
         if start.clicked() {
@@ -437,17 +444,18 @@ pub fn tracking_ui(ui: &mut Ui, shell: &mut Shell) {
         }
         let recenter = ui
             .add_enabled_ui(status::recenter_enabled(state), |ui| {
-                ui.add_sized(
-                    [w, h],
-                    egui::Button::new(with_key("Recenter", Hotkey::Recenter)),
-                )
+                widgets::Button::secondary("Recenter")
+                    .key(recenter_key)
+                    .width(w)
+                    .show(ui)
             })
             .inner;
         if recenter.clicked() {
             shell.command(Command::Recenter);
         }
-        if ui
-            .add_sized([options_w, h], egui::Button::new("Options"))
+        if widgets::Button::secondary("Options")
+            .width(options_w)
+            .show(ui)
             .clicked()
         {
             shell.open_options(None);

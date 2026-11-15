@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12; D0–D6 done 2026-11-15; D6b design checkup next)
+Status: ACTIVE (2026-11-12; D0–D6b done 2026-11-15; D7 runtime integration next)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -116,7 +116,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 | Question | Default if the user doesn't decide | Where |
 |---|---|---|
 | ~~Preview grayscale (luma) vs colour~~ **Decided (user, 2026-11-12): colour preview.** Grayscale is rejected. The camera adapter delivers a colour frame for display alongside the luma the tracker uses; both are mirrored and downsampled at ingest so they share one display space (ADR-0008 amendment) | — | this file + EGUI_FEASIBILITY + ADR-0008 |
-| Font | egui default fonts for the first build. Revisit with an embedded OFL font later | this file |
+| Font | egui default fonts for the first build. **User, 2026-11-15 (D6b): leave for later.** Candidate: embed Inter Regular + SemiBold (OFL, `include_bytes!`, no new crate); the real app already has eframe's system-font fallback, so `→` would render there (not in kittest) | this file |
 | ~~Pointer permission + handover in R-A1~~ **Decided (D0):** orthogonal `PointerOwner` sub-state; plus top-level `Error` | — | BEHAVIOR_SPEC R-A1 |
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
 | ~~Crates `app-core` may take~~ **Decided (D2):** `serde` derive only, besides `thiserror` + cores; checked by `check-core-deps.sh` | — | ADR-0012 |
@@ -343,4 +343,28 @@ Plus the CI run ID for the closing commit.
   FaceTime HD Camera. User: switches and sliders differ a lot from the lab in size and shape,
   tabs must not show a button on hover, a nicer font maybe later. **New slice D6b (design
   checkup) before D7**, gaps listed under §Objective D6b.
+- 2026-11-15: **D6b done (design checkup).** `widgets` rewritten to the lab's CSS: switch
+  44×24 / knob 18 (off: `--surface-2` track, `--line-strong` border, muted knob; on: `--text`
+  track, `--bg` knob), "ON/OFF" mono 0.78 em muted, whole row clickable (`Sense::CLICK`, not a
+  focus stop); slider = egui `Slider` for behaviour/AccessKit, painted invisible, lab rail
+  (4 px, `--text` fill / `--line-strong`) and thumb (18 px, 26 px larger) painted at egui's
+  handle geometry, rail gapped under the thumb so a disabled slider doesn't show through;
+  tabs = frameless, muted → `--text` on hover/selected, 3 px underline, full-width `--line`
+  rule, left-aligned, padding 11 shrinking to fit; segmented = full width, equal halves,
+  divider, selected `--text` fill; `widgets::Button` (primary/secondary, `.small()` for
+  status/card buttons, key as a `kbd` chip, lab hover, faux-semibold label);
+  `theme::primary_colors` replaces `primary`/`primary_button` (still the only yellow).
+  Options window: edge-to-edge layout (panel margin 0), tab row padding 6 10, body padded
+  16 inside the scroll area (scroll bar no longer covers values), footer bar `--surface` with
+  a top rule; limits as four columns with muted labels over mono fields; capture format as a
+  `readout`; help text 0.88 em muted. Cards: lab `.card` (surface, line-strong border, 18×20
+  padding, left-aligned, button row), vertically centred via last pass's height; card and
+  loading scrim = theme bg at 82 % (Paper no longer gets a black scrim).
+  Dev aid (debug builds only): `OCM_DEV_SETTINGS=<file>` and
+  `OCM_DEV_OPTIONS=pointer|clicking|camera|general` for screenshot checks without clicks or
+  touching real settings. Screenshots compared against headless-Chrome lab captures: Carbon
+  Pointer/Camera, Paper General (Light applies), Larger controls Clicking. Remaining
+  differences: no bold font (left for later, user), no icons inside buttons (D6 choice),
+  number fields centre their value (lab: left). Gates green: fmt, clippy, workspace tests
+  (desktop 53), check-core-deps.
 

@@ -1,19 +1,19 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6 done, D6b next)
+Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6b done, D7 next)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`, pushed. Latest code commit `b5336d3` (Phase 6 D6), CI run 43728203292
-green on macOS, Windows, Linux + cargo-deny.
+Branch: `rewrite/rust`. D6b (design checkup) done in the working tree, gates green locally;
+commit/push pending user approval. Last pushed code commit `b5336d3` (D6), CI 43728203292 green.
 
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
 persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
-UI, headless-tested) done. **D6b (design checkup, user request) next**, then D7 (runtime
-integration and QA).
+UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) done.
+**D7 (runtime integration and QA) next.**
 
 ## What exists now
 
@@ -54,7 +54,9 @@ integration and QA).
   `status` (pure View → status line / card), `preview` (one drawing rect for paint + click,
   markers, overlays), `options`, `widgets`, `icons` (painted), `theme` (Carbon/Paper; the only
   hue helpers are `theme::marker_green()` and `theme::primary()`). Two fixed windows, Options via
-  `show_viewport_immediate`. 33 kittest tests drive every control by label. The runtime is
+  `show_viewport_immediate`. 33 kittest tests drive every control by label. D6b: widgets
+  painted to the lab CSS (`widgets::Button` with key chips, switch, slider, tabs, segmented,
+  readout); `theme::primary_colors` is the only yellow. The runtime is
   missing: controller `Effect`s are dropped, so a manual run stops at "Starting camera…".
 
 ## Toolchain
@@ -63,12 +65,9 @@ integration and QA).
 
 ## Immediate next action
 
-Task 0008 slice **D6b — design checkup** (task file §Objective D6b has the gap list with the
-lab's CSS values): restyle switch, slider, tabs, segmented control, fields, buttons with key
-chips; fix the scroll bar covering values and the welcome card alignment; check Paper and
-Larger controls on screen; side-by-side screenshots lab vs app. Font = open decision (maybe
-later). Then D7: runtime (hook point `Shell::input` in `apps/desktop/src/app.rs`, which drops
-the controller `Step` today).
+Task 0008 slice **D7 — runtime integration and QA** (task file §Objective D7). Hook point:
+`Shell::input` in `apps/desktop/src/app.rs` drops the controller `Step` today. Font stays
+egui default (user, 2026-11-15: later).
 
 ## Open risks
 
@@ -82,5 +81,7 @@ the controller `Step` today).
 - `CGPreflightPostEventAccess` ≈10 ms: never call per frame (D7 runtime polls it every few s).
 - The desktop is the displays' bounding box: with uneven monitors the cursor sticks to display
   edges where the box has dead zones (snap). Fine for v1; revisit if users find it odd.
-- D6 UI: only the Tracking window (Stopped) was screenshot-reviewed. Searching animation ignores
-  reduced motion. Default font lacks `→` (wording uses `>`); font decision still open.
+- UI: D6b screenshot-checked Options (all tabs, Paper, Larger controls) and Tracking (Stopped)
+  only; running states need a look in D7. Searching animation ignores reduced motion. Font =
+  egui default, no bold (faux-bold buttons); revisit later (Inter candidate). Debug-only
+  `OCM_DEV_SETTINGS` / `OCM_DEV_OPTIONS` env vars exist for screenshot checks.
