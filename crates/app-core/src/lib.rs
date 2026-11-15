@@ -5,10 +5,12 @@
 //! desktop app and the integration tests drive the same controller; `platform` adapters
 //! implement the [`ports`].
 
+pub mod color;
 pub mod controller;
 pub mod ports;
 pub mod settings;
 
+pub use color::RgbFrame;
 pub use controller::{
     AppState, Command, Controller, Effect, Event, Input, Marker, MarkerKind, PointerAccess,
     PointerOwner, RECENTER_US, RecenterView, Step, View,

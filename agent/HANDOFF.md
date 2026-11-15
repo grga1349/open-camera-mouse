@@ -3,27 +3,33 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-12 (Phase 6 ACTIVE, D0–D2 done)
+## As of 2026-11-15 (Phase 6 ACTIVE, D0–D3 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D2 done** (gates green locally). Work rhythm (user): **one slice per session**,
-then hand off.
+slices D0–D7. **D3 done** (gates green locally, uncommitted until the user says so). Work rhythm
+(user): **one slice per session**, then hand off.
 
-**Done this session (D2):**
-- ADR-0012 (`docs/architecture/decisions/0012-phase-6-dependencies.md`): crates re-queried
-  2026-11-12; `app-core` may take `serde` derive (ADR-0007 amended); candidate table for D3–D5.
-- `crates/app-core/src/settings.rs`: serde derives (`#[serde(default)]`, theme lowercase,
-  `camera` omitted when `None`), `Settings::repaired()` (per-field reset).
-- `crates/platform/src/settings_store.rs`: `SettingsStore` (`at`, `in_user_config_dir`, `load`,
-  `save`), `SettingsNotice`, fallbacks table in the module doc. Hand-written config dir
-  (`directories` rejected: `option-ext` is MPL-2.0 → would fail `cargo deny`).
-- `scripts/check-core-deps.sh` checks `app-core` too. Desktop skeleton loads settings + shows notice.
+**Done this session (D3):**
+- Camera backend picked by measurement: `nokhwa` 0.10.11 `input-native`, no `decoding`
+  (ADR-0012 §"Camera backend": 640×480 YUYV, 30.09 fps from timestamps, close ~90 ms, re-open OK).
+  `objc2-av-foundation` stays the fallback (needs `unsafe`).
+- `app-core`: `color.rs` (`RgbFrame`, mirror/downsample identical to luma), `CameraFrame.rgb`,
+  `Controller::preview_rgb()`. `GrayFrame`/`Point2`/`RgbFrame` re-exported from `ports`.
+- `platform::camera`: `pixels` (YUYV/NV12/GRAY/RGB/BGR → luma + RGB), `latest` (latest-wins slot),
+  `NokhwaCamera` (capture thread, panics → `Backend`, permission → `PermissionDenied`, 3 s frame
+  timeout → `Disconnected`, 10 s open timeout), `list_devices()`. On-device test:
+  `cargo test -p platform --test camera_device -- --ignored --nocapture`.
+- CI Linux apt adds `libclang-dev` (bindgen in `v4l2-sys-mit`); first CI run with nokhwa will
+  confirm Linux/Windows builds.
 
-**Next session:** D3 — camera adapter spike on the dev Mac (`nokhwa` `input-native` vs thin
-`objc2-av-foundation`), measure open / 640×480 / real FPS from timestamps / release on close
-(PLATFORM_RISKS P1), adapter delivers luma + colour, panics caught → `CameraError::Backend`,
-bounded latest-frame channel, disconnect/permission errors. Record the pick in ADR-0012's table
-and check every new transitive licence against `deny.toml` (cargo-deny is CI-only locally).
+**Next session:** D4 — pointer adapter, macOS first: warp (`CGWarpMouseCursorPosition`) vs posted
+move events measured on the dev Mac, incl. whether each needs Accessibility (P6) and warp's
+local-event suppression vs handover; Accessibility check + System Settings deep link; `position()`;
+virtual-desktop rect (R-P5); dwell click via posted events (P7); Windows `SendInput` + Linux X11
+XTest compiled in CI; Wayland → `Unsupported`. Update ADR-0012's pointer rows; check licences.
+
+**Carry to D7 manual QA:** camera unplug → `CameraDisconnected`; camera LED off after close
+(nokhwa #224); permission denial in a `.app` (P2).
 
 **User direction (don't drift):** start from 2018 (ADR-0006) but improve on it, taking the best of
 2018 and legacy. Ship proven improvements as options, off by default. Design: monochrome; neon

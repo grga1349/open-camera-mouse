@@ -7,11 +7,11 @@ retired.
 
 | # | Area | OS | Risk | L | I | Evidence | Mitigation | Owner |
 |---|---|---|---|---|---|---|---|---|
-| P1 | Camera | macOS | `nokhwa` panics or aborts selecting a format/FPS on some webcams (C922 and others) | H | H | SOURCED (nokhwa #247, #180, #202) | Spike in Phase 6: nokhwa vs a thin `objc2-av-foundation` adapter. Catch panics at the adapter boundary and report `CameraError::Backend` | 6 |
+| P1 | Camera | macOS | `nokhwa` panics or aborts selecting a format/FPS on some webcams (C922 and others) | H | H | SOURCED (nokhwa #247, #180, #202) | D3 (2026-11-15): `nokhwa` adopted after measuring on the dev Mac (ADR-0012). Every `nokhwa` call is wrapped in `catch_unwind` on the capture thread → `CameraError::Backend` (tested). External webcams still untested: Phase 7 | 6 ✓ / 7 |
 | P2 | Camera | macOS | Camera permission: needs `NSCameraUsageDescription` in an app bundle. A bare `cargo run` binary inherits the terminal's permission | H | M | INFERRED | Map denial to `PermissionDenied` state (R-A1). Package as `.app` for QA | 6/7 |
-| P3 | Camera | Windows | Reported FPS wrong (nokhwa #110, #144). Some capture devices hang on init (#101) | M | M | SOURCED | Measure FPS from timestamps, never trust the reported value. Open with a timeout | 6/7 |
-| P4 | Camera | all | The device ignores the 640×480@30 request (ADR-0008) | M | L | INFERRED | Use the negotiated `CaptureFormat`, downsample to ≤ 640 wide | 3/6 |
-| P5 | Camera | all | Device disconnect not signalled | M | M | INFERRED | Detect from frame timeout plus backend error, state `CameraDisconnected` | 6 |
+| P3 | Camera | Windows | Reported FPS wrong (nokhwa #110, #144). Some capture devices hang on init (#101) | M | M | SOURCED | Measure FPS from timestamps, never trust the reported value. Open with a timeout (D3: 10 s `OPEN_TIMEOUT`) | 6/7 |
+| P4 | Camera | all | The device ignores the 640×480@30 request (ADR-0008) | M | L | INFERRED | Use the negotiated `CaptureFormat`, downsample to ≤ 640 wide (luma and colour, D3) | 3/6 ✓ |
+| P5 | Camera | all | Device disconnect not signalled | M | M | INFERRED | Detect from frame timeout plus backend error, state `CameraDisconnected`. D3: 3 s `FRAME_TIMEOUT` on the reader side (`nokhwa` reads block forever). Unplug test: D7 manual QA | 6 |
 | P6 | Pointer | macOS | `CGEventPost` needs Accessibility permission. Whether `CGWarpMouseCursorPosition` does is unknown. A warp also briefly suppresses local mouse events | H | H | SOURCED (Apple forums) / unknown | Phase 6 test on the dev Mac. Show `PermissionDenied` with a deep link to System Settings. Avoid suppression artefacts in handover detection | 6 |
 | P7 | Pointer | macOS | Clicks (dwell) need event posting, which needs Accessibility. Sandboxed / App Store builds can't | H | M | SOURCED | Ship notarized, non-sandboxed. Dwell is off by default (ADR-0006) | 6/7 |
 | P8 | Pointer | Windows | `SendInput` can't drive elevated (UIPI) windows or the secure desktop (UAC, lock screen) | H | M | INFERRED (well-known Windows behaviour) | Document. Detect the failed injection (`SendInput` returns 0) and surface it | 7 |

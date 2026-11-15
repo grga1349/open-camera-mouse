@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12)
+Status: ACTIVE (2026-11-12; D0–D3 done 2026-11-15)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -90,7 +90,7 @@ crates. `apps/desktop` is one window with a status label and a button.
 | ~~Pointer permission + handover in R-A1~~ **Decided (D0):** orthogonal `PointerOwner` sub-state; plus top-level `Error` | — | BEHAVIOR_SPEC R-A1 |
 | ~~Re-acquisition → control handover~~ **Decided (user, 2026-11-12):** re-detection is an option, Options → Camera → "Find the target again" (`loss_recovery`), **off by default**, now in the design lab (ADR-0011 amended). Off: `Lost` waits for re-selection or recenter (2018). On: `Lost(Searching)` → `Tracking` gives control back only within R-P4's jump bound | — | ADR-0011 amendment; D0 setting; BEHAVIOR_SPEC R-A1 note in D0 |
 | ~~Crates `app-core` may take~~ **Decided (D2):** `serde` derive only, besides `thiserror` + cores; checked by `check-core-deps.sh` | — | ADR-0012 |
-| Camera backend | From the D3 spike | ADR-0012 |
+| ~~Camera backend~~ **Decided (D3):** `nokhwa` 0.10.11 `input-native` (no `decoding`), measured on the dev Mac; `objc2-av-foundation` stays the fallback | — | ADR-0012 |
 | Warp vs posted move | From the D4 test | ADR-0012 / PLATFORM_RISKS P6 |
 
 ## Non-goals
@@ -213,3 +213,23 @@ Plus the CI run ID for the closing commit.
   lands with the Options window (D6). 2 new app-core + 13 new platform tests + 1 kittest. Gates
   green locally; `cargo deny` not run locally (CI only) — new lockfile crate `toml_writer` is
   MIT OR Apache-2.0.
+- 2026-11-15: **D3 done.** Spike (scratchpad, not committed) then adapter: `nokhwa` adopted
+  (ADR-0012 §"Camera backend": FaceTime HD, 640×480 YUYV, 30.09 fps from timestamps, open cold
+  1.2 s / warm 0.11 s, close ~90 ms, re-open OK, no panics). nokhwa quirks handled: NV12 request
+  broken on macOS (YUYV first, NV12 only elsewhere), empty format list on macOS (ordered request
+  fallbacks), blocking `frame()` (reader-side 3 s timeout → `Disconnected`, bounded 2 s close).
+  `app-core`: `RgbFrame` (`color.rs`, mirror + box downsample identical to the luma path),
+  `CameraFrame.rgb: Option<RgbFrame>`, `Controller::preview_rgb()`; a colour image whose size
+  doesn't match the luma is dropped. `platform::camera`: `pixels` (YUYV/NV12/GRAY/RGB/BGR →
+  luma + RGB, BT.601; MJPEG refused), `latest` (latest-frame-wins slot with timeout),
+  `NokhwaCamera` (`CameraSource`, capture thread, `catch_unwind` → `Backend`, macOS permission
+  prompt → `PermissionDenied`, missing device → `NoDevice`, 10 s open timeout), `list_devices()`.
+  `GrayFrame`/`Point2` re-exported from `app_core::ports` so `platform` doesn't depend on
+  `tracking-core`. CI Linux installs `libclang-dev` (bindgen in `v4l2-sys-mit`). Tests: 4 color
+  unit + 3 controller (colour mirrored/downsampled with luma, wrong size dropped, cleared on
+  stop) + 6 pixels + 4 latest + 4 camera unit; on-device `tests/camera_device.rs` (`#[ignore]`)
+  passed locally; a colour snapshot was checked visually and deleted. Gates green locally;
+  Windows `cargo check` cross-target OK; Linux cross-check can't run from macOS (needs Linux
+  headers), CI decides. All 51 new lockfile crates permissive; `cargo deny` CI only.
+  Not done here: physical unplug (D7 manual QA), camera LED off after close (D7), external
+  webcams / Windows / Linux on device (Phase 7), permission denial path in a `.app` (P2, D7).

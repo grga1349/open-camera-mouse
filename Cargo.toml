@@ -29,6 +29,8 @@ divan = "0.1.21"
 serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
 toml = "1.2.1"
 tempfile = "3.27.0"
+# Camera backend (ADR-0012, task 0008 D3): native backends only, no JPEG decoder, no OpenCV.
+nokhwa = { version = "0.10.11", default-features = false, features = ["input-native"] }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

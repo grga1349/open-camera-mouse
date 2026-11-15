@@ -1,7 +1,9 @@
 //! Port traits implemented by `platform` adapters and by test fakes (ADR-0007).
 
 use thiserror::Error;
-use tracking_core::{GrayFrame, Point2};
+pub use tracking_core::{GrayFrame, Point2};
+
+pub use crate::color::RgbFrame;
 
 /// What the app asks the camera for (ADR-0008, Q-R6): 640×480 at 30 fps, nearest match.
 /// Adapters report what they actually got in [`CaptureFormat`]; the app never assumes the
@@ -31,11 +33,14 @@ pub struct CaptureFormat {
     pub fps: f32,
 }
 
-/// One captured frame: luma in the camera's native orientation, plus a monotonic
-/// capture timestamp. Mirroring happens later, at ingest (ADR-0008).
+/// One captured frame in the camera's native orientation: luma for tracking, an optional
+/// same-size colour image for the preview (ADR-0008 amendment), and a monotonic capture
+/// timestamp. Mirroring and downsampling happen later, at ingest, to both (ADR-0008).
 #[derive(Debug, Clone, PartialEq)]
 pub struct CameraFrame {
     pub luma: GrayFrame,
+    /// Same width and height as `luma`. `None` from fakes that only need tracking.
+    pub rgb: Option<RgbFrame>,
     pub timestamp_us: u64,
 }
 

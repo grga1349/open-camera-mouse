@@ -3,7 +3,9 @@
 
 use std::collections::HashSet;
 
-use app_core::ports::{CameraError, CameraFrame, CaptureFormat, CaptureRequest, PointerError};
+use app_core::ports::{
+    CameraError, CameraFrame, CaptureFormat, CaptureRequest, PointerError, RgbFrame,
+};
 use app_core::{
     AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MarkerKind,
     PointerAccess, PointerOwner, RECENTER_US, ScreenLimits, Settings, Step,
@@ -69,6 +71,7 @@ fn raw_frame(w: u32, h: u32, dx: f32, dy: f32, seed: u32, ts: u64) -> CameraFram
     }
     CameraFrame {
         luma: GrayFrame::from_vec(w, h, data).unwrap(),
+        rgb: None,
         timestamp_us: ts,
     }
 }
@@ -935,4 +938,57 @@ fn dwell_does_not_click_when_pointer_permission_is_denied() {
     let mut r = Rig::tracking_with(with_dwell());
     r.input(Input::PointerAccess(PointerAccess::Denied));
     assert!(clicks(&r.hold(2_000_000, 0.0, SCENE)).is_empty());
+}
+
+// ---- colour preview (D3, ADR-0008 amendment) ----
+
+/// A raw 1280×720 frame whose colour encodes the raw column in red and the row in green.
+fn colour_frame(ts: u64, rgb_w: u32) -> CameraFrame {
+    let (w, h) = (1280u32, 720u32);
+    let luma = GrayFrame::filled(w, h, 128).unwrap();
+    let mut d = Vec::with_capacity((rgb_w * h * 3) as usize);
+    for y in 0..h {
+        for x in 0..rgb_w {
+            d.extend([(x / 8) as u8, (y / 4) as u8, 200]);
+        }
+    }
+    CameraFrame {
+        luma,
+        rgb: Some(RgbFrame::from_vec(rgb_w, h, d).unwrap()),
+        timestamp_us: ts,
+    }
+}
+
+#[test]
+fn colour_preview_is_mirrored_and_downsampled_with_the_luma() {
+    let mut r = Rig::started();
+    r.now += FRAME_US;
+    r.input(Input::Frame(colour_frame(r.now, 1280)));
+    let (g, c) = (r.c.preview().unwrap(), r.c.preview_rgb().unwrap());
+    assert_eq!((c.width(), c.height()), (g.width(), g.height()));
+    assert_eq!((c.width(), c.height()), (640, 360));
+    // Mirrored (default): display column 0 is raw columns 1278..1280, i.e. red 159.
+    assert_eq!(c.get(0, 0), Some([159, 0, 200]));
+    assert_eq!(c.get(639, 0), Some([0, 0, 200]));
+    // Rows 718..720 have green 179.
+    assert_eq!(c.get(320, 359).map(|p| p[1]), Some(179));
+}
+
+#[test]
+fn a_colour_image_of_the_wrong_size_is_dropped() {
+    let mut r = Rig::started();
+    r.now += FRAME_US;
+    r.input(Input::Frame(colour_frame(r.now, 1278)));
+    assert!(r.c.preview().is_some());
+    assert!(r.c.preview_rgb().is_none());
+}
+
+#[test]
+fn stopping_clears_the_colour_preview() {
+    let mut r = Rig::started();
+    r.now += FRAME_US;
+    r.input(Input::Frame(colour_frame(r.now, 1280)));
+    assert!(r.c.preview_rgb().is_some());
+    r.cmd(Command::Stop);
+    assert!(r.c.preview_rgb().is_none());
 }

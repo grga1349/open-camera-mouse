@@ -42,6 +42,7 @@ use tracking_core::{
     downsample_to_width, ingest,
 };
 
+use crate::color::{RgbFrame, downsample_rgb_to_width, ingest_rgb};
 use crate::ports::{CameraError, CameraFrame, CaptureFormat, CaptureRequest, PointerError};
 use crate::settings::{Settings, SettingsError};
 
@@ -267,6 +268,8 @@ pub struct Controller {
     access: PointerAccess,
     tracker: LkTracker,
     frame: Option<GrayFrame>,
+    /// Colour twin of `frame` for the preview, same canonical space and size.
+    color: Option<RgbFrame>,
     frame_seq: u64,
     track: Option<TrackOutput>,
     recenter_deadline_us: Option<u64>,
@@ -334,6 +337,7 @@ impl Controller {
             control: Control::Mouse(None),
             access: PointerAccess::Unknown,
             frame: None,
+            color: None,
             frame_seq: 0,
             track: None,
             recenter_deadline_us: None,
@@ -355,9 +359,15 @@ impl Controller {
         &self.settings
     }
 
-    /// The latest canonical (mirrored, ≤ 640 wide) frame for the preview.
+    /// The latest canonical (mirrored, ≤ 640 wide) luma frame, the one the tracker sees.
     pub fn preview(&self) -> Option<&GrayFrame> {
         self.frame.as_ref()
+    }
+
+    /// The colour image of the latest canonical frame, for the preview texture. Same size
+    /// and orientation as [`Self::preview`]; `None` if the camera gave no colour.
+    pub fn preview_rgb(&self) -> Option<&RgbFrame> {
+        self.color.as_ref()
     }
 
     pub fn pointer_owner(&self) -> PointerOwner {
@@ -428,14 +438,14 @@ impl Controller {
 
         if old.camera != self.settings.camera && self.camera_active() {
             self.drop_target();
-            self.frame = None;
+            self.clear_frame();
             step.effects.push(Effect::CloseCamera);
             step.effects
                 .push(Effect::OpenCamera(CaptureRequest::default()));
             self.set_state(AppState::Starting, &mut step);
         } else if old.mirror != self.settings.mirror {
             // Stale frame is in the old orientation; never select on it.
-            self.frame = None;
+            self.clear_frame();
             if matches!(self.state, AppState::Tracking | AppState::Lost) {
                 self.drop_target();
                 self.set_state(AppState::NoTarget, &mut step);
@@ -538,7 +548,7 @@ impl Controller {
             Command::Stop => {
                 if self.state != S::Stopped {
                     self.drop_target();
-                    self.frame = None;
+                    self.clear_frame();
                     self.capture = None;
                     step.effects.push(Effect::CloseCamera);
                     self.set_state(S::Stopped, step);
@@ -549,6 +559,7 @@ impl Controller {
 
     fn on_frame(&mut self, raw: CameraFrame, now_us: u64, step: &mut Step) {
         use AppState as S;
+        let (raw_w, raw_h) = (raw.luma.width(), raw.luma.height());
         match self.state {
             // Frames prove the camera is open even if `CameraOpened` hasn't arrived.
             S::Starting => self.set_state(S::NoTarget, step),
@@ -561,6 +572,16 @@ impl Controller {
             downsample_to_width(raw.luma, MAX_FRAME_WIDTH),
             self.settings.mirror,
         );
+        // A colour image that doesn't match the luma would misalign the preview: drop it.
+        self.color = raw
+            .rgb
+            .filter(|c| (c.width(), c.height()) == (raw_w, raw_h))
+            .map(|c| {
+                ingest_rgb(
+                    downsample_rgb_to_width(c, MAX_FRAME_WIDTH),
+                    self.settings.mirror,
+                )
+            });
         self.frame_seq += 1;
         self.frame = Some(frame);
         match self.state {
@@ -609,6 +630,11 @@ impl Controller {
     }
 
     // ---- transitions ----
+
+    fn clear_frame(&mut self) {
+        self.frame = None;
+        self.color = None;
+    }
 
     fn set_state(&mut self, to: AppState, step: &mut Step) {
         if to != self.state {

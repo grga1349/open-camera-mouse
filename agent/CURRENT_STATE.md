@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-12 (Phase 6 ACTIVE, D0–D2 done)
+Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D3 done)
 
 ## Branch / commit
 
@@ -10,8 +10,9 @@ for the guided recenter flow, 5 s countdown). Docs-only; code unchanged since Ph
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour) and D2 (ADR-0012 + settings
-persistence) done, gates green locally (D2 uncommitted until the user says so); D3 next.
+slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
+persistence) and D3 (camera adapter) done, gates green locally (D3 uncommitted until the user
+says so); D4 next.
 
 ## What exists now
 
@@ -32,6 +33,10 @@ persistence) done, gates green locally (D2 uncommitted until the user says so); 
   `platform::settings_store` (TOML, `schema_version`, atomic write, never-failing load with a
   `SettingsNotice`; newer schema → read-only store). Config dir hand-written (`directories`
   rejected: MPL-2.0 `option-ext`). `check-core-deps.sh` also checks `app-core`.
+- Camera (D3, ADR-0012): `platform::camera::NokhwaCamera` (`nokhwa` 0.10.11 `input-native`, one
+  adapter for all OS), capture thread + latest-frame slot, luma + RGB per frame, failures mapped
+  per PLATFORM_RISKS P1/P2/P3/P5. Measured on the dev Mac: 640×480 @ 30.09 fps. `app-core`
+  carries the colour image through ingest (`RgbFrame`, `Controller::preview_rgb()`).
 - `apps/desktop` is still the Phase 2 skeleton (now loads settings and shows the load notice) (one window, status label, start/stop button),
   adapted to the new controller API.
 
@@ -41,15 +46,16 @@ persistence) done, gates green locally (D2 uncommitted until the user says so); 
 
 ## Immediate next action
 
-Task 0008 slice D3: camera adapter spike on the dev Mac, `nokhwa` (`input-native` only) vs a thin
-`objc2-av-foundation` adapter; measure open / 640×480 negotiated / real FPS / release on close;
-record the pick in ADR-0012's crate table; colour + luma per frame; check new transitive licences.
+Task 0008 slice D4: pointer adapter on the dev Mac (warp vs posted events, Accessibility P6,
+`position()`, virtual-desktop rect, dwell click P7); Windows/Linux X11 compiled in CI; Wayland
+`Unsupported`. Record the pick in ADR-0012's crate table; check new transitive licences.
 
 ## Open risks
 
 - Synthetic-only tracker evidence; re-measure all thresholds on Phase 6 recordings.
 - Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).
-- Preview is **colour** (user decision 2026-11-12): adapter must deliver a colour frame next to luma (D3), mirrored at ingest with it (ADR-0008 amendment).
+- First CI run with `nokhwa`: Linux needs bindgen/libclang (added to apt) — confirm green.
+- `nokhwa` macOS bindings pull `block` 0.1.6 (future-incompat warning); MJPEG-only cameras unsupported (ADR-0012).
 - Re-detection self-test rarely arms on smooth texture (task 0008 Progress); re-measure in D7.
 - Global F11/F12 hotkeys need a `platform` adapter + crate ADR.
-- Camera crate macOS panics (PLATFORM_RISKS P1); Wayland pointer and window placement (P10/P11).
+- Camera crate panics on external webcams (P1): caught, but untested on device until Phase 7; Wayland pointer and window placement (P10/P11).

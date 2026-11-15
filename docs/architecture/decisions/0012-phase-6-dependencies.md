@@ -1,6 +1,6 @@
 # ADR-0012: Phase 6 dependencies and settings persistence
 
-Status: Accepted (persistence); camera, pointer and hotkey rows are filled in by D3–D5
+Status: Accepted (persistence D2, camera D3); pointer and hotkey rows are filled in by D4–D5
 Date: 2026-11-12
 Task: 0008 slice D2. Amends ADR-0007 (what `app-core` may depend on).
 
@@ -64,8 +64,8 @@ small and flat. `toml` was already in the tree through eframe's dependencies.
 | `toml` | 1.2.1 | MIT OR Apache-2.0 | platform | **adopted** |
 | `tempfile` | 3.27.0 | MIT OR Apache-2.0 | platform (dev) | **adopted** |
 | `directories` | 6.0.0 | MIT OR Apache-2.0, but `option-ext` is MPL-2.0 | — | **rejected** |
-| `nokhwa` (`input-native` only) | 0.10.11 | Apache-2.0 | platform | candidate, D3 spike decides |
-| `objc2-av-foundation` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | platform (macOS) | candidate, D3 spike decides |
+| `nokhwa` (`input-native` only, no `decoding`) | 0.10.11 | Apache-2.0 (51 new transitive crates, all permissive, checked 2026-11-15) | platform (all OS) | **adopted** (D3, measured below) |
+| `objc2-av-foundation` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | — | **fallback**, not built (D3): `nokhwa` met every gate; would need `unsafe` + an ADR |
 | `objc2-core-graphics` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | platform (macOS) | candidate, D4 |
 | `objc2-application-services` | 0.3.2 | Zlib OR Apache-2.0 OR MIT | platform (macOS) | candidate, D4 (Accessibility check) |
 | `windows-sys` | 0.61.2 | MIT OR Apache-2.0 | platform (Windows) | candidate, D4 |
@@ -76,6 +76,42 @@ small and flat. `toml` was already in the tree through eframe's dependencies.
 D3, D4 and D5 each update their row here (adopted or rejected, with the measurement) and add
 the crate to `platform` per target. Check every new transitive licence before adopting:
 `cargo deny` runs only in CI.
+
+## Camera backend (task 0008 D3, 2026-11-15)
+
+Measured on the dev Mac (macOS 14.7.3 arm64, built-in FaceTime HD Camera), first in a
+throwaway spike, then through the adapter on a worker thread
+(`crates/platform/tests/camera_device.rs`, `#[ignore]`d, run with `--ignored`):
+
+| Check | Result |
+|---|---|
+| Opens | yes, permission already granted to the terminal |
+| 640×480 negotiated | yes, YUYV (`yuvs`), reported 30 fps |
+| Real FPS (timestamps, 120 frames after 30 warm-up) | 30.09 (adapter), 30.00–30.02 (spike) |
+| Open → first frame | cold 1.2–1.4 s, warm 0.11–0.21 s |
+| Close (stop stream + drop) | 76–97 ms. Camera LED going off (nokhwa #224) not checked by the agent: D7 manual QA |
+| Re-open after close in one process | yes, same format and FPS |
+| Panics | none on this camera; the P1 panics are reported on external webcams (C922), not reproducible here |
+
+Findings that shaped the adapter:
+- `nokhwa` 0.10.11 on macOS maps an **NV12** request to a 10-bit format the FaceTime camera
+  refuses ("Cannot fulfill request"), and maps every 4:2:0 output to `YUYV` by mistake. The
+  adapter asks for YUYV first and asks for NV12 only off macOS.
+- `compatible_camera_formats()` returns an empty list on macOS, so the adapter can't pick from
+  a list. It tries requests in order: YUYV 640×480@30, NV12 (not macOS), highest frame rate at
+  640×480, driver default.
+- `frame()` blocks with no timeout. Disconnect detection therefore lives on the reader side
+  (no frame for 3 s → `Disconnected`), and `close` waits at most 2 s for the capture thread.
+- `decoding` (JPEG via `mozjpeg`) stays off. A camera that only offers MJPEG gets a `Backend`
+  error naming it. If Phase 7 hardware needs MJPEG, add a pure-Rust decoder through an ADR.
+- `nokhwa`'s macOS bindings pull in `block` 0.1.6, which raises a future-incompatibility
+  warning (not an error) on the pinned toolchain. Watch it on toolchain bumps. It's the
+  strongest argument for the `objc2-av-foundation` fallback later.
+
+Why not the thin `objc2-av-foundation` adapter now: `nokhwa` passed every gate above and covers
+Windows and Linux with the same code, while the objc2 adapter would need `unsafe`
+(the workspace denies it), a delegate class and its own Windows/Linux counterparts. It stays the
+fallback if P1 panics or the `block` warning become real problems in Phase 7.
 
 ## Consequences
 
