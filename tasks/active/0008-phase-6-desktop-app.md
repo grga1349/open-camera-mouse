@@ -272,3 +272,4 @@ Plus the CI run ID for the closing commit.
   refusal wording, `macOS` not recapitalised). Windows clippy clean locally; Linux in CI.
   Carry to D7 manual QA: press F10/F12 with another app focused → state changes; `Fn` on Mac
   laptop keyboards; same in a `.app`.
+  Committed `9f04007`; CI run 43725986748 green (macOS, Windows, Linux, cargo-deny).

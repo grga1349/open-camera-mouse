@@ -6,8 +6,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 ## As of 2026-11-15 (Phase 6 ACTIVE, D0–D5 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D5 done**, gates green locally (check `git log` / `git status` for whether it
-was committed and pushed; last CI-green commit is `67bbb99`, D4). Work rhythm (user): **one
+slices D0–D7. **D5 done**: committed `9f04007`, pushed, CI run 43725986748 green (macOS,
+Windows, Linux + cargo-deny): the first Linux build of the hotkey code. Work rhythm (user): **one
 slice per session**, then hand off.
 
 **Done this session (D5):**
