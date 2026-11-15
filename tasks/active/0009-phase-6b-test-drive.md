@@ -58,6 +58,24 @@ scripts/check-core-deps.sh
 - 2026-11-15 part 2 (planning session): #6 lag measured with the new `OCM_PERF=1` report
   (`apps/desktop/src/perf.rs`, numbers in `docs/qa/TEST_DRIVE.md` #6). Research inputs saved in
   `docs/research/HEAD_POINTER_STABILITY_INPUTS.md`. Plan below agreed for the next sessions.
+- 2026-11-15 slice 2a DONE (device-checked, committed, pushed). User kept 2a lag-only (gain per
+  display stays in 2c). Measured first: benches `crates/app-core/benches/frame.rs`,
+  `crates/platform/benches/decode.rs` (dev profile): `handle(Frame)` 18.4 ms, of which the RGB
+  mirror 17.8 ms; tracker ≈ 0.6 ms. Fix: pixel-wise `reverse` in `RgbFrame::mirror_horizontal`
+  + `[profile.dev.package]` opt-levels → 0.67 ms; YUYV decode 1.8 ms, NV12 0.7 ms (capture
+  thread). ADR-0016 engine thread: `apps/desktop/src/engine.rs` (`Engine` sync,
+  `EngineThread`, `EngineHandle`, `InlineEngine` for UI tests; `runtime.rs` removed), frames on
+  capture time, newest-wins frame slot, preview `Arc<ColorImage>` built by the engine, UI keeps
+  its own validated settings. `OCM_PERF` stages now `in`/`track`/`move`/`age`/`upload`/`ui`.
+  Tests: 14 runtime tests adapted, 5 new (no-UI moves on the thread, snapshot reads change
+  nothing, jittered arrival = same path, deadlines without frames, stalled engine gets newest);
+  33 UI tests on the inline engine; desktop 76 pass. Also fixed CI (red since `eb667e3`):
+  `recommended_params_are_the_measured_candidate` didn't include the ADR-0011 2026-11-15
+  amendment. Device run 1 (tracking, ~35 s): fps 29.6–30.0, `age` p95 ≤ 10.5 ms (target 25),
+  `ui` p95 ≤ 0.4 ms (target 5), `replaced` 6 total — targets met. Run 2 with Options open: engine
+  timings unchanged (target met); `ui` 15/17 ms p50/p95 while Options is open (likely vsync wait
+  of the immediate viewport; misses the 5 ms UI target but can't reach the cursor; revisit only
+  if the UI feels slow). Handover works. Not checked: minimised, dwell, CPU %.
 
 ## Part 2 plan (slices 2a–2d, one per session)
 

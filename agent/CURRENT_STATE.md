@@ -1,12 +1,11 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6b test drive ACTIVE, task 0009; part 1 committed, part 2 planned)
+Last updated: 2026-11-15 (Phase 6b test drive ACTIVE, task 0009; slice 2a done + pushed, CI to verify; next 2b)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last code commit `7e9a2bb` (Phase 6 D7 part 1), CI run 43746097717
-green on 3 OS + cargo-deny. Phase 6 close-out `2146984` pushed; the Phase 6b ADR + handoff may
-be uncommitted: see `git status`.
+Branch: `rewrite/rust`. Last commit = slice 2a (ADR-0016), pushed 2026-11-15. CI was red since
+`eb667e3` on 3 OS (stale `recommended_params_are_the_measured_candidate`); 2a fixes it — verify.
 
 ## Milestone
 
@@ -61,11 +60,15 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
   painted to the lab CSS (`widgets::Button` with key chips, switch, slider, tabs, segmented,
   readout); `theme::primary_colors` is the only yellow. The runtime is
   missing: controller `Effect`s are dropped, so a manual run stops at "Starting camera…".
-- Runtime (D7): `apps/desktop/src/runtime.rs` — `ThreadedCamera` worker (factory-made camera,
-  session numbers, newest-frame coalescing) + `Runtime` on the main thread, pumped from
-  `eframe::App::logic` (runs while minimised, ~10 Hz then). Access polled every 3 s, desktop
-  every 1 s, cursor observed before each frame. `recorder.rs` (`OCM_RECORD=<dir>`). Fixed an
-  `app-core` ordering bug (observation vs due takeover). 14 runtime tests with fakes.
+- Engine (ADR-0016, slice 2a; replaced D7's `runtime.rs`): `apps/desktop/src/engine.rs` —
+  `ThreadedCamera` worker (newest-wins frame slot, session numbers) → `Engine` (controller,
+  pointer, recorder, perf; sync `apply`/`step`/`snapshot`) run by `EngineThread` (wakes on
+  frame/command/100 ms). Frames handled at capture time (clamped monotonic). UI = `Shell` over
+  `dyn EngineHandle`: sends `EngineCmd`, paints `Arc<Snapshot>` (view, displays, preview
+  `Arc<ColorImage>`), keeps its own validated settings and saves them. UI tests use
+  `InlineEngine`. `recorder.rs` (`OCM_RECORD=<dir>`) runs on the engine thread.
+- Dev profile: deps opt 2, `app-core`/`pointer-core`/`platform` opt 3, `tracking-core` 3
+  (root `Cargo.toml`). Benches: `app-core --bench frame`, `platform --bench decode`.
 
 ## Toolchain
 
@@ -73,10 +76,8 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Phase 6b part 2, slice **2a** (issue #6 camera/preview lag, ADR-0016 engine thread), per the
-"Part 2 plan" in `tasks/active/0009-phase-6b-test-drive.md` and `agent/HANDOFF.md`. Then 2b
-(recordings + `replay_bench`), 2c (#5 jitter), 2d (#2 losses). `OCM_PERF=1` timing report
-exists (`apps/desktop/src/perf.rs`). Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7;
+Verify CI green for the slice 2a commit (it fixes the failure red since `eb667e3`). Then 2b (recordings + `replay_bench`), 2c (#5 jitter),
+2d (#2 losses) per `tasks/active/0009-phase-6b-test-drive.md` and `agent/HANDOFF.md`. Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7;
 row 21 and the threshold re-measurement in Phase 8.
 
 ## Open risks
@@ -89,8 +90,9 @@ row 21 and the threshold re-measurement in Phase 8.
   is needed on a Mac laptop keyboard not noted; Windows/X11 on device Phase 7.
 - Camera crate panics on external webcams (P1): caught, but untested on device until Phase 7; Wayland pointer and window placement (P10/P11).
 - `CGPreflightPostEventAccess` ≈10 ms: never call per frame (runtime polls it every 3 s).
-- Minimised window: eframe throttles `logic` to 100 ms → pointer at ~10 Hz; judged usable in
-  manual QA (row 13). Revisit in Phase 8 latency budgets if needed.
+- Pointer now moves from the engine thread (CGEvent posting, `CGGetActiveDisplayList` off the
+  main thread): documented thread-safe, `pointer_device` test already runs off-main; confirm
+  in the 2a device check (pointer, handover, dwell). Minimised: full rate now (was ~10 Hz).
 - The desktop is the displays' bounding box: with uneven monitors the cursor sticks to display
   edges where the box has dead zones (snap). Fine for v1; revisit if users find it odd.
 - UI: D6b screenshot-checked Options (all tabs, Paper, Larger controls) and Tracking (Stopped)

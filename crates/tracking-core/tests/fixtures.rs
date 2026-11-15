@@ -126,10 +126,16 @@ fn e4_recovers_losses_without_silent_errors() {
     }
 }
 
-/// ADR-0011: the recommended tracker is exactly the measured E4 candidate.
+/// ADR-0011: the recommended tracker is exactly the measured E4 candidate, plus the
+/// re-detection guards of the 2026-11-15 amendment (test drive #3).
 #[test]
-fn recommended_params_are_the_measured_candidate() {
-    assert_eq!(tracking_core::lk::LkParams::recommended(), e4_candidate());
+fn recommended_params_are_the_measured_candidate_as_amended() {
+    let mut want = e4_candidate();
+    let r = want.redetect.as_mut().expect("E4 has re-detection");
+    r.min_margin = 0.03;
+    r.confirm_frames = 3;
+    r.min_context_zncc = Some(0.7);
+    assert_eq!(tracking_core::lk::LkParams::recommended(), want);
 }
 
 #[test]

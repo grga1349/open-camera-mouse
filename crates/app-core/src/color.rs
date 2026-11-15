@@ -72,12 +72,7 @@ impl RgbFrame {
     pub fn mirror_horizontal(&mut self) {
         let w = self.width as usize;
         for row in self.data.chunks_exact_mut(w * 3) {
-            for x in 0..w / 2 {
-                let (a, b) = (x * 3, (w - 1 - x) * 3);
-                for c in 0..3 {
-                    row.swap(a + c, b + c);
-                }
-            }
+            row.as_chunks_mut::<3>().0.reverse();
         }
     }
 }

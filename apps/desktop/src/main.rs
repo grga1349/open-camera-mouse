@@ -1,37 +1,38 @@
 //! Desktop shell: renders `app-core` state and sends `app-core` commands. Nothing else.
 //!
 //! Two fixed-size windows per the approved design lab (task 0007): Tracking (root viewport)
-//! and Options (`show_viewport_immediate`). The camera, the pointer and the hotkeys are
-//! driven from `App::logic` by [`runtime::Runtime`], which eframe calls even while the windows
-//! are minimised (task 0008 D7).
+//! and Options (`show_viewport_immediate`). The camera, the controller and the pointer run on
+//! the engine thread ([`engine::EngineThread`], ADR-0016), independent of repaints; the UI
+//! sends commands and paints snapshots. Hotkeys are drained in `App::logic` (main thread).
 
 mod app;
+mod engine;
 mod icons;
 mod options;
 mod perf;
 mod preview;
 mod recorder;
-mod runtime;
 mod status;
 #[cfg(test)]
 mod test_frames;
 mod theme;
 mod widgets;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use app::{Clock, Shell, options_ui, options_viewport, tracking_ui, tracking_viewport};
+use app::{Shell, options_ui, options_viewport, tracking_ui, tracking_viewport};
+use app_core::Settings;
 use app_core::ports::{CameraSource, PointerSink};
-use app_core::{AppState, PointerOwner, Settings};
 use eframe::egui;
+use engine::{Clock, Engine, EngineThread, ThreadedCamera};
+use perf::SharedPerf;
 use platform::hotkeys::{GlobalHotkeys, Hotkey, Source};
-use runtime::{Runtime, ThreadedCamera};
 use status::Action;
 
-/// Idle repaint, so permission and display polls run while nothing else happens.
+/// Idle repaint, for hotkeys and the settings save; the engine repaints on every change.
 const IDLE_REPAINT: Duration = Duration::from_secs(1);
-/// Repaint while a countdown is on screen (recenter, handover).
-const COUNTDOWN_REPAINT: Duration = Duration::from_millis(100);
+/// Repaint while a settings save waits for its debounce.
+const SAVE_REPAINT: Duration = Duration::from_millis(100);
 
 fn main() -> eframe::Result {
     let (settings, notice, store) = load_settings();
@@ -48,33 +49,48 @@ fn main() -> eframe::Result {
             let hotkeys = GlobalHotkeys::register(move || ctx.request_repaint());
             let lines = Hotkey::ALL.map(|k| app::hotkey_line(k, hotkeys.status(k)));
             let all_ok = Hotkey::ALL.iter().all(|k| hotkeys.status(*k).is_active());
-            let mut shell = Shell::new(settings, notice, lines.to_vec(), all_ok, store);
+            let epoch = Instant::now();
+            let perf = perf::Perf::from_env();
+            let engine = start_engine(settings.clone(), epoch, perf.clone(), &cc.egui_ctx);
+            let mut shell = Shell::new(
+                settings,
+                notice,
+                lines.to_vec(),
+                all_ok,
+                store,
+                Box::new(engine),
+                Clock::System(epoch),
+            );
             dev_open_options(&mut shell);
-            let runtime = start_runtime(&shell, &cc.egui_ctx);
             Ok(Box::new(DesktopApp {
                 shell,
                 hotkeys,
-                runtime,
+                perf,
             }))
         }),
     )
 }
 
-/// The camera worker (timestamps on the controller's clock) and the system pointer.
-fn start_runtime(shell: &Shell, ctx: &egui::Context) -> Runtime<ThreadedCamera> {
-    let epoch = match shell.clock {
-        Clock::System(epoch) => epoch,
-        Clock::Manual(_) => std::time::Instant::now(),
-    };
-    let factory: runtime::CameraFactory = Box::new(move |device| {
-        Box::new(platform::NokhwaCamera::new(device, epoch)) as Box<dyn CameraSource>
+/// The engine thread with the camera worker (timestamps on the engine's clock) and the
+/// system pointer, both made on that thread.
+fn start_engine(
+    settings: Settings,
+    epoch: Instant,
+    perf: Option<SharedPerf>,
+    ctx: &egui::Context,
+) -> EngineThread {
+    let make: engine::EngineFactory = Box::new(move |wake| {
+        let factory: engine::CameraFactory = Box::new(move |device| {
+            Box::new(platform::NokhwaCamera::new(device, epoch)) as Box<dyn CameraSource>
+        });
+        let camera = ThreadedCamera::spawn(factory, wake);
+        let pointer = platform::SystemPointer::new().map(|p| Box::new(p) as Box<dyn PointerSink>);
+        Engine::new(settings, Clock::System(epoch), camera, pointer)
+            .with_recorder(recorder::Recorder::from_env())
+            .with_perf(perf)
     });
-    let wake = ctx.clone();
-    let camera = ThreadedCamera::spawn(factory, move || wake.request_repaint());
-    let pointer = platform::SystemPointer::new().map(|p| Box::new(p) as Box<dyn PointerSink>);
-    Runtime::new(camera, pointer)
-        .with_recorder(recorder::Recorder::from_env())
-        .with_perf(perf::Perf::from_env())
+    let ctx = ctx.clone();
+    EngineThread::spawn(make, move || ctx.request_repaint())
 }
 
 /// Debug builds only, for side-by-side design checks against the lab without clicking
@@ -123,7 +139,7 @@ struct DesktopApp {
     shell: Shell,
     /// Kept alive for the app's lifetime; dropping it unregisters the hotkeys.
     hotkeys: GlobalHotkeys,
-    runtime: Runtime<ThreadedCamera>,
+    perf: Option<SharedPerf>,
 }
 
 impl DesktopApp {
@@ -141,7 +157,7 @@ impl DesktopApp {
                         self.shell.notice = Some(format!("Couldn't open the settings: {e}."));
                     }
                 }
-                Action::CheckPointerAccess => self.runtime.check_access(&mut self.shell),
+                Action::CheckPointerAccess => self.shell.check_access(),
                 Action::Start | Action::ChooseCamera | Action::CopyDetails => {}
             }
         }
@@ -153,32 +169,27 @@ impl DesktopApp {
 }
 
 impl eframe::App for DesktopApp {
-    /// Runs before `ui`, and also while the windows are minimised or hidden: hotkeys, camera,
-    /// controller and pointer live here, never in the UI pass.
+    /// Runs before `ui`, and also while the windows are minimised or hidden: global hotkeys
+    /// and the settings save. The engine thread does the rest.
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         for key in self.hotkeys.drain() {
             self.shell.hotkey(key, Source::Global);
         }
-        self.runtime.pump(&mut self.shell);
         self.platform_actions();
         self.shell.save_if_due(false);
-        // Countdowns (recenter, handover) are controller deadlines; keep them moving. Camera
-        // frames wake the loop by themselves.
-        let state = self.shell.controller.state();
-        if state == AppState::Recentering
-            || self.shell.controller.pointer_owner() == PointerOwner::Handover
-            || self.shell.save_pending()
-        {
-            ctx.request_repaint_after(COUNTDOWN_REPAINT);
+        // The engine repaints on every change it publishes (frames, countdowns).
+        ctx.request_repaint_after(if self.shell.save_pending() {
+            SAVE_REPAINT
         } else {
-            ctx.request_repaint_after(IDLE_REPAINT);
-        }
+            IDLE_REPAINT
+        });
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let started = std::time::Instant::now();
+        let started = Instant::now();
         self.draw(ui);
-        if let Some(p) = self.runtime.perf_mut() {
+        if let Some(p) = &self.perf {
+            let mut p = p.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
             if let Some(d) = self.shell.last_upload.take() {
                 p.upload(d);
             }
@@ -216,9 +227,8 @@ impl DesktopApp {
                 },
             );
         }
-        // Clicks in this pass (Start, Check again, …): perform them now, not a frame later.
+        // Clicks in this pass (Check again, …): serve them now, not a frame later.
         self.platform_actions();
-        self.runtime.flush(&mut self.shell);
     }
 }
 

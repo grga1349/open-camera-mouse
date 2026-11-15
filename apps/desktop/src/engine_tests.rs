@@ -1,20 +1,16 @@
-//! Runtime tests (task 0008 D7, acceptance criterion 2): the whole loop — camera link →
-//! controller → pointer — with a scripted fake camera and a fake pointer, on the shell's
-//! manual clock. Plus the threaded camera worker against a fake `CameraSource`.
+//! Engine tests (task 0008 D7 criterion 2, task 0009 slice 2a / ADR-0016): the whole loop —
+//! camera link → controller → pointer — with a scripted fake camera and a fake pointer, on a
+//! manual clock. Plus the threaded camera worker and the engine thread against fakes.
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::sync::atomic::AtomicBool;
+use std::time::Duration;
 
-use app_core::ports::{
-    CameraError, CameraFrame, CameraSource, CaptureFormat, CaptureRequest, Desktop, Point2,
-};
-use app_core::{AppState, Command, DesktopRect, PointerOwner, Settings};
-use platform::hotkeys::{Hotkey, Registration};
+use app_core::ports::Point2;
+use app_core::{AppState, Command, PointerOwner};
 
 use super::*;
-use crate::app::{Clock, Shell, hotkey_line};
 use crate::test_frames::{FLAT, FRAME_US, H, SCENE, W, shifted, with_color};
 
 const DESKTOP: DesktopRect = DesktopRect {
@@ -93,28 +89,38 @@ struct Scene {
     seed: u32,
     unplugged: bool,
     deny: bool,
+    /// Delivers nothing (a stalled camera).
+    stalled: bool,
     opens: Vec<Option<String>>,
     closes: usize,
     open: bool,
-    ts: u64,
+    sent_opened: bool,
+    /// Capture timestamps: the clock's time by default; a fixed 30 fps sequence from here
+    /// when set (to decouple capture time from arrival time).
+    next_ts: Option<u64>,
 }
 
 /// A synchronous [`CameraLink`]: one frame per poll while open, so the test owns time.
 #[derive(Debug, Clone)]
-struct ScriptedCamera(Rc<RefCell<Scene>>);
+struct ScriptedCamera(Rc<RefCell<Scene>>, Clock);
 
 impl ScriptedCamera {
-    fn new() -> Self {
-        Self(Rc::new(RefCell::new(Scene {
-            head: (0.0, 0.0),
-            seed: SCENE,
-            unplugged: false,
-            deny: false,
-            opens: Vec::new(),
-            closes: 0,
-            open: false,
-            ts: 0,
-        })))
+    fn new(clock: Clock) -> Self {
+        Self(
+            Rc::new(RefCell::new(Scene {
+                head: (0.0, 0.0),
+                seed: SCENE,
+                unplugged: false,
+                deny: false,
+                stalled: false,
+                opens: Vec::new(),
+                closes: 0,
+                open: false,
+                sent_opened: false,
+                next_ts: None,
+            })),
+            clock,
+        )
     }
 }
 
@@ -133,7 +139,7 @@ impl CameraLink for ScriptedCamera {
 
     fn poll(&mut self) -> Vec<CameraMsg> {
         let mut s = self.0.borrow_mut();
-        if !s.open {
+        if !s.open || s.stalled {
             return Vec::new();
         }
         let mut out = Vec::new();
@@ -145,42 +151,50 @@ impl CameraLink for ScriptedCamera {
             s.open = false;
             return vec![CameraMsg::Failed(CameraError::Disconnected)];
         }
-        if s.ts == 0 {
+        if !s.sent_opened {
+            s.sent_opened = true;
             out.push(CameraMsg::Opened(CaptureFormat {
                 width: W,
                 height: H,
                 fps: 30.0,
             }));
         }
-        s.ts += FRAME_US;
+        let ts = match s.next_ts {
+            Some(t) => {
+                s.next_ts = Some(t + FRAME_US);
+                t
+            }
+            None => self.1.now_us(),
+        };
         let (dx, dy) = s.head;
         out.push(CameraMsg::Frame(with_color(shifted(
-            W, H, dx, dy, s.seed, s.ts,
+            W, H, dx, dy, s.seed, ts,
         ))));
         out
     }
 }
 
 struct Rig {
-    shell: Shell,
-    rt: Runtime<ScriptedCamera>,
+    engine: Engine<ScriptedCamera>,
+    clock: Clock,
     cam: ScriptedCamera,
     ptr: FakePointer,
 }
 
 impl Rig {
     fn new(access: PointerAccess, settings: Settings) -> Self {
-        let lines = Hotkey::ALL
-            .map(|k| hotkey_line(k, &Registration::Active))
-            .to_vec();
-        let mut shell = Shell::new(settings, None, lines, true, None);
-        shell.clock = Clock::Manual(1_000_000);
-        let cam = ScriptedCamera::new();
+        let clock = Clock::manual(1_000_000);
+        let cam = ScriptedCamera::new(clock.clone());
         let ptr = FakePointer::new(access);
-        let rt = Runtime::new(cam.clone(), Ok(Box::new(ptr.clone())));
+        let engine = Engine::new(
+            settings,
+            clock.clone(),
+            cam.clone(),
+            Ok(Box::new(ptr.clone())),
+        );
         Self {
-            shell,
-            rt,
+            engine,
+            clock,
             cam,
             ptr,
         }
@@ -191,35 +205,36 @@ impl Rig {
     }
 
     fn state(&self) -> AppState {
-        self.shell.controller.state()
+        self.engine.controller().state()
     }
 
     fn owner(&self) -> PointerOwner {
-        self.shell.controller.pointer_owner()
+        self.engine.controller().pointer_owner()
     }
 
     fn cursor(&self) -> Point2 {
         self.ptr.0.borrow().cursor
     }
 
-    /// One frame period: the clock moves, the runtime pumps.
+    fn moves(&self) -> Vec<Point2> {
+        self.ptr.0.borrow().moves.clone()
+    }
+
+    /// One frame period: the clock moves, the engine steps.
     fn pump(&mut self) {
-        if let Clock::Manual(t) = &mut self.shell.clock {
-            *t += FRAME_US;
-        }
-        self.rt.pump(&mut self.shell);
+        self.clock.advance(FRAME_US);
+        self.engine.step();
     }
 
     fn pump_for(&mut self, us: u64) {
-        let end = self.shell.now_us() + us;
-        while self.shell.now_us() < end {
+        let end = self.clock.now_us() + us;
+        while self.clock.now_us() < end {
             self.pump();
         }
     }
 
     fn command(&mut self, c: Command) {
-        self.shell.command(c);
-        self.rt.flush(&mut self.shell);
+        self.engine.apply(EngineCmd::Input(Input::Command(c)));
     }
 
     /// Started, centre selected, and the 4 s handover over: the camera has the pointer.
@@ -317,7 +332,7 @@ fn dwell_clicks_once_where_the_cursor_rests() {
     let mut settings = Settings::default();
     settings.dwell.enabled = true;
     let mut r = Rig::tracking(PointerAccess::Granted, settings);
-    let dwell_us = (f64::from(r.shell.controller.settings().dwell.dwell_s) * 1e6) as u64;
+    let dwell_us = (f64::from(r.engine.controller().settings().dwell.dwell_s) * 1e6) as u64;
     r.pump_for(dwell_us + 200_000);
     let clicks = r.ptr.0.borrow().clicks.clone();
     assert_eq!(clicks.len(), 1, "{clicks:?}");
@@ -392,17 +407,19 @@ fn the_desktop_from_the_pointer_reaches_the_controller() {
 
 #[test]
 fn no_pointer_backend_is_unsupported_and_tracking_still_runs() {
-    let lines = Hotkey::ALL
-        .map(|k| hotkey_line(k, &Registration::Active))
-        .to_vec();
-    let mut shell = Shell::new(Settings::default(), None, lines, true, None);
-    shell.clock = Clock::Manual(1_000_000);
-    let cam = ScriptedCamera::new();
-    let mut rt = Runtime::new(cam, Err(PointerError::Unsupported("Wayland".into())));
-    shell.command(Command::ToggleStart);
-    rt.pump(&mut shell);
-    assert_eq!(shell.controller.pointer_owner(), PointerOwner::Unsupported);
-    assert_eq!(shell.controller.state(), AppState::NoTarget);
+    let clock = Clock::manual(1_000_000);
+    let cam = ScriptedCamera::new(clock.clone());
+    let mut e = Engine::new(
+        Settings::default(),
+        clock.clone(),
+        cam,
+        Err(PointerError::Unsupported("Wayland".into())),
+    );
+    e.apply(EngineCmd::Input(Input::Command(Command::ToggleStart)));
+    clock.advance(FRAME_US);
+    e.step();
+    assert_eq!(e.controller().pointer_owner(), PointerOwner::Unsupported);
+    assert_eq!(e.controller().state(), AppState::NoTarget);
 }
 
 #[test]
@@ -410,10 +427,9 @@ fn changing_the_camera_reopens_with_the_new_device() {
     let mut r = Rig::granted();
     r.command(Command::ToggleStart);
     r.pump();
-    let mut s = r.shell.controller.settings().clone();
+    let mut s = r.engine.controller().settings().clone();
     s.camera = Some("usb-cam".into());
-    r.shell.set_settings(s);
-    r.rt.flush(&mut r.shell);
+    r.engine.apply(EngineCmd::Settings(s));
     let cam = r.cam.0.borrow();
     assert_eq!(cam.opens, vec![None, Some("usb-cam".into())]);
     assert_eq!(cam.closes, 1);
@@ -547,4 +563,255 @@ fn worker_coalesces_frames_to_the_newest() {
         })
         .collect();
     assert_eq!(frames.len(), 1, "{msgs:?}");
+}
+
+// ---- ADR-0016: the engine doesn't depend on the UI, frames run on camera time ----
+
+/// Head moving right a little each frame, so every frame moves the cursor somewhere new.
+fn sway(r: &mut Rig, i: usize) {
+    r.cam.0.borrow_mut().head = ((i % 20) as f32 * 0.5, (i % 7) as f32 * 0.3);
+}
+
+#[test]
+fn reading_snapshots_changes_neither_the_number_nor_the_positions_of_moves() {
+    let run = |read: bool| {
+        let mut r = Rig::tracking(PointerAccess::Granted, Settings::default());
+        let before = r.moves().len();
+        for i in 0..60 {
+            sway(&mut r, i);
+            r.pump();
+            if read {
+                // A UI pass (or ten): reads only.
+                for _ in 0..10 {
+                    let _ = r.engine.snapshot();
+                }
+            }
+        }
+        r.moves()[before..].to_vec()
+    };
+    let quiet = run(false);
+    assert_eq!(quiet.len(), 60, "one move per frame");
+    assert_eq!(run(true), quiet);
+}
+
+#[test]
+fn regular_capture_times_give_the_same_path_whatever_the_arrival_jitter() {
+    let run = |jitter: bool| {
+        let mut r = Rig::tracking(PointerAccess::Granted, Settings::default());
+        let start = r.clock.now_us();
+        r.cam.0.borrow_mut().next_ts = Some(start + FRAME_US);
+        let before = r.moves().len();
+        for i in 0..60u64 {
+            sway(&mut r, i as usize);
+            // Frame `i` was captured at start + (i + 1) frames; it arrives 0–25 ms later.
+            let arrival =
+                start + (i + 1) * FRAME_US + if jitter { (i * 7_919) % 25_000 } else { 0 };
+            let now = r.clock.now_us();
+            r.clock.advance(arrival.saturating_sub(now));
+            r.engine.step();
+        }
+        r.moves()[before..].to_vec()
+    };
+    let steady = run(false);
+    assert_eq!(steady.len(), 60);
+    assert_eq!(run(true), steady);
+}
+
+#[test]
+fn deadlines_fire_with_no_frames_and_no_ui() {
+    let mut r = Rig::tracking(PointerAccess::Granted, Settings::default());
+    r.cam.0.borrow_mut().stalled = true;
+    r.command(Command::Recenter);
+    assert_eq!(r.state(), AppState::Recentering);
+    // Only the engine's idle steps, as when minimised with a stalled camera.
+    let step = |r: &mut Rig, us: u64| {
+        let end = r.clock.now_us() + us;
+        while r.clock.now_us() < end {
+            r.clock.advance(WAIT.as_micros() as u64);
+            r.engine.step();
+        }
+    };
+    step(&mut r, 4_800_000);
+    assert_eq!(r.state(), AppState::Recentering);
+    step(&mut r, 400_000);
+    assert_eq!(
+        r.state(),
+        AppState::Tracking,
+        "the countdown finished on the last frame"
+    );
+}
+
+/// A camera source producing numbered frames as fast as it can (2 ms each).
+struct Counting {
+    produced: Arc<AtomicU64>,
+}
+
+impl CameraSource for Counting {
+    fn open(&mut self, _r: CaptureRequest) -> Result<CaptureFormat, CameraError> {
+        Ok(CaptureFormat {
+            width: 8,
+            height: 8,
+            fps: 500.0,
+        })
+    }
+
+    fn next_frame(&mut self) -> Result<CameraFrame, CameraError> {
+        std::thread::sleep(Duration::from_millis(2));
+        let n = self.produced.fetch_add(1, Ordering::SeqCst) + 1;
+        Ok(shifted(8, 8, 0.0, 0.0, SCENE, n))
+    }
+
+    fn close(&mut self) {}
+}
+
+#[test]
+fn a_stalled_engine_gets_the_newest_frame_next() {
+    let produced = Arc::new(AtomicU64::new(0));
+    let p = produced.clone();
+    let factory: CameraFactory = Box::new(move |_| {
+        Box::new(Counting {
+            produced: p.clone(),
+        }) as Box<dyn CameraSource>
+    });
+    let mut cam = ThreadedCamera::spawn(factory, || {});
+    cam.open(None, CaptureRequest::default());
+    poll_until(&mut cam, |m| {
+        m.iter().any(|m| matches!(m, CameraMsg::Frame(_)))
+    });
+    // The engine is busy for 100 ms (≈ 50 frames produced meanwhile).
+    std::thread::sleep(Duration::from_millis(100));
+    let newest = produced.load(Ordering::SeqCst);
+    let frames: Vec<u64> = cam
+        .poll()
+        .into_iter()
+        .filter_map(|m| match m {
+            CameraMsg::Frame(f) => Some(f.timestamp_us),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(frames.len(), 1);
+    // The frame in the slot is the newest one, or the one just being written.
+    assert!(frames[0] + 1 >= newest, "got {} of {newest}", frames[0]);
+    assert!(
+        cam.replaced() > 10,
+        "older frames were replaced, not queued"
+    );
+}
+
+/// A pointer that can live on the engine thread and be read from the test.
+#[derive(Debug, Clone, Default)]
+struct SharedMoves(Arc<Mutex<Vec<Point2>>>);
+
+impl PointerSink for SharedMoves {
+    fn access(&self) -> PointerAccess {
+        PointerAccess::Granted
+    }
+    fn move_to(&mut self, p: Point2) -> Result<(), PointerError> {
+        self.0.lock().unwrap().push(p);
+        Ok(())
+    }
+    fn click(&mut self, _p: Point2) -> Result<(), PointerError> {
+        Ok(())
+    }
+    fn position(&self) -> Option<Point2> {
+        self.0.lock().unwrap().last().copied()
+    }
+    fn desktop(&mut self) -> Result<Desktop, PointerError> {
+        Ok(Desktop {
+            bounds: DESKTOP,
+            displays: vec![DESKTOP],
+        })
+    }
+}
+
+/// Textured frames stamped with the (manual) clock, one every 2 ms of real time.
+struct ClockedScene {
+    clock: Clock,
+}
+
+impl CameraSource for ClockedScene {
+    fn open(&mut self, _r: CaptureRequest) -> Result<CaptureFormat, CameraError> {
+        Ok(CaptureFormat {
+            width: W,
+            height: H,
+            fps: 30.0,
+        })
+    }
+
+    fn next_frame(&mut self) -> Result<CameraFrame, CameraError> {
+        std::thread::sleep(Duration::from_millis(2));
+        Ok(shifted(W, H, 0.0, 0.0, SCENE, self.clock.now_us()))
+    }
+
+    fn close(&mut self) {}
+}
+
+fn wait_for(what: &str, done: impl Fn() -> bool) {
+    let start = Instant::now();
+    while !done() {
+        assert!(
+            start.elapsed() < Duration::from_secs(10),
+            "timed out: {what}"
+        );
+        std::thread::sleep(Duration::from_millis(2));
+    }
+}
+
+#[test]
+fn the_engine_thread_moves_the_pointer_with_no_ui_pass() {
+    let clock = Clock::manual(1_000_000);
+    // Simulated time runs ≈ 16× real time, so the 4 s handover takes ≈ 250 ms.
+    let ticking = Arc::new(AtomicBool::new(true));
+    let ticker = {
+        let (clock, ticking) = (clock.clone(), ticking.clone());
+        std::thread::spawn(move || {
+            while ticking.load(Ordering::SeqCst) {
+                clock.advance(FRAME_US);
+                std::thread::sleep(Duration::from_millis(2));
+            }
+        })
+    };
+    let moves = SharedMoves::default();
+    let (c, m) = (clock.clone(), moves.clone());
+    let make: EngineFactory = Box::new(move |wake| {
+        let cc = c.clone();
+        let factory: CameraFactory = Box::new(move |_| {
+            Box::new(ClockedScene { clock: cc.clone() }) as Box<dyn CameraSource>
+        });
+        let camera = ThreadedCamera::spawn(factory, wake);
+        Engine::new(Settings::default(), c, camera, Ok(Box::new(m)))
+    });
+    let repaints = Arc::new(AtomicU64::new(0));
+    let rp = repaints.clone();
+    let mut engine = EngineThread::spawn(make, move || {
+        rp.fetch_add(1, Ordering::SeqCst);
+    });
+    engine.send(EngineCmd::Input(Input::Command(Command::ToggleStart)));
+    wait_for("a frame to select on", || {
+        let v = engine_view(&engine);
+        v.state == AppState::NoTarget && v.frame_seq > 0
+    });
+    engine.send(EngineCmd::Input(Input::Command(Command::SelectTarget(
+        Point2::new(320.0, 240.0),
+    ))));
+    wait_for("camera takes over", || !moves.0.lock().unwrap().is_empty());
+    // From here on nobody reads a snapshot or paints: the moves keep coming.
+    let n = moves.0.lock().unwrap().len();
+    wait_for("20 more moves", || moves.0.lock().unwrap().len() >= n + 20);
+    assert!(
+        repaints.load(Ordering::SeqCst) > 0,
+        "the UI was told to repaint"
+    );
+    ticking.store(false, Ordering::SeqCst);
+    ticker.join().unwrap();
+    drop(engine);
+}
+
+/// The engine thread's latest published view, read without `&mut` (unlike the trait).
+fn engine_view(e: &EngineThread) -> View {
+    e.latest
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .view
+        .clone()
 }

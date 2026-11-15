@@ -15,5 +15,12 @@ pointer-core.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 
+[dev-dependencies]
+divan.workspace = true
+
+[[bench]]
+name = "frame"
+harness = false
+
 [lints]
 workspace = true

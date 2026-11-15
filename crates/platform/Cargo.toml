@@ -27,6 +27,11 @@ x11rb.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+divan.workspace = true
+
+[[bench]]
+name = "decode"
+harness = false
 
 [lints]
 workspace = true

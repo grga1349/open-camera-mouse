@@ -1,18 +1,19 @@
-//! The shell between eframe and `app-core`: owns the controller and the one clock it is
-//! driven with, renders the Tracking and Options windows from `Controller::view`, and turns
-//! clicks and keys into commands. No tracking, pointer or camera logic lives here.
+//! The shell between eframe and the engine (ADR-0016): renders the Tracking and Options
+//! windows from the engine's [`Snapshot`], and turns clicks and keys into engine commands.
+//! No tracking, pointer or camera logic lives here; the controller runs on the engine thread.
 
-use std::time::Instant;
+use std::sync::Arc;
 
-use app_core::{
-    Command, Controller, DesktopRect, Effect, Event, Input, PointerAccess, Settings, Step, Theme,
-};
+#[cfg(test)]
+use app_core::{AppState, PointerOwner, View};
+use app_core::{Command, Input, Settings, Theme};
 use eframe::egui::{
-    self, Align, ColorImage, Layout, RichText, ScrollArea, TextureHandle, TextureOptions, Ui, Vec2,
+    self, Align, Layout, RichText, ScrollArea, TextureHandle, TextureOptions, Ui, Vec2,
 };
 use platform::hotkeys::{Hotkey, KeyRouter, Registration, Source};
 use platform::{CameraDevice, SettingsStore};
 
+use crate::engine::{Clock, EngineCmd, EngineHandle, Snapshot};
 use crate::options::{self, Facts, Tab};
 use crate::preview::{self, Extras};
 use crate::status::{self, Action, describe};
@@ -45,15 +46,6 @@ pub fn hotkey_line(key: Hotkey, status: &Registration) -> String {
     }
 }
 
-/// The controller's time source: monotonic in the app, set by hand in tests (countdowns are
-/// controller deadlines, never UI timers).
-#[derive(Debug, Clone, Copy)]
-pub enum Clock {
-    System(Instant),
-    #[cfg_attr(not(test), allow(dead_code))] // Only tests set the clock by hand.
-    Manual(u64),
-}
-
 /// Frame-rate estimate for the diagnostics overlay (EMA over frame intervals).
 #[derive(Debug, Default, Clone, Copy)]
 struct FpsMeter {
@@ -84,7 +76,11 @@ impl FpsMeter {
 }
 
 pub struct Shell {
-    pub controller: Controller,
+    engine: Box<dyn EngineHandle>,
+    /// The latest engine state; refreshed at the start of every window pass.
+    snap: Arc<Snapshot>,
+    /// The UI's copy of the settings: validated here, sent to the engine, saved from here.
+    settings: Settings,
     pub clock: Clock,
     /// Shown above the preview (settings-load fallback, save failure).
     pub notice: Option<String>,
@@ -101,10 +97,6 @@ pub struct Shell {
     pub cameras: Vec<CameraDevice>,
     /// Requests only the platform can serve (pointer permission). Drained by the app.
     pub platform_actions: Vec<Action>,
-    /// Controller effects not yet performed; the runtime drains them (`take_effects`).
-    effects: Vec<Effect>,
-    /// Controller events not yet seen by the runtime (the frame recorder logs them).
-    events: Vec<Event>,
     texture: Option<TextureHandle>,
     uploaded_seq: u64,
     /// How long the last preview upload took, for `OCM_PERF` (taken by `main`).
@@ -116,7 +108,7 @@ pub struct Shell {
 impl std::fmt::Debug for Shell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Shell")
-            .field("controller", &self.controller)
+            .field("view", &self.snap.view)
             .field("clock", &self.clock)
             .field("notice", &self.notice)
             .field("options_open", &self.options_open)
@@ -126,26 +118,21 @@ impl std::fmt::Debug for Shell {
 }
 
 impl Shell {
+    /// `settings` must be the ones the engine was made with; `clock` the engine's clock.
     pub fn new(
         settings: Settings,
         notice: Option<String>,
         hotkey_lines: Vec<String>,
         hotkeys_ok: bool,
         store: Option<SettingsStore>,
+        mut engine: Box<dyn EngineHandle>,
+        clock: Clock,
     ) -> Self {
-        // The pointer adapter reports the real desktop in the runtime (task 0008 D7).
-        let desktop = DesktopRect {
-            x: 0.0,
-            y: 0.0,
-            width: 1920.0,
-            height: 1080.0,
-        };
         Self {
-            // Loaded settings are already repaired; fall back rather than panic regardless.
-            controller: Controller::new(settings, desktop)
-                .or_else(|_| Controller::new(Settings::default(), desktop))
-                .expect("default settings are valid"),
-            clock: Clock::System(Instant::now()),
+            snap: engine.snapshot(),
+            engine,
+            settings: settings.validated().unwrap_or_default(),
+            clock,
             notice,
             keys: KeyRouter::new(),
             hotkey_lines,
@@ -157,8 +144,6 @@ impl Shell {
             wants_camera_list: false,
             cameras: Vec::new(),
             platform_actions: Vec::new(),
-            effects: Vec::new(),
-            events: Vec::new(),
             texture: None,
             uploaded_seq: 0,
             last_upload: None,
@@ -168,32 +153,44 @@ impl Shell {
     }
 
     pub fn now_us(&self) -> u64 {
-        match self.clock {
-            Clock::System(epoch) => epoch.elapsed().as_micros() as u64,
-            Clock::Manual(t) => t,
-        }
+        self.clock.now_us()
     }
 
+    /// Sends a controller input to the engine (commands; tests also send frames).
     pub fn input(&mut self, input: Input) {
-        let now = self.now_us();
-        let step = self.controller.handle(input, now);
-        self.queue(step);
+        self.engine.send(EngineCmd::Input(input));
     }
 
-    /// Keeps a step's effects (open camera, move pointer, click) for the runtime, in order.
-    fn queue(&mut self, step: Step) {
-        self.effects.extend(step.effects);
-        self.events.extend(step.events);
+    /// Asks the engine to re-check pointer permission ("Check again").
+    pub fn check_access(&mut self) {
+        self.engine.send(EngineCmd::CheckAccess);
     }
 
-    /// Effects the controller asked for since the last call, in order (`runtime::Runtime`).
-    pub fn take_effects(&mut self) -> Vec<Effect> {
-        std::mem::take(&mut self.effects)
+    /// Takes the engine's latest snapshot.
+    pub fn refresh(&mut self) {
+        self.snap = self.engine.snapshot();
     }
 
-    /// Events since the last call (state changes, selections), for the frame recorder.
-    pub fn take_events(&mut self) -> Vec<Event> {
-        std::mem::take(&mut self.events)
+    /// The latest view (refreshed).
+    #[cfg(test)]
+    pub fn view(&mut self) -> View {
+        self.refresh();
+        self.snap.view.clone()
+    }
+
+    #[cfg(test)]
+    pub fn state(&mut self) -> AppState {
+        self.view().state
+    }
+
+    #[cfg(test)]
+    pub fn pointer_owner(&mut self) -> PointerOwner {
+        self.view().pointer
+    }
+
+    #[cfg(test)]
+    pub fn settings(&self) -> &Settings {
+        &self.settings
     }
 
     pub fn command(&mut self, c: Command) {
@@ -216,14 +213,14 @@ impl Shell {
         }
     }
 
-    /// Validates and applies new settings through `app-core` (R-A5), then schedules a save.
+    /// Validates new settings (R-A5, `app-core`), sends them to the engine and schedules a
+    /// save. The engine applies them (a camera change reopens the camera).
     pub fn set_settings(&mut self, new: Settings) {
-        let now = self.now_us();
-        match self.controller.update_settings(new, now) {
-            Ok(step) => {
-                // A camera change reopens the camera: the runtime performs it.
-                self.queue(step);
-                self.dirty_since = Some(now);
+        match new.validated() {
+            Ok(s) => {
+                self.settings = s.clone();
+                self.engine.send(EngineCmd::Settings(s));
+                self.dirty_since = Some(self.now_us());
             }
             Err(e) => self.notice = Some(format!("That setting wasn't applied: {e}.")),
         }
@@ -244,7 +241,7 @@ impl Shell {
         }
         self.dirty_since = None;
         if let Some(store) = &self.store
-            && let Err(e) = store.save(self.controller.settings())
+            && let Err(e) = store.save(&self.settings)
         {
             self.notice = Some(format!("Settings couldn't be saved: {e}."));
         }
@@ -252,7 +249,7 @@ impl Shell {
 
     /// Applies theme, larger controls and text size when they change.
     pub fn apply_style(&mut self, ctx: &egui::Context) {
-        let s = self.controller.settings();
+        let s = &self.settings;
         let key = (
             s.theme,
             s.larger_controls,
@@ -271,23 +268,14 @@ impl Shell {
         ctx.set_zoom_factor(s.text_scale);
     }
 
-    /// Uploads the controller's preview frame when a new one arrived (`frame_seq`).
-    fn upload_preview(&mut self, ctx: &egui::Context, seq: u64) {
+    /// Uploads the engine's preview image when a new frame arrived (`frame_seq`).
+    fn upload_preview(&mut self, ctx: &egui::Context) {
+        let seq = self.snap.view.frame_seq;
         if seq == self.uploaded_seq {
             return;
         }
         let started = std::time::Instant::now();
-        let image = if let Some(rgb) = self.controller.preview_rgb() {
-            ColorImage::from_rgb(
-                [rgb.width() as usize, rgb.height() as usize],
-                rgb.as_bytes(),
-            )
-        } else if let Some(luma) = self.controller.preview() {
-            ColorImage::from_gray(
-                [luma.width() as usize, luma.height() as usize],
-                luma.as_bytes(),
-            )
-        } else {
+        let Some(image) = self.snap.preview.clone() else {
             self.texture = None;
             self.uploaded_seq = seq;
             return;
@@ -307,22 +295,13 @@ impl Shell {
             Action::Start => self.command(Command::ToggleStart),
             Action::ChooseCamera => self.open_options(Some(Tab::Camera)),
             Action::CopyDetails => {
-                let text = self
-                    .controller
-                    .view(self.now_us())
-                    .error
-                    .unwrap_or_default();
+                let text = self.snap.view.error.clone().unwrap_or_default();
                 ui.ctx().copy_text(text);
             }
             Action::OpenPointerSettings | Action::CheckPointerAccess => {
                 self.platform_actions.push(action);
             }
         }
-    }
-
-    /// Feeds a pointer-permission result (from the platform) to the controller.
-    pub fn pointer_access(&mut self, access: PointerAccess) {
-        self.input(Input::PointerAccess(access));
     }
 }
 
@@ -382,28 +361,29 @@ pub fn tracking_ui(ui: &mut Ui, shell: &mut Shell) {
     for key in window_hotkeys(ui) {
         shell.hotkey(key, Source::Window);
     }
-    // Deadlines (recenter, handover) fire on time even without camera frames.
-    shell.input(Input::Tick);
+    // Deadlines (recenter, handover) are the engine's: it ticks on its own.
+    shell.refresh();
+    let snap = shell.snap.clone();
+    let view = &snap.view;
     let now = shell.now_us();
-    let view = shell.controller.view(now);
     shell.fps.observe(view.frame_seq, now);
-    shell.upload_preview(ui.ctx(), view.frame_seq);
+    shell.upload_preview(ui.ctx());
     let start_key = Hotkey::ToggleStart.key_name();
     let recenter_key = Hotkey::Recenter.key_name();
-    let st = describe(&view, start_key, recenter_key);
-    let settings = shell.controller.settings();
+    let st = describe(view, start_key, recenter_key);
+    let settings = &shell.settings;
     let extras = Extras {
         texture: shell.texture.as_ref(),
         mirrored: settings.mirror,
         diagnostics: settings
             .show_diagnostics
-            .then(|| diagnostics_lines(&view, shell.fps.fps())),
+            .then(|| diagnostics_lines(view, shell.fps.fps())),
     };
 
     if let Some(n) = &shell.notice {
         ui.label(RichText::new(n).weak());
     }
-    let out = preview::show(ui, &view, &st, &extras);
+    let out = preview::show(ui, view, &st, &extras);
     if let Some(p) = out.pick {
         shell.command(Command::SelectTarget(p));
     }
@@ -501,22 +481,22 @@ pub fn options_ui(ui: &mut Ui, shell: &mut Shell) {
     for key in window_hotkeys(ui) {
         shell.hotkey(key, Source::Window);
     }
-    let now = shell.now_us();
-    let capture = shell.controller.view(now).capture;
-    let mut s = shell.controller.settings().clone();
+    shell.refresh();
+    let snap = shell.snap.clone();
+    let mut s = shell.settings.clone();
     let close = {
         let facts = Facts {
             cameras: &shell.cameras,
-            capture,
+            capture: snap.view.capture,
             hotkey_lines: &shell.hotkey_lines,
-            displays: shell.controller.displays(),
+            displays: &snap.displays,
         };
         ui.with_layout(Layout::top_down(Align::Min), |ui| {
             options::show(ui, &mut s, &mut shell.tab, &facts)
         })
         .inner
     };
-    if s != *shell.controller.settings() {
+    if s != shell.settings {
         shell.set_settings(s);
     }
     if close {

@@ -1,22 +1,27 @@
-//! Frame-path timing for diagnostics (Phase 6b, test-drive lag investigation).
+//! Frame-path timing for diagnostics (Phase 6b, test-drive lag investigation, ADR-0016).
 //!
-//! Off unless `OCM_PERF=1` is set. Every [`REPORT_EVERY`] it prints one line to stderr with
-//! p50 / p95 / max of each stage, so "the preview lags" can be answered with numbers:
+//! Off unless `OCM_PERF=1` is set. Every [`REPORT_EVERY`] the engine prints one line to
+//! stderr with p50 / p95 / max of each stage, so "the cursor lags" can be answered with
+//! numbers:
 //!
-//! - `age`: camera frame timestamp → the controller gets it (decode, two hand-offs, waiting
-//!   for the UI loop). This is the latency the pointer inherits.
+//! - `in`: camera frame timestamp → the engine takes it (decode, hand-offs, engine busy).
 //! - `track`: `Controller::handle(Frame)` (ingest, mirror, tracker, pointer mapping).
 //! - `move`: performing the effects of that frame (the OS pointer move).
-//! - `upload`: preview `ColorImage` build + texture upload.
+//! - `age`: camera frame timestamp → its pointer move is done. The latency the user feels,
+//!   minus the camera's own sensor-to-timestamp delay.
+//! - `upload`: preview texture upload on the UI thread (the image is built by the engine).
 //! - `ui`: the whole `ui` pass (layout, paint).
-//! - `gap`: time between two `logic` calls (how often the loop runs at all).
 //!
-//! Counts: frames given to the controller, frames the worker dropped (UI behind), frames
-//! coalesced away in one poll (several arrived between two passes).
+//! Counts: frames given to the controller per second, and frames the camera worker replaced
+//! before the engine took them (engine behind; running total).
 
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub const REPORT_EVERY: Duration = Duration::from_secs(5);
+
+/// Shared by the engine thread (frame stages, report) and the UI thread (upload, ui).
+pub type SharedPerf = Arc<Mutex<Perf>>;
 
 #[derive(Debug, Default)]
 struct Stat(Vec<u64>);
@@ -47,43 +52,43 @@ impl Stat {
 #[derive(Debug)]
 pub struct Perf {
     since: Instant,
-    last_logic: Option<Instant>,
     frames: u64,
-    age: Stat,
+    input: Stat,
     track: Stat,
     moves: Stat,
+    age: Stat,
     upload: Stat,
     ui: Stat,
-    gap: Stat,
 }
 
 impl Perf {
-    pub fn from_env() -> Option<Self> {
+    pub fn from_env() -> Option<SharedPerf> {
         let on = std::env::var("OCM_PERF").is_ok_and(|v| v == "1");
         on.then(|| {
             eprintln!(
                 "OCM_PERF: every {} s, ms p50/p95/max (see perf.rs)",
                 REPORT_EVERY.as_secs()
             );
-            Self {
+            Arc::new(Mutex::new(Self {
                 since: Instant::now(),
-                last_logic: None,
                 frames: 0,
-                age: Stat::default(),
+                input: Stat::default(),
                 track: Stat::default(),
                 moves: Stat::default(),
+                age: Stat::default(),
                 upload: Stat::default(),
                 ui: Stat::default(),
-                gap: Stat::default(),
-            }
+            }))
         })
     }
 
-    pub fn frame(&mut self, age_us: u64, track: Duration, moves: Duration) {
+    /// One frame through the engine; `input_us` and `age_us` are from its capture timestamp.
+    pub fn frame(&mut self, input_us: u64, track: Duration, moves: Duration, age_us: u64) {
         self.frames += 1;
-        self.age.add(age_us);
+        self.input.add(input_us);
         self.track.add(us(track));
         self.moves.add(us(moves));
+        self.age.add(age_us);
     }
 
     pub fn upload(&mut self, d: Duration) {
@@ -94,26 +99,22 @@ impl Perf {
         self.ui.add(us(d));
     }
 
-    /// Call at the start of every `logic`; prints the report when due. `dropped` and
-    /// `coalesced` are the camera link's running totals.
-    pub fn logic(&mut self, dropped: u64, coalesced: u64) {
+    /// Prints the report when due. `replaced` is the camera link's running total.
+    pub fn report_if_due(&mut self, replaced: u64) {
         let now = Instant::now();
-        if let Some(prev) = self.last_logic.replace(now) {
-            self.gap.add(us(now - prev));
-        }
         let span = now - self.since;
         if span < REPORT_EVERY {
             return;
         }
         eprintln!(
-            "perf {:.1} fps | dropped {dropped} coalesced {coalesced} | {} | {} | {} | {} | {} | {}",
+            "perf {:.1} fps | replaced {replaced} | {} | {} | {} | {} | {} | {}",
             self.frames as f64 / span.as_secs_f64(),
-            self.age.line("age"),
+            self.input.line("in"),
             self.track.line("track"),
             self.moves.line("move"),
+            self.age.line("age"),
             self.upload.line("upload"),
             self.ui.line("ui"),
-            self.gap.line("gap"),
         );
         self.frames = 0;
         self.since = now;

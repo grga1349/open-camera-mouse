@@ -4,10 +4,11 @@
 
 use super::*;
 use app_core::ports::{CameraError, CameraFrame, CaptureFormat, Point2};
-use app_core::{AppState, MarkerKind, PointerOwner};
+use app_core::{AppState, MarkerKind, PointerAccess, PointerOwner};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
+use crate::engine::{CameraLink, CameraMsg, Clock, Engine, InlineEngine};
 use crate::preview::{PREVIEW_LABEL, fit_rect, to_screen};
 
 use crate::test_frames::{FLAT, FRAME_US, H, SCENE, W, shifted};
@@ -18,12 +19,42 @@ fn raw_frame(w: u32, h: u32, seed: u32, ts: u64) -> CameraFrame {
 
 // ---- shell rigs ----
 
-fn advance(sh: &mut Shell, us: u64) {
-    if let Clock::Manual(t) = &mut sh.clock {
-        *t += us;
-    } else {
-        panic!("tests use the manual clock");
+/// No camera: the UI tests feed frames themselves (`Input::Frame`).
+#[derive(Debug)]
+struct NullCamera;
+
+impl CameraLink for NullCamera {
+    fn open(&mut self, _device: Option<String>, _request: app_core::ports::CaptureRequest) {}
+    fn close(&mut self) {}
+    fn poll(&mut self) -> Vec<CameraMsg> {
+        Vec::new()
     }
+}
+
+/// A shell over an inline engine (no camera, no pointer) on a manual clock at `t`.
+fn shell_at(
+    t: u64,
+    settings: Settings,
+    lines: Vec<String>,
+    ok: bool,
+    store: Option<SettingsStore>,
+) -> Shell {
+    let clock = Clock::manual(t);
+    let pointer = Err(app_core::ports::PointerError::Backend("tests".into()));
+    let engine = Engine::new(settings.clone(), clock.clone(), NullCamera, pointer);
+    Shell::new(
+        settings,
+        None,
+        lines,
+        ok,
+        store,
+        Box::new(InlineEngine(engine)),
+        clock,
+    )
+}
+
+fn advance(sh: &mut Shell, us: u64) {
+    sh.clock.advance(us);
 }
 
 fn frame_sized(sh: &mut Shell, w: u32, h: u32, seed: u32) {
@@ -44,9 +75,7 @@ fn hold(sh: &mut Shell, us: u64) {
 }
 
 fn stopped_with(settings: Settings) -> Shell {
-    let mut sh = Shell::new(settings, None, test_lines(), true, None);
-    sh.clock = Clock::Manual(1_000_000);
-    sh
+    shell_at(1_000_000, settings, test_lines(), true, None)
 }
 
 fn stopped() -> Shell {
@@ -72,7 +101,7 @@ fn started_with(settings: Settings) -> Shell {
     let mut sh = stopped_with(settings);
     opened(&mut sh, W, H);
     frame(&mut sh, SCENE);
-    assert_eq!(sh.controller.state(), AppState::NoTarget);
+    assert_eq!(sh.state(), AppState::NoTarget);
     sh
 }
 
@@ -85,14 +114,14 @@ fn selected_with(settings: Settings) -> Shell {
     let mut sh = started_with(settings);
     sh.command(Command::SelectTarget(Point2::new(320.0, 240.0)));
     frame(&mut sh, SCENE);
-    assert_eq!(sh.controller.state(), AppState::Tracking);
+    assert_eq!(sh.state(), AppState::Tracking);
     sh
 }
 
 fn tracking_with(settings: Settings) -> Shell {
     let mut sh = selected_with(settings);
     hold(&mut sh, 4_000_000);
-    assert_eq!(sh.controller.pointer_owner(), PointerOwner::Camera);
+    assert_eq!(sh.pointer_owner(), PointerOwner::Camera);
     sh
 }
 
@@ -104,7 +133,7 @@ fn lost_with(settings: Settings) -> Shell {
     let mut sh = tracking_with(settings);
     for _ in 0..3 {
         frame(&mut sh, FLAT);
-        if sh.controller.state() == AppState::Lost {
+        if sh.state() == AppState::Lost {
             return sh;
         }
     }
@@ -157,8 +186,8 @@ fn recenter_label() -> String {
     with_key("Recenter", Hotkey::Recenter)
 }
 
-fn state(h: &Harness<'_, Shell>) -> AppState {
-    h.state().controller.state()
+fn state(h: &mut Harness<'_, Shell>) -> AppState {
+    h.state_mut().state()
 }
 
 // ---- every state renders icon + text (criterion 3) ----
@@ -239,7 +268,7 @@ fn status_text_per_state() {
         (
             {
                 let mut s = tracking();
-                s.pointer_access(PointerAccess::Denied);
+                s.input(Input::PointerAccess(PointerAccess::Denied));
                 s
             },
             "Pointer control needs permission",
@@ -247,15 +276,15 @@ fn status_text_per_state() {
         (
             {
                 let mut s = tracking();
-                s.pointer_access(PointerAccess::Unsupported);
+                s.input(Input::PointerAccess(PointerAccess::Unsupported));
                 s
             },
             "Pointer: not available",
         ),
     ];
     let mut seen = std::collections::HashSet::new();
-    for (sh, title) in cases {
-        seen.insert(format!("{:?}", sh.controller.state()));
+    for (mut sh, title) in cases {
+        seen.insert(format!("{:?}", sh.state()));
         let h = tracking_window(sh);
         assert_text(&h, title);
     }
@@ -270,7 +299,8 @@ fn searching_shows_when_find_again_is_on() {
         ..Settings::default()
     };
     let sh = lost_with(settings);
-    let view = sh.controller.view(sh.now_us());
+    let mut sh = sh;
+    let view = sh.view();
     assert_eq!(view.marker.map(|m| m.kind), Some(MarkerKind::Searching));
     let h = tracking_window(sh);
     assert_text(&h, "Looking for the target…");
@@ -301,7 +331,7 @@ fn recenter_countdown_follows_the_injected_clock() {
     advance(h.state_mut(), 3_000_000);
     h.run_steps(4);
     // At 0 the frame centre was selected, without any new frame or UI timer.
-    assert_eq!(state(&h), AppState::Tracking);
+    assert_eq!(state(&mut h), AppState::Tracking);
 }
 
 #[test]
@@ -319,7 +349,7 @@ fn start_button_starts_the_camera() {
     let mut h = tracking_window(stopped());
     h.get_by_label(&start_label("Start")).click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
     assert!(
         h.get_by_label(&start_label("Start"))
             .accesskit_node()
@@ -332,10 +362,10 @@ fn pause_and_resume_through_recenter() {
     let mut h = tracking_window(tracking());
     h.get_by_label(&start_label("Pause")).click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Paused);
+    assert_eq!(state(&mut h), AppState::Paused);
     h.get_by_label(&start_label("Resume")).click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Recentering);
+    assert_eq!(state(&mut h), AppState::Recentering);
 }
 
 #[test]
@@ -349,7 +379,7 @@ fn recenter_button_starts_the_countdown_and_is_disabled_when_stopped() {
     let mut h = tracking_window(started());
     h.get_by_label(&recenter_label()).click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Recentering);
+    assert_eq!(state(&mut h), AppState::Recentering);
 }
 
 #[test]
@@ -366,7 +396,7 @@ fn preview_click_selects_a_target() {
     let mut h = tracking_window(started());
     h.get_by_label(PREVIEW_LABEL).click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Tracking);
+    assert_eq!(state(&mut h), AppState::Tracking);
 }
 
 #[test]
@@ -374,7 +404,7 @@ fn card_buttons() {
     let mut h = tracking_window(stopped());
     h.get_by_label("Start camera").click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
 
     let mut sh = stopped();
     sh.command(Command::ToggleStart);
@@ -386,14 +416,14 @@ fn card_buttons() {
     assert_eq!(h.state().tab, Tab::Camera);
     h.get_by_label("Try again").click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
 
     let mut sh = started();
     sh.input(Input::CameraFailed(CameraError::Disconnected));
     let mut h = tracking_window(sh);
     h.get_by_label("Reconnect").click();
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
 }
 
 #[test]
@@ -416,7 +446,7 @@ fn copy_details_copies_the_error() {
 #[test]
 fn pointer_permission_buttons_reach_the_platform() {
     let mut sh = tracking();
-    sh.pointer_access(PointerAccess::Denied);
+    sh.input(Input::PointerAccess(PointerAccess::Denied));
     let mut h = tracking_window(sh);
     h.get_by_label("Check again").click();
     h.run_steps(4);
@@ -442,12 +472,12 @@ fn in_window_keys_toggle_start_and_recenter() {
     let mut h = tracking_window(stopped());
     h.key_press(start_key());
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
 
     let mut h = tracking_window(started());
     h.key_press(egui::Key::F12);
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Recentering);
+    assert_eq!(state(&mut h), AppState::Recentering);
 }
 
 #[test]
@@ -455,10 +485,10 @@ fn in_window_start_key_after_a_global_press_is_the_same_press() {
     let mut sh = stopped();
     sh.hotkey(Hotkey::ToggleStart, Source::Global);
     let mut h = tracking_window(sh);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
     h.key_press(start_key());
     h.run_steps(4);
-    assert_eq!(state(&h), AppState::Starting);
+    assert_eq!(state(&mut h), AppState::Starting);
 }
 
 /// Labels of every node that gets keyboard focus while tabbing through the window.
@@ -509,8 +539,7 @@ fn failed_hotkeys_are_explained_in_the_tracking_window() {
             &Registration::Unsupported("global hotkeys aren't available on Wayland".into()),
         ),
     ];
-    let mut sh = Shell::new(Settings::default(), None, lines, false, None);
-    sh.clock = Clock::Manual(0);
+    let sh = shell_at(0, Settings::default(), lines, false, None);
     let h = tracking_window(sh);
     assert_text(
         &h,
@@ -559,7 +588,7 @@ fn letterboxed_click_selects_the_point_under_the_cursor() {
     let mut sh = stopped();
     opened(&mut sh, fw, fh);
     frame_sized(&mut sh, fw, fh, SCENE);
-    assert_eq!(sh.controller.state(), AppState::NoTarget);
+    assert_eq!(sh.state(), AppState::NoTarget);
     let mut h = tracking_window(sh);
     let area = h.get_by_label(PREVIEW_LABEL).rect();
     let drawn = fit_rect(area, (fw, fh));
@@ -567,13 +596,12 @@ fn letterboxed_click_selects_the_point_under_the_cursor() {
 
     // On the bar above the picture: nothing is selected.
     click_at(&mut h, egui::pos2(area.center().x, area.min.y + 4.0));
-    assert_eq!(state(&h), AppState::NoTarget);
+    assert_eq!(state(&mut h), AppState::NoTarget);
 
     let want = Point2::new(200.0, 120.0);
     click_at(&mut h, to_screen(want, drawn, (fw, fh)));
-    assert_eq!(state(&h), AppState::Tracking);
-    let sh = h.state();
-    let got = sh.controller.view(sh.now_us()).marker.unwrap().position;
+    assert_eq!(state(&mut h), AppState::Tracking);
+    let got = h.state_mut().view().marker.unwrap().position;
     assert!(
         (got.x - want.x).abs() < 1.0 && (got.y - want.y).abs() < 1.0,
         "{got:?}"
@@ -599,7 +627,7 @@ fn tracking_window_fits_at_130_percent_with_larger_controls() {
     // Zoom 1.3 leaves 1/1.3 of the points; text_scale itself is applied as egui zoom.
     let size = Vec2::from(TRACKING_SIZE) / 1.3;
     let mut sh = tracking_with(settings);
-    sh.pointer_access(PointerAccess::Denied); // the longest status (body + two buttons)
+    sh.input(Input::PointerAccess(PointerAccess::Denied)); // the longest status (body + two buttons)
     let h = tracking_window_sized(sh, size);
     for l in [start_label("Pause"), recenter_label(), "Options".to_owned()] {
         inside(&h, &l, size);
@@ -627,7 +655,7 @@ fn options_window_fits_at_130_percent_with_larger_controls() {
 // ---- Options window controls, by label ----
 
 fn settings(h: &Harness<'_, Shell>) -> Settings {
-    h.state().controller.settings().clone()
+    h.state().settings().clone()
 }
 
 #[test]
@@ -842,8 +870,8 @@ fn options_controls_are_reachable_by_tab() {
 
 #[test]
 fn diagnostics_overlay_lines() {
-    let sh = tracking();
-    let view = sh.controller.view(sh.now_us());
+    let mut sh = tracking();
+    let view = sh.view();
     let lines = diagnostics_lines(&view, Some(30.0));
     assert_eq!(lines[0], "fps      30.0");
     assert_eq!(lines[3], "status   Tracking");
@@ -856,14 +884,13 @@ fn diagnostics_overlay_lines() {
 fn options_changes_are_saved_after_the_debounce() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("settings.toml");
-    let mut sh = Shell::new(
+    let mut sh = shell_at(
+        1_000_000,
         Settings::default(),
-        None,
         test_lines(),
         true,
         Some(SettingsStore::at(&path)),
     );
-    sh.clock = Clock::Manual(1_000_000);
     sh.tab = Tab::General;
     let mut h = options_window(sh);
     h.get_by_label("Light").click();
@@ -884,14 +911,13 @@ fn options_changes_are_saved_after_the_debounce() {
 fn closing_options_saves_at_once() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("settings.toml");
-    let mut sh = Shell::new(
+    let mut sh = shell_at(
+        1_000_000,
         Settings::default(),
-        None,
         test_lines(),
         true,
         Some(SettingsStore::at(&path)),
     );
-    sh.clock = Clock::Manual(1_000_000);
     sh.tab = Tab::Camera;
     let mut h = options_window(sh);
     h.get_by_label("Find the target again").click();

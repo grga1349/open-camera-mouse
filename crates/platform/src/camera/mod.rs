@@ -44,7 +44,7 @@ use nokhwa::utils::{
 };
 
 pub use latest::{LatestSlot, Take};
-pub use pixels::{DecodeError, PixelFormat, decode};
+pub use pixels::{DecodeError, PixelFormat, decode, expected_len};
 
 /// Longest wait for the device to start streaming (P3: some devices hang on init).
 pub const OPEN_TIMEOUT: Duration = Duration::from_secs(10);
