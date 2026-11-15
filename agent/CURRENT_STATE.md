@@ -1,21 +1,18 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6b, task 0009; slice 2d done, device-checked, committed)
+Last updated: 2026-11-16 (Phase 6b DONE, task 0009 closed; Phase 6c tuning round NEXT, ADR-0019; no task file yet)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last pushed: slice 2b `54386f4` (ADR-0017) + handoff `d0dc472`, CI
-green. Slice 2d (ADR-0018) on top — see `git log` / `git status` for whether it is committed.
+Branch: `rewrite/rust`. Last code: slice 2d `df4c670` (ADR-0018), handoffs after it. CI for
+`df4c670`/`71ac27a` was running at writing — verify.
 
 ## Milestone
 
-Phases 0–6 DONE. Phase 6 (desktop app): `tasks/done/0008-phase-6-desktop-app.md`,
-slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
-persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
-UI, headless-tested) and D6b (widgets restyled to the lab, screenshot-compared) done.
-D7 done: runtime, end-to-end headless tests, recorder, and manual QA on the dev Mac with the
-user (`docs/qa/MANUAL_QA.md` rows 1–18 pass, 2026-11-15). **Phase 6b (test drive, ADR-0013) is
-NEXT: the user uses the app and we fix what comes up, before Phase 7. No task file yet.**
+Phases 0–6 and 6b DONE. 6b (task 0009, ADR-0013): issues #1–#6 in `docs/qa/TEST_DRIVE.md`
+fixed, slices 2a–2d (ADR-0014…0018) device-checked. **Phase 6c — tuning round (ADR-0019) is
+NEXT**: one more round of test → tune → fix on the dev Mac before Phase 7. Task 0010 is not
+written yet; the session that starts 6c writes it from `docs/ROADMAP.md` §6c.
 
 ## What exists now
 
@@ -79,11 +76,10 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Slice 2d done and device-checked (user: "turns hold much better now"). Next: user test drive
-(head turns left/right/up/down; does the point hold, any wrong lock when a hand passes over
-the face?). Then optional 2e (research report) or straight to the user's test drive → Phase 7
-when they say ready. Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the
-threshold re-measurement in Phase 8.
+Start Phase 6c: verify CI, write `tasks/active/0010-phase-6c-tuning-round.md` from ADR-0019
++ ROADMAP §6c, add it to `tasks/BACKLOG.md`, then ask the user what they want to tune first and
+log it as TEST_DRIVE #7+. Carried in from 6b: #4 main-monitor on-device check; minimised rate +
+dwell on device since the engine thread; `ui` 15/17 ms with Options open.
 
 ## Open risks
 

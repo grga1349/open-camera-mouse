@@ -1,6 +1,6 @@
 # 0009 — Phase 6b: test drive
 
-Status: ACTIVE (2026-11-15)
+Status: DONE (2026-11-16) — closed into Phase 6c by user decision (ADR-0019)
 Owner/branch: `rewrite/rust`
 Depends on: 0008 (done)
 
@@ -270,3 +270,11 @@ Gates are synthetic: `appearance.rs` (raise `turn_extreme` from 31/90), the fixt
 
 Optional 2e: the final research report (`HEAD_POINTER_STABILITY_RESEARCH.md`) only for what the
 experiments leave open. Then the user test-drives again; Phase 7 when they say ready.
+
+## Close-out (2026-11-16)
+
+Issues #1–#6 fixed (#4's on-device check carried into 6c). Slices 2a–2d done: ADR-0016
+(`f458e92`), ADR-0017 (`54386f4`), ADR-0018 (`df4c670`), all device-checked. 2c's remaining
+comparison rows and 2e (research report) were not needed for the fixes and are left to 6c if
+tuning calls for them. The gate item "the user says ready for Phase 7" is replaced by the
+user's decision to run one more tuning round, Phase 6c (ADR-0019).

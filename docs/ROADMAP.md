@@ -2,7 +2,7 @@
 
 The live phase plan for the Rust rewrite. Condensed from the frozen planning seed
 (`docs/archive/rust-rewrite-seed/02-roadmap-nine-phases.md`), which stays the historical
-source. Phase 6b (test drive) was inserted by ADR-0013 without renumbering. Change phases here, via an ADR, never by silently renumbering. Per-task status lives in
+source. Phase 6b (test drive) was inserted by ADR-0013 and Phase 6c (tuning round) by ADR-0019, without renumbering. Change phases here, via an ADR, never by silently renumbering. Per-task status lives in
 `tasks/BACKLOG.md`. This file only tracks phase status.
 
 Working rule: when a phase starts, its coordinator writes that phase's task file(s) in
@@ -18,7 +18,8 @@ the phase.
 | 4 | Tracking improvements | DONE | task 0006; ADR-0010, -0011; `docs/research/TRACKING_IMPROVEMENTS.md` |
 | 5 | Design system | DONE | task 0007; `docs/design/design-lab.html` (approved v3), `EGUI_FEASIBILITY.md` |
 | 6 | Desktop app | DONE | task 0008; ADR-0012; `docs/qa/MANUAL_QA.md` (rows 1–18 pass); CI green |
-| 6b | Test drive (ADR-0013) | ACTIVE | task 0009; `docs/qa/TEST_DRIVE.md` |
+| 6b | Test drive (ADR-0013) | DONE | task 0009; `docs/qa/TEST_DRIVE.md` #1–#6; ADR-0014…0018 |
+| 6c | Tuning round (ADR-0019) | NEXT | task 0010 (written when the phase starts); `docs/qa/TEST_DRIVE.md` from #7 |
 | 7 | Multiplatform / release | — | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
 | 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 
@@ -77,6 +78,15 @@ severity, triage, fix commit or deferral), reproduced, and either fixed (regress
 it can be tested headless) or explicitly deferred to a named phase. Fixes only, no new
 features. *Gate:* every logged issue fixed or deferred with a reason; quality gates green; the
 user says the app is ready for Phase 7.
+
+**6c — Tuning round (ADR-0019).** One more round on the dev Mac after 6b: the user drives
+the dev build; issues and tuning wishes are logged in `docs/qa/TEST_DRIVE.md` (from #7),
+measured, changed with an automated check (CI test, local replay metric or `OCM_PERF`) and
+re-checked on the device. A changed default needs the user's OK and an amendment to the ADR
+that owns it. Carried in from 6b: on-device check of main-monitor recenter (#4), minimised
+rate and dwell since the engine thread, `ui` time with Options open. *Gate:* every 6c row
+fixed or deferred with a reason; quality gates green; the user says the app is ready for
+Phase 7.
 
 **7 — Multiplatform / release.** Validate macOS (Apple Silicon, permissions), Windows (cursor
 injection, capture), Linux (X11/Wayland limits). Packaging, signing/notarization, licenses,

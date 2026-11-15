@@ -9,12 +9,13 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0009 | Phase 6b — test drive (ADR-0013) | ACTIVE — issue log `docs/qa/TEST_DRIVE.md` (#1–#6); part 2 plan (slices 2a–2d) in the task file; 2a done (ADR-0016, device-checked, pushed; verify CI), next 2b |
+| — | Phase 6c — tuning round (ADR-0019) | NEXT — task 0010 to be written by the session that starts it, from `docs/ROADMAP.md` §6c |
 
 ## Done
 
 | ID | Title | Status |
 |---|---|---|
+| 0009 | Phase 6b — test drive (ADR-0013) | DONE — issues #1–#6 (`docs/qa/TEST_DRIVE.md`); slices 2a–2d, ADR-0014…0018, last code `df4c670`; closed into 6c (ADR-0019) |
 | 0008 | Phase 6 — desktop app | DONE — D0–D7 + D6b, final code `7e9a2bb` CI 43746097717 green on 3 OS + cargo-deny; manual QA rows 1–18 pass 2026-11-15 (`docs/qa/MANUAL_QA.md`); ADR-0012 |
 | 0007 | Phase 5 — design system | DONE — lab v3 approved 2026-11-12 (Carbon/Paper, neon-green thin-ring marker, yellow primary buttons); `docs/design/EGUI_FEASIBILITY.md` |
 | 0006 | Phase 4 — tracking improvements | DONE — E0–E4 (`f68f042`…`0074611`), E4 CI 43131916361 green, close-out `66768c9` CI 43132339284 green on 3 OS + cargo-deny; ADR-0010, -0011, `docs/research/TRACKING_IMPROVEMENTS.md` |
