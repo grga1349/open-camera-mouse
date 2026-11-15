@@ -103,6 +103,8 @@ image too.
   **Resolved in task 0008 D0:** `app_core::PointerOwner` sub-state (`Camera`, `Handover`,
   `Mouse`, `PermissionNeeded`, `Unsupported`) plus a top-level `AppState::Error`. See BEHAVIOR_SPEC R-A1.
 - The global F11/F12 hotkey adapter and its crate (ADR).
-- Font: egui default vs an embedded OFL font.
+- Font: egui default vs an embedded OFL font. **Finding (task 0008 D6):** egui 0.37's default
+  proportional font (Ubuntu-Light) has no `→` (U+2192); the UI wording uses `>` until a font
+  with arrows is embedded.
 - ~~Preview: grayscale (luma) vs colour.~~ **Decided: colour** (see token section).
 - Wording is draft-quality. Review it with real users in Phase 8.

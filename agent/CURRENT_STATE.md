@@ -1,18 +1,19 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D5 done)
+Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6 done)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`, pushed. Latest code commit `9f04007` (Phase 6 D5), CI run 43725986748
-green on macOS, Windows, Linux + cargo-deny.
+Branch: `rewrite/rust`. Last pushed code commit `9f04007` (Phase 6 D5), CI run 43725986748
+green. **D6 is uncommitted in the working tree** (gates green locally) unless a later commit
+says otherwise: check `git log`.
 
 ## Milestone
 
 Phases 0–5 DONE. Phase 6 (desktop app) is ACTIVE: `tasks/active/0008-phase-6-desktop-app.md`,
 slices D0–D7. D0 (app-core controller), D1 (pointer-core behaviour), D2 (ADR-0012 + settings
-persistence), D3 (camera adapter), D4 (pointer adapter) and D5 (global hotkeys) done. D6
-(desktop UI) next.
+persistence), D3 (camera adapter), D4 (pointer adapter), D5 (global hotkeys) and D6 (desktop
+UI, headless-tested) done. D7 (runtime integration and QA) next.
 
 ## What exists now
 
@@ -49,8 +50,12 @@ persistence), D3 (camera adapter), D4 (pointer adapter) and D5 (global hotkeys) 
   on Windows/Linux; F12 recenter. Per-key `Registration` shown in the window; in-window keys
   always work; `KeyRouter` dedups global + window presses (300 ms). Wayland / no `DISPLAY` →
   `Unsupported`. `GlobalHotkeys::register` must run in the eframe creator closure (main thread).
-- `apps/desktop` is still the Phase 2 skeleton (now loads settings, shows the load notice and the D5 hotkey lines) (one window, status label, start/stop button),
-  adapted to the new controller API.
+- Desktop UI (D6): `apps/desktop` = `app` (Shell: controller + clock, debounced save-on-change),
+  `status` (pure View → status line / card), `preview` (one drawing rect for paint + click,
+  markers, overlays), `options`, `widgets`, `icons` (painted), `theme` (Carbon/Paper; the only
+  hue helpers are `theme::marker_green()` and `theme::primary()`). Two fixed windows, Options via
+  `show_viewport_immediate`. 33 kittest tests drive every control by label. The runtime is
+  missing: controller `Effect`s are dropped, so a manual run stops at "Starting camera…".
 
 ## Toolchain
 
@@ -58,11 +63,13 @@ persistence), D3 (camera adapter), D4 (pointer adapter) and D5 (global hotkeys) 
 
 ## Immediate next action
 
-Task 0008 slice D6: desktop UI per the approved design lab
-(`docs/design/design-lab.html` v3, `docs/design/EGUI_FEASIBILITY.md`): Tracking 560×620 and
-Options 400×620 fixed windows, Carbon/Paper themes, colour preview texture, click-to-select via
-the drawing rect, markers, recenter circle + badge, status line, Options tabs, save on change.
-Keep the D5 hotkey status lines (key names from `Hotkey::key_name()`).
+Task 0008 slice D7: runtime integration and QA (task file §Objective D7). Camera thread →
+`Input::Frame` → controller → execute `Effect`s (`OpenCamera`/`CloseCamera` on `NokhwaCamera`,
+`MovePointer`/`Click` on `SystemPointer`), observe `position()` before each step, poll
+`access()` every few s, `desktop()` about once a second, `request_repaint` on a new frame.
+Hook point: `Shell::input` in `apps/desktop/src/app.rs` (it drops the `Step` today). Then the
+fake-camera/fake-pointer end-to-end test, frame recorder, `docs/qa/MANUAL_QA.md`, `.app` bundle
+for permission QA. First ask the user for the D6 visual review (see HANDOFF).
 
 ## Open risks
 
@@ -76,3 +83,5 @@ Keep the D5 hotkey status lines (key names from `Hotkey::key_name()`).
 - `CGPreflightPostEventAccess` ≈10 ms: never call per frame (D7 runtime polls it every few s).
 - The desktop is the displays' bounding box: with uneven monitors the cursor sticks to display
   edges where the box has dead zones (snap). Fine for v1; revisit if users find it odd.
+- D6 UI: only the Tracking window (Stopped) was screenshot-reviewed. Searching animation ignores
+  reduced motion. Default font lacks `→` (wording uses `>`); font decision still open.

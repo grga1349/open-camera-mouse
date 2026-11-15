@@ -2774,6 +2774,7 @@ dependencies = [
  "eframe",
  "egui_kittest",
  "platform",
+ "tempfile",
 ]
 
 [[package]]

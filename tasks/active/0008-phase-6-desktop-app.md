@@ -1,6 +1,6 @@
 # 0008 — Phase 6: desktop app
 
-Status: ACTIVE (2026-11-12; D0–D5 done 2026-11-15)
+Status: ACTIVE (2026-11-12; D0–D6 done 2026-11-15)
 Owner/branch: `rewrite/rust`
 Depends on: 0006, 0007 (done)
 
@@ -273,3 +273,38 @@ Plus the CI run ID for the closing commit.
   Carry to D7 manual QA: press F10/F12 with another app focused → state changes; `Fn` on Mac
   laptop keyboards; same in a `.app`.
   Committed `9f04007`; CI run 43725986748 green (macOS, Windows, Linux, cargo-deny).
+- 2026-11-15: **D6 done (headless; visual check by the user still owed).** `apps/desktop` split
+  into `app` (Shell: controller + injected clock, debounced save-on-change 400 ms + save on
+  Options close and on drop, style application, texture upload per `frame_seq`), `status` (pure
+  View → icon/title/pointer/body/hint/buttons/card/camera mode, lab wording), `preview`
+  (`fit_rect`/`to_frame`/`to_screen` = one drawing rect for paint and click, R-C2; markers:
+  ring, dashed held, growing searching, grey lost + X; white dashed pick/recenter ring;
+  "Recentering in N" badge; live/paused/no-signal badge; cards and spinner overlays;
+  diagnostics), `options` (four tabs, Restore defaults, Close), `widgets` (switch, tabs with
+  arrow keys, segmented, slider row), `icons` (painted), `theme` (Carbon/Paper tokens → egui
+  `Visuals`/`Style`; `marker_green()` and `primary()` are the only hue helpers). Options =
+  `show_viewport_immediate`, both windows fixed (560×620, 400×620, not resizable).
+  `app-core` re-exports `TrackStatus`/`HoldReason`/`LossReason`/`Diagnostics`.
+  Tests: 53 desktop (12 status unit, 4 preview geometry, 3 theme, 1 options, 33 kittest:
+  status text for all 11 states + Handover/PermissionNeeded/Unsupported/Searching, every
+  Tracking and Options control by label, Tab reachability for both windows, letterboxed click
+  → frame point, recenter/handover countdown from the manual clock, save debounce + save on
+  close to a temp file, both windows fit at 1/1.3 of the points with larger controls).
+  Found and fixed: egui's default font has no `→` (would render a placeholder box; wording
+  uses `>` now), switch labels doubled in AccessKit (now `labelled_by`), tabs overflowed at
+  130 % + larger controls (now equal-width), status header overflowed (now wraps).
+  **Choices made here (tell the user / revisit):** Text size and Larger controls live in
+  Options → General (the lab had them only as lab toggles); Restore defaults keeps the camera
+  and appearance; Stopped shows a welcome-style card (no first-run flag exists); a thin green
+  dwell-progress arc outside the ring (not in the lab); buttons show the key as text
+  ("Pause  F10"), no icons inside buttons; the camera-permission card has only "Try again"
+  (no platform deep link for camera settings yet); the recenter badge is painted, the status
+  title carries the countdown for screen readers; the searching animation ignores reduced
+  motion (egui has no flag; platform read still owed).
+  Not done here (D7): the runtime. Controller `Effect`s are still dropped, so Start stays at
+  "Starting camera…" when run. "Check again" does a one-off `SystemPointer::access()`.
+  Screenshot of the Tracking window (Stopped card) after the user granted Screen Recording:
+  found and fixed the overlay moving the layout cursor (status line was drawn inside the
+  preview; overlays now use a detached child `Ui`), panel margins set to the 16 px token.
+  Options window and Paper theme not yet seen on screen: user review owed.
+
