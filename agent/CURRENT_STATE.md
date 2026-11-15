@@ -4,9 +4,8 @@ Last updated: 2026-11-15 (Phase 6 ACTIVE, D0–D6 done)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last pushed code commit `9f04007` (Phase 6 D5), CI run 43725986748
-green. **D6 is uncommitted in the working tree** (gates green locally) unless a later commit
-says otherwise: check `git log`.
+Branch: `rewrite/rust`, pushed. Latest code commit `b5336d3` (Phase 6 D6), CI run 43728203292
+green on macOS, Windows, Linux + cargo-deny.
 
 ## Milestone
 

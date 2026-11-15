@@ -307,4 +307,4 @@ Plus the CI run ID for the closing commit.
   found and fixed the overlay moving the layout cursor (status line was drawn inside the
   preview; overlays now use a detached child `Ui`), panel margins set to the 16 px token.
   Options window and Paper theme not yet seen on screen: user review owed.
-
+  Committed `b5336d3`; CI run 43728203292 green (macOS, Windows, Linux, cargo-deny).

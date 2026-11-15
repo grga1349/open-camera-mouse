@@ -6,8 +6,8 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 ## As of 2026-11-15 (Phase 6 ACTIVE, D0–D6 done)
 
 **Branch:** `rewrite/rust`. Phases 0–5 DONE. Task `tasks/active/0008-phase-6-desktop-app.md`,
-slices D0–D7. **D6 done, uncommitted** at the time of writing (check `git log`; the user is
-asked whether to commit). Gates green locally: fmt, clippy `-D warnings`, `cargo test
+slices D0–D7. **D6 done**: committed `b5336d3`, pushed, CI run 43728203292 green (macOS,
+Windows, Linux + cargo-deny). Gates green locally: fmt, clippy `-D warnings`, `cargo test
 --workspace` (desktop 53 tests), `check-core-deps.sh`. Work rhythm (user): **one slice per
 session**, then hand off.
 
