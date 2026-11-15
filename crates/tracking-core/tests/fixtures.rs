@@ -139,6 +139,8 @@ fn recommended_params_are_the_measured_candidate_as_amended() {
     // gate decides losses.
     want.min_eigen = 0.25;
     want.min_eigen_ratio = Some(0.05);
+    // ADR-0018 (slice 2d): anchored update of the appearance gate.
+    want.anchored = Some(tracking_core::lk::AnchoredUpdate::default());
     assert_eq!(tracking_core::lk::LkParams::recommended(), want);
 }
 
@@ -159,19 +161,24 @@ fn recommended_tracker_never_tracks_flat_occluded_or_wrong_targets() {
         "repeated_texture",
     ] {
         let seq = scene(name).render(320, 240);
-        let steps = run(
-            &mut LkTracker::new(tracking_core::lk::LkParams::recommended()),
-            &seq,
-        );
-        let m = metrics(&seq, &steps);
-        assert_eq!(m.wrong_lock, 0, "{name}: {m:?}");
-        assert_eq!(m.false_tracking, 0, "{name}: {m:?}");
-        if name == "textureless" {
-            let tracking = steps[1..]
-                .iter()
-                .filter(|s| s.status == TrackStatus::Tracking)
-                .count();
-            assert_eq!(tracking, 0, "flat region reported as tracked");
+        // The recommended tracker (anchored update, ADR-0018) and its plain-gate baseline.
+        let recommended = tracking_core::lk::LkParams::recommended();
+        let plain_gate = tracking_core::lk::LkParams {
+            anchored: None,
+            ..recommended
+        };
+        for params in [recommended, plain_gate] {
+            let steps = run(&mut LkTracker::new(params), &seq);
+            let m = metrics(&seq, &steps);
+            assert_eq!(m.wrong_lock, 0, "{name} {params:?}: {m:?}");
+            assert_eq!(m.false_tracking, 0, "{name} {params:?}: {m:?}");
+            if name == "textureless" {
+                let tracking = steps[1..]
+                    .iter()
+                    .filter(|s| s.status == TrackStatus::Tracking)
+                    .count();
+                assert_eq!(tracking, 0, "flat region reported as tracked");
+            }
         }
     }
 }

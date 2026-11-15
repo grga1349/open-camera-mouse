@@ -103,3 +103,10 @@ Evidence: `crates/app-core/tests/replay.rs` on a local `OCM_RECORD` session (not
 targets such as gratings). A faint nose texture under sensor noise sat around the old floor and
 flapped Lost ↔ Tracking every few frames. The pin test and
 `recommended_tracker_never_tracks_flat_occluded_or_wrong_targets` cover the change.
+
+## Amendment 2026-11-16 (test drive #2, slice 2d, ADR-0018)
+
+`recommended()` adds `anchored: Some(AnchoredUpdate::default())`. The E2 gate compares with
+the window accepted 10 steps earlier (≥ 0.7) and with the selection (≥ 0.3) instead of only
+the selection (≥ 0.7). Head turns no longer trip it, and occluders still do. `turn_extreme` is
+now 90/90 (was 31/90).

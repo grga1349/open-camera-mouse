@@ -1,11 +1,11 @@
 # Current state
 
-Last updated: 2026-11-15 (Phase 6b, task 0009; slice 2b done and pushed (54386f4); next session = slice 2d)
+Last updated: 2026-11-16 (Phase 6b, task 0009; slice 2d done, device-checked, committed)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last commits = slice 2b `54386f4` (ADR-0017) + handoff, pushed
-2026-11-15; CI for 2a (`f458e92`) green, 2b's run was in progress at handoff — verify.
+Branch: `rewrite/rust`. Last pushed: slice 2b `54386f4` (ADR-0017) + handoff `d0dc472`, CI
+green. Slice 2d (ADR-0018) on top — see `git log` / `git status` for whether it is committed.
 
 ## Milestone
 
@@ -67,6 +67,9 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
   `dyn EngineHandle`: sends `EngineCmd`, paints `Arc<Snapshot>` (view, displays, preview
   `Arc<ColorImage>`), keeps its own validated settings and saves them. UI tests use
   `InlineEngine`. `recorder.rs` (`OCM_RECORD=<dir>`) runs on the engine thread.
+- Appearance gate anchored update (ADR-0018, slice 2d): `LkParams::anchored`, on in
+  `recommended()`: gate vs the window accepted 10 steps earlier (≥ 0.7) + selection floor 0.3.
+  `turn_extreme` 90/90; slow-occluder scenes `occluder_slide`/`occluder_creep` pinned.
 - Dev profile: deps opt 2, `app-core`/`pointer-core`/`platform` opt 3, `tracking-core` 3
   (root `Cargo.toml`). Benches: `app-core --bench frame`, `platform --bench decode`.
 
@@ -76,12 +79,17 @@ NEXT: the user uses the app and we fix what comes up, before Phase 7. No task fi
 
 ## Immediate next action
 
-Slice 2b done (ADR-0017), committed `54386f4` and pushed; verify CI first. Next session:
-slice 2d (#2 losses on head turns, synthetic gap `appearance.rs` `turn_extreme`). Brief and
-local diagnosis tools are in `agent/HANDOFF.md`. Recordings are diagnosis-only (no repo
-code/numbers). Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the threshold re-measurement in Phase 8.
+Slice 2d done and device-checked (user: "turns hold much better now"). Next: user test drive
+(head turns left/right/up/down; does the point hold, any wrong lock when a hand passes over
+the face?). Then optional 2e (research report) or straight to the user's test drive → Phase 7
+when they say ready. Carry-overs unchanged: MANUAL_QA rows 19–20 in Phase 7; row 21 and the
+threshold re-measurement in Phase 8.
 
 ## Open risks
+
+- ADR-0018 limit: a change slower than the gate allows in 10 frames is followed down to the
+  selection floor (0.3); a surface correlating ≥ 0.3 with the selection could be followed
+  indefinitely (very slow hand creep). Re-measure on Phase 8 recordings.
 
 - Synthetic-only tracker evidence; re-measure all thresholds on `OCM_RECORD` recordings (Phase 8).
 - Re-acquisition → control handover: implemented in D0 (R-P4 bound 0.05 × shorter desktop side, provisional).

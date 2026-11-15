@@ -2,7 +2,9 @@
 //! scale + roll, and a combined head-turn stand-in, with exact ground truth. Pins what the
 //! recommended tracker (ADR-0011) does on them today, so tracker work in slice 2d has a
 //! regression gate: a change may move a number in the good direction (then update the pin
-//! and say so in the commit), never the other way.
+//! and say so in the commit), never the other way. Slice 2d added two slow-occluder scenes,
+//! the adversary of an adaptive appearance reference, and made the anchored update
+//! (ADR-0018) part of the recommended tracker; the plain gate keeps one baseline test.
 //!
 //! Print the current numbers:
 //! `cargo test -p tracking-core --test appearance appearance_table -- --ignored --nocapture`
@@ -12,12 +14,21 @@ mod support;
 use support::{Metrics, appearance_corpus, metrics, run, scene};
 use tracking_core::lk::{LkParams, LkTracker};
 
+fn measure_with(params: LkParams, name: &str, (w, h): (u32, u32)) -> Metrics {
+    let seq = scene(name).render(w, h);
+    metrics(&seq, &run(&mut LkTracker::new(params), &seq))
+}
+
 fn measure(name: &str) -> Metrics {
-    let seq = scene(name).render(640, 480);
-    metrics(
-        &seq,
-        &run(&mut LkTracker::new(LkParams::recommended()), &seq),
-    )
+    measure_with(LkParams::recommended(), name, (640, 480))
+}
+
+/// The recommended tracker without the slice 2d anchored update (ADR-0018).
+fn plain_gate() -> LkParams {
+    LkParams {
+        anchored: None,
+        ..LkParams::recommended()
+    }
 }
 
 #[test]
@@ -65,17 +76,20 @@ fn illumination_gradient_scales_values_across_the_target() {
     }
 }
 
-/// Today's numbers (measured 2026-11-15, recommended tracker, 640×480): minimum share of
+/// Today's numbers (measured 2026-11-16, recommended tracker, 640×480): minimum share of
 /// visible frames tracked within 2 % of the width, and EPE p95 (px) + 10 %.
-/// `turn_extreme` is a known gap (the tracker holds/loses at the peak of the change, without
-/// a wrong lock): slice 2d's job is to raise its share, not to accept a lower one.
-const PINS: [(&str, f64, f64); 6] = [
+/// `turn_extreme` was the slice 2d gap (31/90 with the plain gate); the anchored update
+/// (ADR-0018) tracks it through the peak, where the turn's own error is largest (p95 4.15).
+/// The two occluder scenes lose the point while it is covered, by design.
+const PINS: [(&str, f64, f64); 8] = [
     ("illum_gradient", 1.0, 0.30),
     ("nonrigid_warp", 1.0, 0.10),
     ("scale_rotate", 1.0, 1.17),
     ("turn_moderate", 1.0, 1.03),
     ("turn_strong", 1.0, 2.37),
-    ("turn_extreme", 31.0 / 90.0, 2.28),
+    ("turn_extreme", 1.0, 4.57),
+    ("occluder_slide", 0.87, 1.17),
+    ("occluder_creep", 0.89, 0.52),
 ];
 
 #[test]
@@ -93,6 +107,16 @@ fn recommended_tracker_holds_its_appearance_change_numbers() {
             "{name}: ends lost/off {m:?}"
         );
     }
+}
+
+/// The plain gate (ADR-0011, before ADR-0018) as measured on 2026-11-15: it loses the
+/// extreme turn at its peak (31/90). Kept so the anchored update's gain stays visible and
+/// the baseline can't silently change.
+#[test]
+fn plain_gate_baseline_loses_the_extreme_turn() {
+    let m = measure_with(plain_gate(), "turn_extreme", (640, 480));
+    assert_eq!(m.wrong_lock, 0, "{m:?}");
+    assert!((m.tracked_ok - 31.0 / 90.0).abs() < 1e-9, "{m:?}");
 }
 
 #[test]

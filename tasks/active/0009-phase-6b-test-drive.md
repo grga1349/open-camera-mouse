@@ -97,6 +97,18 @@ scripts/check-core-deps.sh
   restated because steady-zone trailing (≤ 5 px) and the 1€ settle (≈ 0.5 s) are by design.
   All gates green locally. This merges plan items 2c.1–2c.3 into 2b. Next: on-device check,
   then 2d (turn losses).
+- 2026-11-16 slice 2d DONE (ADR-0018; device-checked 2026-11-16, user: "turns hold much better now"). Measured first: with the
+  gate off, plain LK follows `turn_extreme` (EPE ≤ 4.2 px) — the gate caused the losses; turn
+  = selection ZNCC −0.01…0.03/frame, occluder −0.08…0.15/frame. Cheap candidate (anchored
+  update) met the stop condition, so the feature cloud (2d.2) was not built. `LkParams::anchored`
+  (`AnchoredUpdate { lag_frames: 10, min_selection_zncc: 0.3 }`), on in `recommended()` (user:
+  default on). New scenes `occluder_slide`, `occluder_creep` (adversary). Lag sweep 5/10/15 ×
+  floor 0.3/0.4/0.5 on both corpora at 320 and 640: lag 5 lets the creep through, 15 costs
+  `rotate_15` at 320. Local replay (not in repo): S2 losses 5 → 2, S1 unchanged, drift 0 %.
+  Pins: `turn_extreme` 90/90 (p95 4.57). Tests: `lk.rs` anchored ×3,
+  `appearance.rs` pins + `plain_gate_baseline_loses_the_extreme_turn`, fixtures adversarial
+  list for both gates. tracking-core / app-core / desktop tests green; clippy tracking-core clean.
+  Next: device check of 2d (head turns), then optional 2e / user test drive → Phase 7.
 
 ## Part 2 plan (slices 2a–2d, one per session)
 

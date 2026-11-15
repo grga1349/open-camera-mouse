@@ -785,6 +785,31 @@ pub fn appearance_corpus() -> Vec<Scene> {
             90,
             |t| turn(t, 3.0),
         ),
+        // Slice 2d adversary: an adaptive appearance reference must not absorb an occluder
+        // that slides in slowly (a hand), so its edge sweeps over the selected point at
+        // ≤ 4.2 ref px/frame, covers it, and goes back.
+        base(
+            "occluder_slide",
+            "occluder edge slides slowly over the selected point and back (≤ 4.2 ref px/frame)",
+            90,
+            |t| {
+                let mut p = Pose::at((C0.0 + 0.3 * t as f64, C0.1));
+                let x1 = p.center.0 - 50.0 + 120.0 * there_and_back(t, 90);
+                p.occluder = Some((x1 - 200.0, p.center.1 - 70.0, x1, p.center.1 + 70.0));
+                p
+            },
+        ),
+        base(
+            "occluder_creep",
+            "as occluder_slide, 2.7× slower (≤ 1.6 ref px/frame)",
+            240,
+            |t| {
+                let mut p = Pose::at((C0.0 + 0.1 * t as f64, C0.1));
+                let x1 = p.center.0 - 50.0 + 120.0 * there_and_back(t, 240);
+                p.occluder = Some((x1 - 200.0, p.center.1 - 70.0, x1, p.center.1 + 70.0));
+                p
+            },
+        ),
     ]
 }
 

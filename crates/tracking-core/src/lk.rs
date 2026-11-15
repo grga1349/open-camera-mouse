@@ -51,6 +51,9 @@ pub struct LkParams {
     /// this. ZNCC is gain/bias invariant, so lighting changes pass; a different surface
     /// (occluder, background) does not. `None` = off = B-LK18.
     pub min_ref_zncc: Option<f32>,
+    /// Anchored reference update (task 0009 slice 2d), with `min_ref_zncc` set: see
+    /// [`AnchoredUpdate`]. `None` = gate against the selection only (ADR-0011).
+    pub anchored: Option<AnchoredUpdate>,
     /// Gain/bias compensation (Phase 4 E3): at each pyramid level, the current window `J` at
     /// the level's initial guess fixes a map `α·J + β` whose mean and standard deviation
     /// match the reference window `I` (`α = σ_I/σ_J`, `β = μ_I − α·μ_J`). The residual is
@@ -69,7 +72,7 @@ pub struct LkParams {
 
 impl LkParams {
     /// The recommended product tracker (ADR-0011): the 2018 preset plus the E2 appearance gate
-    /// (ZNCC ≥ 0.7), E3 gain/bias compensation and E4 re-detection (τ 0.9, δ 0.1, K 16,
+    /// (ZNCC ≥ 0.7, anchored update per ADR-0018), E3 gain/bias compensation and E4 re-detection (τ 0.9, δ 0.1, K 16,
     /// level 2, spatial prior 0.25 · width). E1 stays off. `Default` stays B-LK18, the
     /// measurement baseline.
     pub fn recommended() -> Self {
@@ -82,6 +85,10 @@ impl LkParams {
             min_eigen: 0.25,
             min_eigen_ratio: Some(0.05),
             min_ref_zncc: Some(0.7),
+            // Test drive #2, slice 2d (ADR-0018): every remaining loss on a head turn was the
+            // gate seeing the patch drift away from the selection (ZNCC 0.85 → < 0.70) while
+            // LK itself stayed on target. The anchored update lets slow changes through.
+            anchored: Some(AnchoredUpdate::default()),
             gain_bias: true,
             redetect: Some(RedetectParams {
                 max_radius_frac: Some(0.25),
@@ -114,8 +121,39 @@ impl Default for LkParams {
             edge_margin_frac: 10.0 / 640.0,
             fb_max_error: None,
             min_ref_zncc: None,
+            anchored: None,
             gain_bias: false,
             redetect: None,
+        }
+    }
+}
+
+/// Anchored reference update for the appearance gate (task 0009 slice 2d).
+///
+/// The gate compares the new window with the window accepted `lag_frames` steps earlier
+/// (against `min_ref_zncc`) and with the selection window (against `min_selection_zncc`).
+/// A change that is faster than the gate allows within `lag_frames` (an occluder, a jump to
+/// background) is rejected as with the plain gate; a slow one (a head turn) passes. The
+/// selection window is never replaced (Matthews 2004), and its floor stops a slow slide
+/// onto a different surface.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AnchoredUpdate {
+    /// Age in accepted steps of the window the gate compares with (0 is treated as 1).
+    pub lag_frames: usize,
+    /// ZNCC floor against the selection window.
+    pub min_selection_zncc: f32,
+}
+
+impl Default for AnchoredUpdate {
+    /// Slice 2d measurement (task 0009, ADR-0018): lag 10 (≈ 1/3 s at 30 fps) is the
+    /// shortest that keeps a slowly sliding occluder (`occluder_creep`, ≤ 1.6 px/frame at
+    /// 640) out without false tracking; lag 15 starts to cost in-plane roll at 320. A real
+    /// head turn went down to ZNCC ≈ 0.38 against the selection, so the floor sits at 0.3:
+    /// the lag check does the occluder work, the floor is the backstop.
+    fn default() -> Self {
+        Self {
+            lag_frames: 10,
+            min_selection_zncc: 0.3,
         }
     }
 }
@@ -397,6 +435,12 @@ pub struct LkTracker {
     size: (u32, u32),
     /// Zero-mean, unit-norm level-0 window from the selection frame (only with `min_ref_zncc`).
     reference: Vec<f32>,
+    /// The last `lag_frames` accepted windows, same normalisation, as a ring (only with
+    /// `anchored`). `recent[recent_head]` is the oldest: the one the gate compares with.
+    recent: Vec<Vec<f32>>,
+    recent_head: usize,
+    /// Scratch for the next accepted window (no per-frame allocation).
+    scratch_window: Vec<f32>,
     /// Selection templates for re-detection (only with `redetect`, and only when the
     /// selection passed its self-test).
     searcher: Searcher,
@@ -507,15 +551,52 @@ impl LkTracker {
         if self.reference.is_empty() {
             return false;
         }
-        let z = zncc_against(
+        let img = &self.prev.level(0).img;
+        let hw = self.params.half_window;
+        // `score` always reports the match with the selection.
+        let z = zncc_against(img, b, hw, &self.reference);
+        diagnostics.score = Some(z);
+        match self.params.anchored {
+            Some(a) if !self.recent.is_empty() => {
+                let zr = zncc_against(img, b, hw, &self.recent[self.recent_head]);
+                // NaN also rejects.
+                !(zr >= min && z >= a.min_selection_zncc)
+            }
+            // NaN also rejects.
+            _ => z.is_nan() || z < min,
+        }
+    }
+
+    /// Anchored update: after an accepted step, the window at `b` replaces the oldest recent
+    /// window. A flat window is not recorded.
+    fn accept_appearance(&mut self, b: Point2) {
+        if self.recent.is_empty() {
+            return;
+        }
+        if !normalized_window(
             &self.prev.level(0).img,
             b,
             self.params.half_window,
-            &self.reference,
-        );
-        diagnostics.score = Some(z);
-        // NaN also rejects.
-        z.is_nan() || z < min
+            &mut self.scratch_window,
+        ) {
+            return;
+        }
+        std::mem::swap(&mut self.recent[self.recent_head], &mut self.scratch_window);
+        self.recent_head = (self.recent_head + 1) % self.recent.len();
+    }
+
+    /// Restarts the recent windows from the selection's (select, re-detection resume).
+    fn reset_recent(&mut self) {
+        self.recent_head = 0;
+        match self.params.anchored {
+            Some(a) if !self.reference.is_empty() => {
+                self.recent.resize_with(a.lag_frames.max(1), Vec::new);
+                for w in &mut self.recent {
+                    w.clone_from(&self.reference);
+                }
+            }
+            _ => self.recent.clear(),
+        }
     }
 
     /// 2018 loss policy for a step without a usable estimate: near an edge and moving out →
@@ -615,6 +696,7 @@ impl LkTracker {
             SearchResult::Found { position, score } => {
                 self.searching = false;
                 self.point = Some(position);
+                self.reset_recent();
                 TrackOutput {
                     position,
                     status: TrackStatus::Tracking,
@@ -682,6 +764,7 @@ impl Tracker for LkTracker {
         {
             self.reference.clear();
         }
+        self.reset_recent();
         Ok(())
     }
 
@@ -729,6 +812,7 @@ impl Tracker for LkTracker {
                     self.reject(a, b, w, h, LossReason::AppearanceChanged, diagnostics)
                 } else {
                     self.point = Some(b);
+                    self.accept_appearance(b);
                     TrackOutput {
                         position: b,
                         status: TrackStatus::Tracking,
@@ -870,19 +954,7 @@ mod tests {
     #[test]
     fn forward_backward_rejects_a_texture_swap() {
         // The window's content is replaced by an unrelated texture (a full occlusion onset).
-        let other = {
-            let (w, h) = (320u32, 240u32);
-            let mut data = Vec::with_capacity((w * h) as usize);
-            for y in 0..h {
-                for x in 0..w {
-                    let (x, y) = (x as f32, y as f32);
-                    let v = 128.0 + 60.0 * (x * 0.13 + 1.0).cos() * (y * 0.29 + 2.0).sin()
-                        - 35.0 * ((x - 3.0 * y) * 0.05).sin();
-                    data.push(v.round().clamp(0.0, 255.0) as u8);
-                }
-            }
-            GrayFrame::from_vec(w, h, data).unwrap()
-        };
+        let other = other_texture(320, 240);
         let params = LkParams {
             fb_max_error: Some(0.5),
             max_motion_frac: 1.0, // guard off: isolate the FB check
@@ -905,6 +977,136 @@ mod tests {
         assert_eq!(
             t.step(&other).unwrap().status,
             TrackStatus::Lost(LossReason::NoSelection)
+        );
+    }
+
+    /// An unrelated texture (a different surface for the same window).
+    fn other_texture(w: u32, h: u32) -> GrayFrame {
+        let mut data = Vec::with_capacity((w * h) as usize);
+        for y in 0..h {
+            for x in 0..w {
+                let (x, y) = (x as f32, y as f32);
+                let v = 128.0 + 60.0 * (x * 0.13 + 1.0).cos() * (y * 0.29 + 2.0).sin()
+                    - 35.0 * ((x - 3.0 * y) * 0.05).sin();
+                data.push(v.round().clamp(0.0, 255.0) as u8);
+            }
+        }
+        GrayFrame::from_vec(w, h, data).unwrap()
+    }
+
+    /// Smooth value noise (hashed lattice, 3 px cells, bilinear): a surface unrelated to
+    /// [`pattern`], unlike [`other_texture`], whose sinusoids partly correlate with it.
+    fn blob_texture(w: u32, h: u32) -> GrayFrame {
+        let hash = |i: i64, j: i64| {
+            let mut z = (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                ^ (j as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
+            z ^= z >> 29;
+            z = z.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z ^= z >> 32;
+            (z % 1000) as f32 / 1000.0
+        };
+        noise_frame(w, h, |x, y| {
+            let (u, v) = (x / 3.0, y / 3.0);
+            let (i, j) = (u.floor(), v.floor());
+            let (fx, fy) = (u - i, v - j);
+            let (i, j) = (i as i64, j as i64);
+            let top = hash(i, j) * (1.0 - fx) + hash(i + 1, j) * fx;
+            let bot = hash(i, j + 1) * (1.0 - fx) + hash(i + 1, j + 1) * fx;
+            40.0 + 170.0 * (top * (1.0 - fy) + bot * fy)
+        })
+    }
+
+    /// `(1 − k)·a + k·b`, pixel-wise.
+    fn dissolve(a: &GrayFrame, b: &GrayFrame, k: f32) -> GrayFrame {
+        let data = a
+            .as_bytes()
+            .iter()
+            .zip(b.as_bytes())
+            .map(|(&x, &y)| ((1.0 - k) * f32::from(x) + k * f32::from(y)).round() as u8)
+            .collect();
+        GrayFrame::from_vec(a.width(), a.height(), data).unwrap()
+    }
+
+    fn anchored() -> LkParams {
+        LkParams {
+            min_ref_zncc: Some(0.7),
+            anchored: Some(AnchoredUpdate::default()),
+            ..LkParams::default()
+        }
+    }
+
+    #[test]
+    fn anchored_update_off_in_b_lk18_and_rejects_a_sudden_swap() {
+        assert_eq!(LkParams::default().anchored, None);
+        assert_eq!(
+            LkParams::recommended().anchored,
+            Some(AnchoredUpdate::default())
+        );
+        let a = frame(320, 240, Point2::default());
+        let mut t = LkTracker::new(LkParams {
+            max_motion_frac: 1.0, // guard off: isolate the gate
+            ..anchored()
+        });
+        let p = Point2::new(160.0, 120.0);
+        t.select(&a, p).unwrap();
+        // Accepted steps fill the lag ring with the same surface.
+        for _ in 0..12 {
+            assert_eq!(t.step(&a).unwrap().status, TrackStatus::Tracking);
+        }
+        let out = t.step(&blob_texture(320, 240)).unwrap();
+        assert_eq!(
+            out.status,
+            TrackStatus::Lost(LossReason::AppearanceChanged),
+            "{out:?}"
+        );
+    }
+
+    /// A slow change of the surface under the point (a head turn as the 2D window sees it):
+    /// the plain gate loses it once the selection match falls under 0.7; the anchored gate
+    /// follows it until the selection floor.
+    #[test]
+    fn anchored_update_follows_a_slow_change_until_the_selection_floor() {
+        let (a, b) = (frame(320, 240, Point2::default()), blob_texture(320, 240));
+        let p = Point2::new(160.0, 120.0);
+        let first_loss = |params: LkParams| {
+            let mut t = LkTracker::new(params);
+            t.select(&a, p).unwrap();
+            (1..=200).find_map(|i| {
+                let out = t.step(&dissolve(&a, &b, i as f32 / 200.0)).unwrap();
+                (out.status != TrackStatus::Tracking).then_some((i, out))
+            })
+        };
+        let plain = first_loss(LkParams {
+            min_ref_zncc: Some(0.7),
+            ..LkParams::default()
+        });
+        let (i_plain, out) = plain.expect("the plain gate loses the dissolve");
+        assert_eq!(out.status, TrackStatus::Lost(LossReason::AppearanceChanged));
+        let (i_anch, out) = first_loss(anchored()).expect("the floor stops the dissolve");
+        assert_eq!(out.status, TrackStatus::Lost(LossReason::AppearanceChanged));
+        let z = out.diagnostics.score.expect("gate ran");
+        assert!(z < 0.3, "lost above the floor: zncc {z} at {i_anch}");
+        assert!(i_anch > i_plain + 20, "{i_anch} vs plain {i_plain}");
+    }
+
+    #[test]
+    fn anchored_update_restarts_from_the_selection_on_select() {
+        let (a, b) = (frame(320, 240, Point2::default()), blob_texture(320, 240));
+        let p = Point2::new(160.0, 120.0);
+        let mut t = LkTracker::new(LkParams {
+            max_motion_frac: 1.0,
+            ..anchored()
+        });
+        t.select(&a, p).unwrap();
+        for _ in 0..12 {
+            t.step(&a).unwrap();
+        }
+        // Re-selected on the other surface: the ring holds `b`, not the old `a` windows.
+        t.select(&b, p).unwrap();
+        assert_eq!(t.step(&b).unwrap().status, TrackStatus::Tracking);
+        assert_eq!(
+            t.step(&a).unwrap().status,
+            TrackStatus::Lost(LossReason::AppearanceChanged)
         );
     }
 
