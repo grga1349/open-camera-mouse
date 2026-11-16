@@ -1,19 +1,21 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3 queue done: #13 zone 0.2 + drift cap + default gain 20, #12 closed (no jumps), #14 Main monitor = OS primary; next = #14 device check, then step 3 sweep / step 4 calibration — see task 0011)
+Last updated: 2026-11-16 (Phase 6d DONE — user: ready for Phase 7; next = start Phase 7, multiplatform / release)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last code: `304de65` (#13 zone 0.2 + drift cap); CI green. CI on `944cbf1` failed once in macOS `test (no webcam)` (flake,
-TEST_DRIVE #7, test name unknown).
+Branch: `rewrite/rust`. Last code: `687a9fc` (default gain 20, Main monitor = OS primary). CI run
+43797400148 on it was in progress at close — confirm it is green (Linux RandR change is
+unchecked locally). Flaky CI (#7, deferred to Phase 7): macOS `test (no webcam)` exit 101
+(run 43773727473), Windows exit 1 (run 43779616732).
 
 ## Milestone
 
-Phases 0–6, 6b and 6c DONE. 6c (task 0010, ADR-0019): #8 real gain 1–60, #9 Options Screen tab
-(limits + Main monitor), #10 Text size removed, #11 steady zone automatic (0.5 camera px of head
-movement, converted through gain and Main monitor; no longer an option). Defaults now gain
-20/20 (6d #13; was 22), smoothing 0.20 (ADR-0017 amendments). **Phase 6d — calibrated pointer behaviour
-(ADR-0020) is ACTIVE**, task 0011 (parts 1–2 done; part 3 in progress).
+Phases 0–6, 6b, 6c and **6d DONE** (6d task 0011 closed 2026-11-16, user: ready for Phase 7;
+steps 3–4 of 6d dropped as obsolete). **Phase 7 — multiplatform / release is NEXT**; its task
+file is not written yet (the starting coordinator writes it from `docs/ROADMAP.md`).
+Pointer defaults now: gain 20/20, smoothing 0.20, steady zone automatic 0.2 cam px with the
+drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## What exists now
 
@@ -82,16 +84,15 @@ movement, converted through gain and Main monitor; no longer an option). Default
 
 ## Immediate next action
 
-Phase 6d (task 0011) part 3 queue is done: #13 (zone 0.2 cam px, drift cap, default gain 20),
-#12 closed (user: no jumps any more), #14 "Main monitor" = OS primary (`MainMonitor`,
-`Desktop::primary`, ADR-0014 amendment). Next: confirm CI (Linux RandR change is unchecked
-locally), device-check #14, then step 3 sweep / step 4 calibration. No new recordings (user
-decision).
+Start Phase 7 (`docs/ROADMAP.md` §7): write task 0012 from the roadmap's deliverables and gate,
+with carry-overs: MANUAL_QA rows 19–20 (`.app` permissions), TEST_DRIVE #7 CI flake, Windows/X11
+pointer + primary-monitor detection on device, camera on external webcams (P1), Wayland limits.
+Confirm CI on `687a9fc` first.
 
 ## Open risks
 
 - #12 closed (user: no jumps). Near a limit the zone holds less toward it (creep, no shake).
-- #14: Linux RandR primary and Windows origin rule are compile/CI-checked only; on device in Phase 7.
+- #14: macOS checked on device; Linux RandR primary and the Windows origin rule are compile/CI-checked only (Phase 7 on device).
 - #7: CI `test (no webcam)` flaky on macOS (exit 101) and Windows (exit 1, run 43779616732).
 
 - Synthetic pointer tests passed while the device still jittered: not calibrated (ADR-0020).

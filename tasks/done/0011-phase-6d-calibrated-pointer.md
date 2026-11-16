@@ -1,6 +1,6 @@
 # 0011 — Phase 6d: calibrated pointer behaviour
 
-Status: ACTIVE (started 2026-11-16)
+Status: DONE (started and closed 2026-11-16)
 Owner/branch: `rewrite/rust`
 Depends on: 0010 (done)
 
@@ -95,7 +95,9 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
 
 ## Sweep table
 
-(filled by step 3)
+Zone sweep: `docs/research/ZONE_VARIANTS.md` §5 (zone 0–0.5 cam px × visible shake / hold error
+/ lag on S1). Gain sweep: same doc §6. Steps 3–4 as originally planned (full grid sweep,
+calibrated synthetic signals) were dropped as obsolete by the user at close-out.
 
 ## Progress
 
@@ -137,6 +139,21 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
   at the overshoot. pointer-core 52, app-core 51 + 10, desktop 78 green; fmt, clippy
   (`-p pointer-core -p app-core -p open-camera-mouse`), core-deps clean. Replay S1 at the app
   zone: 175/299 moves, 12 reversals; S2 step max unchanged (3.73 cam px).
+
+- 2026-11-16 part 3 close: default gain 22 → 20 (#13, ADR-0017 amendment), #12 closed (user: no
+  jumps any more), #14 Main monitor = OS primary (ADR-0014 amendment, device-checked OK by the
+  user). Commit `687a9fc`.
+
+- **2026-11-16 CLOSED — user: ready for Phase 7; steps 3–4 obsolete.** Gate status:
+  - Shake at rest: **not 0 by design.** User decision: accept a little shake, closest to a real
+    mouse. S1 at zone 0.2: 0.1 visible (≥ 2 px) reversals/s. Zero shake with a small hold error is
+    infeasible even non-causally (`ZONE_VARIANTS.md` §3). CI rest tests (synthetic) at every gain
+    1–60: 0 moves.
+  - Jumps: none reported (user). S2 replay: no unexplained jumps after the edge fix.
+  - Smallest zone with its sweep table: 0.2 cam px, `ZONE_VARIANTS.md` §5.
+  - Rows: #12 closed, #13 done, #14 done. #7 (CI flake) deferred to Phase 7 (CI/release work; needs the
+    job log). Calibrated synthetic signals (step 4) dropped (user).
+  - Quality gates: local fmt/clippy/tests green; CI on `687a9fc`, see HANDOFF.
 
 ## Queued for part 3 (user, 2026-11-16)
 

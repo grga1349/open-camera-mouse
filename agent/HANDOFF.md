@@ -3,42 +3,33 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6d part 3 queue done: #13 gain 20, #12 closed, #14 primary monitor)
+## As of 2026-11-16 (Phase 6d CLOSED → Phase 7 next)
 
-**Branch:** `rewrite/rust`, pushed. CI: check the run for this commit (last known green `304de65`).
+**Branch:** `rewrite/rust`, pushed. Last code `687a9fc`; CI run 43797400148 was in progress at
+close. **First thing: confirm it's green** (the Linux RandR change in `pointer/linux.rs` can't be
+compiled on the Mac).
 
-**Done this session:**
-- **#13 default gain 22 → 20** (`replay_gain_sweep`, `ZONE_VARIANTS.md` §6; user tried 22/18/16
-  on device across two screens, 20 because most users have one monitor). ADR-0017 amendment.
-  `a_slow_move_onto_an_edge_does_not_jump` now derives its end point from the scale.
-- **#12 closed:** user reports no jumps any more.
-- **#14 Main monitor = OS primary:** `app_core::MainMonitor { Primary (default), All, Display(n) }`
-  (TOML `"primary"` / `"all"` / index; pre-#14 files → Primary). `Desktop::primary` from the
-  adapters: macOS `CGMainDisplayID`, Windows monitor at (0, 0), X11 RandR primary. Controller
-  `primary_display()` / `main_display()`, origin fallback, then centre of all. Options →
-  Screen → "Primary monitor" / "Centre of all monitors" / each monitor. ADR-0014 amendment.
-  Rest tests pin `MainMonitor::All` (largest scale = strictest).
-- Gates: app-core, platform lib, desktop tests green; fmt; clippy (app-core, platform, desktop;
-  platform also for the Windows target); core-deps OK. Linux can't be checked locally
-  (v4l2 headers) → CI.
+**Phase 6d closed (task 0011 → `tasks/done/`, ROADMAP 6d DONE):** zone 0.2 cam px + drift cap
+(#13), default gain 20 (#13), #12 closed (user: no jumps), #14 Main monitor = OS primary
+(device-checked OK by the user). User: ready for Phase 7; the planned 6d steps 3–4 (grid sweep,
+calibrated synthetic signals) are obsolete — don't resurrect them.
 
-**Next session:**
-1. If CI is red (esp. Linux `pointer/linux.rs` RandR change), fix first.
-2. **Device check #14** (2 monitors): fresh/default settings → recenter lands on the menu-bar
-   display; Options shows "Primary monitor" and "· primary" on the right monitor. The user's own
-   saved file keeps gain 22 and their old Main monitor choice.
-3. Then task 0011 **step 3 sweep / step 4 calibration** (the phase objective). One slice per session.
+**Next session: start Phase 7 — multiplatform / release** (`docs/ROADMAP.md` §7). Write the task
+file (0012) from the roadmap's deliverables and gate; don't assume a pre-written one. Carry-overs:
+MANUAL_QA rows 19–20 (`.app` permissions), TEST_DRIVE #7 CI flake (needs the job log, ask the
+user), Windows/X11 pointer + primary-monitor detection on device, external webcams (P1), Wayland
+limits (P10/P11). Phase 8 keeps: MANUAL_QA row 21 (reduced motion), `OCM_RECORD` threshold
+re-measurement, ADR-0018 slow-creep limit.
 
-**Corpus (user decision, no new recordings):** `~/ocm-recordings/S1-still-2026-11-15`,
+**Corpus (6d, kept for reference; user: no new recordings):** `~/ocm-recordings/S1-still-2026-11-15`,
 `S2-turns-2026-11-15`. Replay tool `~/ocm-recordings/_tools/replay-tool`; run with
 `OCM_REPLAY_DIRS=<S1>:<S2> cargo test --test replay <name> -- --ignored --nocapture`. Tests:
 `replay_metrics`, `replay_2018`, `replay_nakf`, `replay_zone_variants`, `replay_hold_bound`,
-`replay_zone_sweep` (+ `visible_shake`);
+`replay_zone_sweep` (+ `visible_shake`), `replay_gain_sweep`;
 harness `emulate_ours` / `emulate_chain` (swap the zone stage).
 
-**Carried in:** #7 macOS CI flake (need the test name from run 43773727473's log); #4
-main-monitor check, minimised rate, dwell on device (from 6b), `ui` 15/17 ms with Options open,
-ADR-0018 slow-creep limit.
+**Also open from 6b/6c (fold into Phase 7/8 as fits):** minimised rate and dwell on device,
+`ui` 15/17 ms with Options open.
 
 **Rules (ADR-0019/-0020):** measure first; changed defaults need the user's OK + ADR amendment;
 every fix gets a CI test / replay metric / `OCM_PERF` + device check; recordings diagnosis-only,

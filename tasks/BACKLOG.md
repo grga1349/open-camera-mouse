@@ -9,12 +9,13 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| 0011 | Phase 6d — calibrated pointer behaviour (ADR-0020) | ACTIVE — `tasks/active/0011-phase-6d-calibrated-pointer.md` |
+| — | Phase 7 — multiplatform / release | NEXT — task file not written yet; the coordinator writes it from `docs/ROADMAP.md` |
 
 ## Done
 
 | ID | Title | Status |
 |---|---|---|
+| 0011 | Phase 6d — calibrated pointer behaviour (ADR-0020) | DONE 2026-11-16 — steady zone 0.2 cam px + drift cap (#13), default gain 20, #12 closed (no jumps), #14 Main monitor = OS primary; user: ready for Phase 7; steps 3–4 dropped as obsolete; #7 → Phase 7 |
 | 0010 | Phase 6c — tuning round (ADR-0019) | DONE — #8 real gain 1–60, #9 Screen tab, #10 Text size removed + defaults gain 22 / smoothing 0.20, #11 automatic steady zone (0.5 cam px); closed into 6d (ADR-0020) |
 | 0009 | Phase 6b — test drive (ADR-0013) | DONE — issues #1–#6 (`docs/qa/TEST_DRIVE.md`); slices 2a–2d, ADR-0014…0018, last code `df4c670`; closed into 6c (ADR-0019) |
 | 0008 | Phase 6 — desktop app | DONE — D0–D7 + D6b, final code `7e9a2bb` CI 43746097717 green on 3 OS + cargo-deny; manual QA rows 1–18 pass 2026-11-15 (`docs/qa/MANUAL_QA.md`); ADR-0012 |
