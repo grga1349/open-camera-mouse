@@ -294,12 +294,13 @@ pub struct Controller {
     error: Option<String>,
 }
 
-/// Steady zone (test drive #5, #11; ADR-0017 amendment 2026-11-16): head movement smaller than
-/// this, in camera px, doesn't move the cursor. Measured on a real still recording (S1): the
-/// zone in camera px gives the same result at every gain; 0.5 cut cursor moves at rest to about
-/// a third and back-and-forth shake to 2 reversals in 14.5 s. Real heads also drift 1–2.5 px over
-/// seconds, which no small zone can hold.
-pub const STEADY_ZONE_CAM_PX: f32 = 0.5;
+/// Steady zone (test drive #5, #11, #13; ADR-0015/-0017 amendments): head movement smaller than
+/// this, in camera px, doesn't move the cursor. The zone in camera px gives the same result at
+/// every gain. A hold costs precision: the cursor sits up to the radius from where the head
+/// points (`docs/research/ZONE_VARIANTS.md`). 0.2 chosen on the device (user, Phase 6d) from
+/// the S1 sweep: 0.1 visible (≥ 2 screen px) reversals/s at rest, hold error 0.26 cam px vs
+/// 0.43 at the former 0.5, lag ≈ 30 ms lower.
+pub const STEADY_ZONE_CAM_PX: f32 = 0.2;
 
 /// Tracker parameters for the settings: the recommended tracker, with re-detection only when
 /// "Find the target again" is on (ADR-0011 amendment).
@@ -926,14 +927,18 @@ impl Controller {
     /// mapping's screen px per camera px on the faster axis, so it grows with the speed and
     /// the Main monitor's size (test drive #11).
     fn steady_radius(&self) -> f32 {
-        let Some(frame) = &self.frame else {
-            return 0.0;
-        };
-        let size = frame_size(frame);
+        self.scale()
+            .map_or(0.0, |(sx, sy)| self.steady_cam_px * sx.max(sy))
+    }
+
+    /// Screen px per camera px on each axis (gain × Main monitor / frame), if a frame is known.
+    fn scale(&self) -> Option<(f32, f32)> {
+        let size = frame_size(self.frame.as_ref()?);
         let r = self.scale_reference();
-        let sx = self.settings.gain_x * r.width / size.width;
-        let sy = self.settings.gain_y * r.height / size.height;
-        self.steady_cam_px * sx.max(sy)
+        Some((
+            self.settings.gain_x * r.width / size.width,
+            self.settings.gain_y * r.height / size.height,
+        ))
     }
 
     /// The display whose size sets the mapping scale (ADR-0017).
@@ -977,13 +982,17 @@ impl Controller {
         let limited = apply_limits(smoothed, self.desktop, limits(&self.settings));
         // 2018 keeps the clamped position as the filter state.
         self.smoother.set_current(limited.position);
-        self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us));
+        // How far the head is past each limit, in camera px: the drift stops there.
+        let (lo, hi) = bounds(self.desktop, limits(&self.settings));
+        let (sx, sy) = self.scale().unwrap_or((1.0, 1.0));
+        let past = |v: f32, lo: f32, hi: f32, s: f32| ((v - hi).max(lo - v)).max(0.0) / s;
+        let past = Point2::new(past(raw.x, lo.x, hi.x, sx), past(raw.y, lo.y, hi.y, sy));
+        self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us), past);
         let radius = self.steady_radius();
         let mut cursor = self.steady.update(limited.position, radius);
         // The edge itself must be reachable (menu bar, corners, ADR-0017), but snapping a
         // pinned axis onto it released the zone's trail in one frame (test drive #12,
         // ADR-0020): near a limit the trail shortens with the target's distance to it.
-        let (lo, hi) = bounds(self.desktop, limits(&self.settings));
         let t = limited.position;
         cursor.x = approach_edge(cursor.x, t.x, lo.x, hi.x);
         cursor.y = approach_edge(cursor.y, t.y, lo.y, hi.y);

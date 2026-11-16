@@ -266,7 +266,7 @@ fn end_to_end_select_track_lose_pause_recenter_resume() {
     assert!(close(r.cursor(), DESKTOP.center(), 2.0), "{:?}", r.cursor());
     assert_eq!(r.cam.0.borrow().opens, vec![None]);
 
-    // The steady zone (0.5 camera px, #11) may hold the first small step; the cursor never
+    // The steady zone (`STEADY_ZONE_CAM_PX`, #11) may hold the first small step; the cursor never
     // moves left and ends up right of where it started.
     let start = r.cursor();
     let mut last = start;

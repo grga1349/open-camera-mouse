@@ -40,3 +40,11 @@ converted to screen px through the current gain and the Main monitor scale, so i
 same head movement at gain 1–60. `steady_px` is gone from the settings (old files load; the
 field is ignored). Debug builds can try another value on the device with
 `OCM_DEV_STEADY=<camera px>` (0 = off).
+
+## Amendment 2026-11-16 (Phase 6d, #13, ADR-0017 amendment)
+
+The zone is now **0.2 camera px** (was 0.5). User decision after a device check, from the
+trade-off sweep in `docs/research/ZONE_VARIANTS.md`: a little sub-2 px wobble at rest buys
+40 % less hold error and ≈ 30 ms less lag. With the smaller zone, offset drift at a screen
+limit is capped at the head's overshoot so the cursor doesn't saw off the edge (ADR-0017
+amendment).

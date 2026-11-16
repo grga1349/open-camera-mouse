@@ -800,7 +800,7 @@ fn toggling_recovery_rebuilds_the_tracker_and_keeps_tracking() {
     assert!(state_changes(&s).is_empty());
     assert!(r.c.view(r.now).redetect_armed);
     assert_eq!(r.c.state(), AppState::Tracking);
-    // Beyond the 0.5 camera px steady zone, so the cursor follows.
+    // Beyond the steady zone (`STEADY_ZONE_CAM_PX`), so the cursor follows.
     let s = r.hold(500_000, 2.0, SCENE);
     assert!(s.pointer_target().unwrap().x > CENTER.x);
     let s = r.c.update_settings(Settings::default(), r.now).unwrap();
@@ -1191,7 +1191,7 @@ fn recenter_on_a_display_starts_at_its_centre_and_still_reaches_the_others() {
     let s = r.hold(2_000_000, -5.0, SCENE);
     let last = *moves(&s).last().unwrap();
     let want = Point2::new(RIGHT.center().x - 5.0 * gain() * 4.0, RIGHT.center().y);
-    // The steady zone scales with the Main monitor too: 0.5 · gain · 2560 / 640.
+    // The steady zone scales with the Main monitor too: zone · gain · 2560 / 640.
     let zone = STEADY_ZONE_CAM_PX * gain() * 2560.0 / 640.0;
     assert!(dist(last, want) < zone + 3.0, "{last:?} vs {want:?}");
 
@@ -1369,7 +1369,7 @@ fn rest_tremor(i: u64) -> (f32, f32) {
 /// #5 (S1): sitting still, the cursor shook ≈ 2.6 px rms frame to frame on the user's two
 /// displays. At rest the cursor must not move at all (user, 2026-11-15: "jitter has to be 0").
 /// ADR-0017: 1€ filter in camera space, scale by the main display, steady zone. #11: the zone
-/// is 0.5 camera px of head movement at every gain, so it holds at **every** speed 1–60, and a
+/// is `STEADY_ZONE_CAM_PX` of head movement at every gain, so it holds at **every** speed 1–60, and a
 /// deliberate 1 camera px move still moves the cursor.
 #[test]
 fn the_cursor_does_not_move_at_rest_on_a_wide_desktop() {

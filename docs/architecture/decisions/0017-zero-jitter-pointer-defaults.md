@@ -101,3 +101,28 @@ last 4 zone radii, and the cursor moves at most 1.25 × the target there. Measur
 steps onto the edge): zone off 26/30/27/20 px, old snap …/44, factor 1.0 …/39, 0.25
 31/37/34/25. Trade-off: within 4 radii of a limit the zone holds less toward that limit (the
 cursor may creep toward it, never shakes). CI: `a_slow_move_onto_an_edge_does_not_jump`.
+
+## Amendment 2026-11-16 (Phase 6d) — steady zone 0.2 camera px; drift stops at the limit (#13)
+
+User decision after the device check (0.2 / 0.25 / 0.35 tried; "0.2 feels best"), on the
+user's direction to accept a little shake and imprecision and get as close to a real mouse
+as possible. `docs/research/ZONE_VARIANTS.md`: ≤ 0.2 reversals/s with ≤ 0.15 cam px hold error
+is infeasible even non-causally on S1, so the zone is a trade-off. S1 sweep (laptop Main,
+gain 22): 0.5 → 0 visible (≥ 2 screen px) reversals/s, hold error 0.43 cam px (21 px), lag
+140 ms; **0.2 → 0.1 visible/s, 0.26 cam px (13 px), 110 ms**. The 1€ filter is unchanged (a
+lower `min_cutoff` didn't help at the same zone).
+
+- `STEADY_ZONE_CAM_PX` **0.5 → 0.2**.
+- **Offset drift capped at the head's overshoot** (`pointer_core::limits::drift_offset`,
+  new `past` argument). 2018's whole-tick drift (≈ 0.47 cam px per frame) pulled the mapping
+  back inside the limit while the head still pushed past it, so the cursor sawed off the edge.
+  A 0.5 zone (33 px at gain 22) hid this; at 0.2 the cursor stepped 5–8 px back off the edge
+  and ended 18 px inside it (`a_slow_move_onto_an_edge_does_not_jump` failed). Capped, the
+  end state is 2018's (the held head maps onto the limit) without the overshoot. Unit test
+  `drift_stops_where_the_head_meets_the_limit`.
+
+Checks: `the_cursor_does_not_move_at_rest_*` at every gain 1–60 (synthetic tremor, still 0
+moves), `a_slow_move_onto_an_edge_does_not_jump` (≤ 1.25 × the head's step, stays on the
+edge), replay S1/S2 at the app zone: S1 175/299 moves, 12 reversals (0.5: 102 / 1); S2 step
+max unchanged. Caveat: visible wobble scales with gain × Main width; re-check at high gains
+and on the 2560 px Main in Phase 8.

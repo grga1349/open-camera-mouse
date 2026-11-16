@@ -129,6 +129,15 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
   51, app-core 51 + 10 green; clippy (`-p pointer-core -p app-core`), fmt, core-deps clean.
   Device check: edges looked fine, but the user is not sure the jumping is fixed (#12 open).
 
+- 2026-11-16 part 3 #13 (zone variants): replay tool `replay_zone_variants`,
+  `replay_hold_bound` (non-causal piecewise-monotone bound). Result above (queue item 1) and
+  in `docs/research/ZONE_VARIANTS.md`. No production code changed.
+
+- 2026-11-16 part 3 #13 sweet spot: zone 0.5 → 0.2 (user, device), `drift_offset` capped
+  at the overshoot. pointer-core 52, app-core 51 + 10, desktop 78 green; fmt, clippy
+  (`-p pointer-core -p app-core -p open-camera-mouse`), core-deps clean. Replay S1 at the app
+  zone: 175/299 moves, 12 reversals; S2 step max unchanged (3.73 cam px).
+
 ## Queued for part 3 (user, 2026-11-16)
 
 0. **DONE 2026-11-16 → `docs/research/CM2018_JITTER_COMPARISON.md`.** Verdict: 2018 has no
@@ -161,6 +170,16 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
    test on calibrated signals at every gain 1–60, and a device check. This supersedes the
    zone-only variants in §5.1 of the doc unless NAKF loses.
 1. **#13 the mouse is imprecise** — triage first (zone trail/creep, filter lag, tracker noise).
+   **Zone variants MEASURED 2026-11-16 → `docs/research/ZONE_VARIANTS.md`: the §5.1 target
+   is infeasible.** A non-causal lower bound (best path with K monotone pieces) on S1 gives
+   residual 0.25 cam px at 0.2 reversals/s; 0.15 needs ≈ 0.5/s. Today's zone 0.5 (0.10/s,
+   0.43) is ≈ 0.1 above the bound; 25 real-time variants (smaller zone + lower 1€ cutoff,
+   shake-only trail closing, settle release) don't beat it on both. Open for the user: accept
+   some shake, lower default gain, a deliberate-push precision metric, or close #13.
+   **User chose: accept a little shake → sweet spot.** Sweep (`replay_zone_sweep`, visible
+   reversals ≥ 2 screen px) → device check 0.2/0.25/0.35 → user: 0.2. **Shipped: zone 0.2 cam
+   px + offset drift capped at the head's overshoot** (the smaller zone exposed a 5–18 px saw
+   off the edge). ADR-0015/-0017 amendments; TEST_DRIVE #13 "Improved".
 2. **#12 not sure the jumping is fixed** — the edge snap is fixed; look for other causes
    (fast-move filter catch-up at S2 29–34 s, handover/re-acquisition, display snap).
 3. **#14 "Main monitor" defaults to the primary monitor** (ADR-0014 amendment + user OK).

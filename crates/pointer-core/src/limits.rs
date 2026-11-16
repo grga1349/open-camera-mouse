@@ -96,14 +96,27 @@ pub fn bounds(desktop: DesktopRect, limits: Limits) -> (Point2, Point2) {
 
 /// Drifts the image-space `offset` back toward the centre for every pinned axis over
 /// `dt_us`. Pinned high (E/S) means the head is too far that way, so the offset decreases.
-pub fn drift_offset(offset: Point2, limited: &Limited, dt_us: u64) -> Point2 {
+///
+/// `past` is how far the head is past the limit per axis, in image px (≥ 0). The drift never
+/// exceeds it: 2018 drifts a whole tick even when the head is barely past the edge, which pulls
+/// the mapping back inside the limit and the cursor off the edge while the head still pushes
+/// (≈ 0.47 image px per frame at 30 fps, 31 screen px at gain 22; hidden by a 0.5 image px
+/// steady zone, visible at 0.2 — Phase 6d #13). Capped, the end state is 2018's (the head's
+/// position maps onto the limit) without the overshoot.
+pub fn drift_offset(offset: Point2, limited: &Limited, dt_us: u64, past: Point2) -> Point2 {
     let step = DRIFT_IMAGE_PX_PER_S * (dt_us as f32 / 1_000_000.0);
-    let drift = |pin: Pin| match pin {
-        Pin::Free => 0.0,
-        Pin::Low => step,
-        Pin::High => -step,
+    let drift = |pin: Pin, past: f32| {
+        let s = step.min(past.max(0.0));
+        match pin {
+            Pin::Free => 0.0,
+            Pin::Low => s,
+            Pin::High => -s,
+        }
     };
-    Point2::new(offset.x + drift(limited.x), offset.y + drift(limited.y))
+    Point2::new(
+        offset.x + drift(limited.x, past.x),
+        offset.y + drift(limited.y, past.y),
+    )
 }
 
 #[cfg(test)]
@@ -169,6 +182,9 @@ mod tests {
         assert!((a.position.x - 959.5).abs() < 1e-3);
     }
 
+    /// Head far past the limit: the drift runs at its full rate.
+    const FAR: Point2 = Point2 { x: 1e6, y: 1e6 };
+
     #[test]
     fn pinned_offset_drifts_toward_centre_at_the_2018_rate() {
         let pinned = Limited {
@@ -177,7 +193,7 @@ mod tests {
             y: Pin::Low,
         };
         // One 2018 tick = 1 image px.
-        let o = drift_offset(Point2::new(5.0, 5.0), &pinned, REFERENCE_TICK_US);
+        let o = drift_offset(Point2::new(5.0, 5.0), &pinned, REFERENCE_TICK_US, FAR);
         assert!(
             (o.x - 4.0).abs() < 1e-4 && (o.y - 6.0).abs() < 1e-4,
             "{o:?}"
@@ -188,7 +204,7 @@ mod tests {
             ..pinned
         };
         assert_eq!(
-            drift_offset(Point2::new(5.0, 5.0), &free, 1_000_000),
+            drift_offset(Point2::new(5.0, 5.0), &free, 1_000_000, FAR),
             Point2::new(5.0, 5.0)
         );
     }
@@ -203,12 +219,41 @@ mod tests {
         let run = |fps: u64| {
             let mut o = Point2::default();
             for _ in 0..fps {
-                o = drift_offset(o, &pinned, 1_000_000 / fps);
+                o = drift_offset(o, &pinned, 1_000_000 / fps, FAR);
             }
             o.x
         };
         for fps in [15, 30, 60] {
             assert!((run(fps) + DRIFT_IMAGE_PX_PER_S).abs() < 0.01, "fps {fps}");
         }
+    }
+
+    /// Phase 6d #13: the head 0.1 image px past the edge drifts the offset by 0.1, not by a
+    /// whole tick, so the mapping stops exactly at the limit.
+    #[test]
+    fn drift_stops_where_the_head_meets_the_limit() {
+        let pinned = Limited {
+            position: Point2::default(),
+            x: Pin::High,
+            y: Pin::Low,
+        };
+        let o = drift_offset(
+            Point2::new(5.0, 5.0),
+            &pinned,
+            REFERENCE_TICK_US,
+            Point2::new(0.1, 0.25),
+        );
+        assert!(
+            (o.x - 4.9).abs() < 1e-4 && (o.y - 5.25).abs() < 1e-4,
+            "{o:?}"
+        );
+        // Not past (or a negative estimate): no drift.
+        let o = drift_offset(
+            Point2::new(5.0, 5.0),
+            &pinned,
+            REFERENCE_TICK_US,
+            Point2::new(0.0, -1.0),
+        );
+        assert_eq!(o, Point2::new(5.0, 5.0));
     }
 }

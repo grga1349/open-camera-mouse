@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: LK-vs-OpenCV, 2018 jitter and NAKF research DONE (NAKF loses); next = #13 zone variants, then #12 / #14 — see task 0011)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: #13 → steady zone 0.2 cam px + drift cap at limits (user OK on device); next = #12 / #14 — see task 0011)
 
 ## Branch / commit
 
@@ -69,7 +69,7 @@ movement, converted through gain and Main monitor; no longer an option). Default
   `recommended()`: gate vs the window accepted 10 steps earlier (≥ 0.7) + selection floor 0.3.
   `turn_extreme` 90/90; slow-occluder scenes `occluder_slide`/`occluder_creep` pinned.
 - Pointer tuning (6c): `Settings` has no `steady_px`/`text_scale` any more (old files load,
-  unknown fields ignored). `app_core::STEADY_ZONE_CAM_PX` = 0.5; `Controller::set_steady_zone_cam_px`
+  unknown fields ignored). `app_core::STEADY_ZONE_CAM_PX` = 0.2 (6d #13; was 0.5); offset drift capped at the head's overshoot; `Controller::set_steady_zone_cam_px`
   for tests and the debug-only `OCM_DEV_STEADY=<cam px>` (engine.rs). Options tabs: Pointer ·
   Clicking · Camera · Screen · General. Rest test `the_cursor_does_not_move_at_rest_*` covers
   gains 1–60 in four parallel parts (synthetic, *not yet calibrated*).
@@ -82,13 +82,11 @@ movement, converted through gain and Main monitor; no longer an option). Default
 
 ## Immediate next action
 
-Part 3 of Phase 6d, queued in task 0011 § "Queued for part 3". Research done:
-`OPENCV_LK_PARITY.md` (tracker = OpenCV), `CM2018_JITTER_COMPARISON.md` (2018 has no jitter
-fix; zone hold error ≈ 0.45 cam px = main #13 candidate) and `NAKF_VS_STEADY_ZONE.md` (NAKF
-loses on shake: rest noise is low-frequency head motion, a hold is needed; keep 1€ + EMA +
-zone). **Next (user decision): #13 zone variants** (doc §5.1, reduce the zone's hold error,
-measured with the replay tool's `emulate_ours` harness). Then ask: #12 takeover
-instrumentation, #14 Main monitor default = primary. No new recordings (user decision).
+Part 3 of Phase 6d (task 0011). #13 done for now: zone 0.2 cam px (user picked on device from
+`ZONE_VARIANTS.md` §5) + `drift_offset` capped at the head's overshoot (ADR-0015/-0017
+amendments). Committed + pushed; check CI first. Leftovers in HANDOFF order: #13 device follow-ups (edge hold, wobble at high gain / 2560 Main), default-gain decision, #12 takeover instrumentation (jump-cause tag, CI test that
+a ≤ 5 px echo never triggers move-stop, ask if jumps follow touching the mouse), #14 Main monitor
+default = OS primary. Then step 3 sweep / step 4 calibration. No new recordings (user decision).
 
 ## Open risks
 
