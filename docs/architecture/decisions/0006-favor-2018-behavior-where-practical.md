@@ -31,7 +31,7 @@ Applied to the current open items (BEHAVIOR_SPEC section refs):
 | Item | Resolution | Reason if deviating |
 |---|---|---|
 | Pointer model (R-P1, Q-R2) | **Absolute**: `desk_center + (p + offset − img_center)·gain·desk/img` | — |
-| Per-axis gain (R-P3) | HorizG/VertG, default 6/6 | — |
+| Per-axis gain (R-P3) | HorizG/VertG, default 6/6 | Range 1–60, default 22/22 since ADR-0017 amendments 2026-11-16 (test drive #8, #10) |
 | Smoothing (R-P2) | Position EMA with damping 0.95. Implemented dt-aware with the time constant equivalent to α=0.95 per 70 ms tick, so the feel matches 2018 at any frame rate | (a)/(c): a fixed 70 ms sleep loop is an implementation artifact, not a behavior |
 | Screen limits + offset drift (§2.6) | Adopt W/E/N/S limits (default 0) and the ±1 image px/tick offset drift (converted to a rate) | (a): fix the missing desktop origin on E/S; use the virtual desktop |
 | Control handover (R-A2, Q-R3) | Adopt: physical move > 5 px yields control, 4 s inactivity resumes, cursor to desktop centre on camera takeover (AutoCenterScheme 0), On-Screen-Keyboard focus guard as a per-OS adapter concern | (c) for the OSK/focus part |

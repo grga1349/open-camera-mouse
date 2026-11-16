@@ -8,7 +8,7 @@ use app_core::ports::{
 };
 use app_core::{
     AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MarkerKind,
-    PointerAccess, PointerOwner, RECENTER_US, ScreenLimits, Settings, Step,
+    PointerAccess, PointerOwner, RECENTER_US, STEADY_ZONE_CAM_PX, ScreenLimits, Settings, Step,
 };
 use tracking_core::{GrayFrame, LossReason, Point2, TrackStatus};
 
@@ -16,6 +16,11 @@ const W: u32 = 640;
 const H: u32 = 480;
 const FRAME_US: u64 = 33_333;
 const HANDOVER_US: u64 = 4_000_000;
+
+/// The default gain (test drive #8/#10).
+fn gain() -> f32 {
+    Settings::default().gain_x
+}
 const DESK: DesktopRect = DesktopRect {
     x: 0.0,
     y: 0.0,
@@ -383,6 +388,8 @@ fn an_observation_before_a_due_takeover_does_not_cancel_it() {
 #[test]
 fn head_right_moves_the_cursor_right() {
     let mut r = Rig::tracking();
+    // Mapping direction per frame; the steady zone (which holds sub-0.5 px steps) is off.
+    r.c.set_steady_zone_cam_px(0.0);
     let mut last = CENTER;
     for i in 1..=5 {
         let s = r.frame(i as f32, 0.0, SCENE);
@@ -394,11 +401,10 @@ fn head_right_moves_the_cursor_right() {
         last = p;
     }
     // Filtering lags a little; once the head is still the cursor settles at 5 px of head
-    // motion × gain 6 × (1920 / 640) = 90 px, short of it by at most the steady zone
-    // (5 px, ADR-0017), never past it.
+    // motion × the default gain × (1920 / 640), within the filter's residual lag.
     let last = r.hold(500_000, 5.0, SCENE).pointer_target().unwrap();
-    let short = CENTER.x + 90.0 - last.x;
-    assert!((-0.5..STEADY + 1.0).contains(&short), "{last:?}");
+    let short = CENTER.x + 5.0 * gain() * 3.0 - last.x;
+    assert!((-1.5..3.0).contains(&short), "{last:?}");
     let t = r.c.view(r.now).marker.unwrap();
     assert!((t.position.x - 325.0).abs() < 0.5, "{t:?}");
 }
@@ -792,7 +798,8 @@ fn toggling_recovery_rebuilds_the_tracker_and_keeps_tracking() {
     assert!(state_changes(&s).is_empty());
     assert!(r.c.view(r.now).redetect_armed);
     assert_eq!(r.c.state(), AppState::Tracking);
-    let s = r.frame(1.0, 0.0, SCENE);
+    // Beyond the 0.5 camera px steady zone, so the cursor follows.
+    let s = r.hold(500_000, 2.0, SCENE);
     assert!(s.pointer_target().unwrap().x > CENTER.x);
     let s = r.c.update_settings(Settings::default(), r.now).unwrap();
     assert!(state_changes(&s).is_empty());
@@ -892,32 +899,35 @@ fn sweep(r: &mut Rig, from: f32, to: f32) -> Step {
     all
 }
 
-/// Steady-zone radius in the default settings (ADR-0017).
-const STEADY: f32 = 5.0;
-
 /// Smoothing 0 turns off the 2018 smoother only; the 1€ filter (ADR-0017) still runs, and
-/// settles a 2 px step (2 × gain 6 × 1920/640 = 36 px) within half a second.
+/// settles a 2 px step (2 × the default gain × 1920/640) within half a second.
 #[test]
 fn zero_smoothing_settles_a_step_within_half_a_second() {
     let mut r = Rig::tracking_with(Settings {
         smoothing: 0.0,
         ..Settings::default()
     });
+    // The filters, not the steady zone, are under test here.
+    r.c.set_steady_zone_cam_px(0.0);
     let first = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
     assert!(first.x > CENTER.x, "moves on the first frame: {first:?}");
     let p = r.hold(500_000, 2.0, SCENE).pointer_target().unwrap();
-    let short = CENTER.x + 36.0 - p.x;
-    assert!((-0.5..STEADY + 1.0).contains(&short), "{p:?}");
+    let short = CENTER.x + 2.0 * gain() * 3.0 - p.x;
+    assert!((-1.5..3.0).contains(&short), "{p:?}");
 }
 
 #[test]
 fn default_smoothing_lags_then_settles() {
     let mut r = Rig::tracking();
+    r.c.set_steady_zone_cam_px(0.0);
     let first = r.frame(2.0, 0.0, SCENE).pointer_target().unwrap();
-    assert!(first.x > CENTER.x && first.x < CENTER.x + 34.0, "{first:?}");
+    assert!(
+        first.x > CENTER.x && first.x < CENTER.x + 2.0 * gain() * 3.0 - 6.0,
+        "{first:?}"
+    );
     let settled = r.hold(500_000, 2.0, SCENE).pointer_target().unwrap();
-    let short = CENTER.x + 36.0 - settled.x;
-    assert!((-0.5..STEADY + 1.0).contains(&short), "{settled:?}");
+    let short = CENTER.x + 2.0 * gain() * 3.0 - settled.x;
+    assert!((-1.5..3.0).contains(&short), "{settled:?}");
 }
 
 /// Limits keep the cursor inside the insets; while pinned, the offset drifts back so the
@@ -1137,18 +1147,20 @@ fn recenter_on_a_display_starts_at_its_centre_and_still_reaches_the_others() {
     assert_eq!(s.pointer_target(), Some(RIGHT.center()));
 
     // The scale comes from the Main monitor's size (ADR-0017), shifted to its centre: head
-    // 5 px left moves the cursor 5 · gain 6 · 2560 / 640 = 120 px left of the home point.
+    // 5 px left moves the cursor 5 · gain · 2560 / 640 px left of the home point.
     let s = r.hold(2_000_000, -5.0, SCENE);
     let last = *moves(&s).last().unwrap();
-    let want = Point2::new(RIGHT.center().x - 120.0, RIGHT.center().y);
-    assert!(dist(last, want) < STEADY + 1.0, "{last:?} vs {want:?}");
+    let want = Point2::new(RIGHT.center().x - 5.0 * gain() * 4.0, RIGHT.center().y);
+    // The steady zone scales with the Main monitor too: 0.5 · gain · 2560 / 640.
+    let zone = STEADY_ZONE_CAM_PX * gain() * 2560.0 / 640.0;
+    assert!(dist(last, want) < zone + 3.0, "{last:?} vs {want:?}");
 
     // Far enough left, the cursor crosses onto the left display (head turned in 2 px steps):
-    // 75 px · 24 = 1800 px left of 3200 is on the left display.
-    for i in 1..=35 {
+    // 25 px · 88 = 2200 px left of 3200 is on the left display.
+    for i in 1..=10 {
         r.frame(-5.0 - 2.0 * i as f32, 0.0, SCENE);
     }
-    let s = r.hold(2_000_000, -75.0, SCENE);
+    let s = r.hold(2_000_000, -25.0, SCENE);
     assert_eq!(r.c.state(), AppState::Tracking);
     let last = *moves(&s).last().unwrap();
     assert!(last.x < LEFT.width, "{last:?} still on the right display");
@@ -1180,11 +1192,8 @@ fn recenter_on_an_unplugged_display_falls_back_to_the_centre_of_all() {
 
 #[test]
 fn steady_zone_holds_the_cursor_still_against_head_jitter() {
-    let mut r = Rig::tracking_with(Settings {
-        steady_px: 6,
-        ..Settings::default()
-    });
-    // Settle, then sub-pixel head jitter: ±0.2 camera px ≈ ±3.6 screen px at gain 6.
+    let mut r = Rig::tracking();
+    // Settle, then sub-pixel head jitter: ±0.2 camera px ≈ ±13 screen px at the default gain.
     r.hold(500_000, 0.0, SCENE);
     let mut targets = Vec::new();
     for i in 0..90 {
@@ -1211,10 +1220,8 @@ fn steady_zone_holds_the_cursor_still_against_head_jitter() {
 fn without_steady_zone_head_jitter_moves_the_cursor() {
     // Control for the test above: with the zone off, filtered jitter still reaches the
     // cursor; the zone is what makes it exactly zero.
-    let mut r = Rig::tracking_with(Settings {
-        steady_px: 0,
-        ..Settings::default()
-    });
+    let mut r = Rig::tracking();
+    r.c.set_steady_zone_cam_px(0.0);
     r.hold(500_000, 0.0, SCENE);
     let mut targets = Vec::new();
     for i in 0..90 {
@@ -1320,38 +1327,70 @@ fn rest_tremor(i: u64) -> (f32, f32) {
 }
 
 /// #5 (S1): sitting still, the cursor shook ≈ 2.6 px rms frame to frame on the user's two
-/// displays: 0.08 px of camera-space movement × gain 6 × 4000 / 640 ≈ 37 screen px per camera
-/// px, and default smoothing removed almost none of it. At rest the cursor must not move at
-/// all (user, 2026-11-15: "jitter has to be 0"). ADR-0017: 1€ filter in camera space, scale by
-/// the main display, 5 px steady zone.
+/// displays. At rest the cursor must not move at all (user, 2026-11-15: "jitter has to be 0").
+/// ADR-0017: 1€ filter in camera space, scale by the main display, steady zone. #11: the zone
+/// is 0.5 camera px of head movement at every gain, so it holds at **every** speed 1–60, and a
+/// deliberate 1 camera px move still moves the cursor.
 #[test]
 fn the_cursor_does_not_move_at_rest_on_a_wide_desktop() {
-    let mut r = Rig::new(Settings::default());
-    r.input(Input::DesktopChanged(users_desktop()));
-    r.cmd(Command::ToggleStart);
-    r.frame(0.0, 0.0, SCENE);
-    r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
-    r.hold(HANDOVER_US, 0.0, SCENE);
-    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
-    let mut cursor = Vec::new();
-    for i in 0..300 {
-        let (dx, dy) = rest_tremor(i);
-        let p = r.frame(dx, dy, SCENE).pointer_target();
-        // The first second settles; the next 9 s are measured.
-        if i >= 30 {
-            cursor.push(p.expect("camera moves the pointer every tracked frame"));
-        }
-    }
-    let moved = cursor.windows(2).filter(|w| w[0] != w[1]).count();
-    assert_eq!(
-        moved,
-        0,
-        "cursor moved on {moved} of {} frames at rest",
-        cursor.len()
-    );
+    still_at_rest(1..=15);
+}
 
-    // A deliberate small move (1 camera px ≈ 24 screen px here) still moves the cursor.
-    let before = *cursor.last().unwrap();
-    let after = r.hold(1_000_000, 1.0, SCENE).pointer_target().unwrap();
-    assert!(after.x - before.x > 15.0, "{before:?} → {after:?}");
+// Every gain 1–60, split so the test harness runs the parts in parallel.
+#[test]
+fn the_cursor_does_not_move_at_rest_gains_16_to_30() {
+    still_at_rest(16..=30);
+}
+
+#[test]
+fn the_cursor_does_not_move_at_rest_gains_31_to_45() {
+    still_at_rest(31..=45);
+}
+
+#[test]
+fn the_cursor_does_not_move_at_rest_gains_46_to_60() {
+    still_at_rest(46..=60);
+}
+
+fn still_at_rest(gains: std::ops::RangeInclusive<u32>) {
+    for gain in gains {
+        let gain = gain as f32;
+        let mut r = Rig::new(Settings {
+            gain_x: gain,
+            gain_y: gain,
+            ..Settings::default()
+        });
+        r.input(Input::DesktopChanged(users_desktop()));
+        r.cmd(Command::ToggleStart);
+        r.frame(0.0, 0.0, SCENE);
+        r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
+        r.hold(HANDOVER_US, 0.0, SCENE);
+        assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+        let mut cursor = Vec::new();
+        for i in 0..150 {
+            let (dx, dy) = rest_tremor(i);
+            let p = r.frame(dx, dy, SCENE).pointer_target();
+            // The first second settles; the next 4 s are measured.
+            if i >= 30 {
+                cursor.push(p.expect("camera moves the pointer every tracked frame"));
+            }
+        }
+        let moved = cursor.windows(2).filter(|w| w[0] != w[1]).count();
+        assert_eq!(
+            moved,
+            0,
+            "gain {gain}: cursor moved on {moved} of {} frames at rest",
+            cursor.len()
+        );
+
+        // A deliberate 1 camera px move (gain × 2560 / 640 screen px; the largest display
+        // sets the scale) moves the cursor by at least half of it, past the 0.5 px zone.
+        let before = *cursor.last().unwrap();
+        let after = r.hold(1_000_000, 1.0, SCENE).pointer_target().unwrap();
+        let px_per_cam = gain * 2560.0 / 640.0;
+        assert!(
+            after.x - before.x > 0.4 * px_per_cam,
+            "gain {gain}: {before:?} → {after:?}"
+        );
+    }
 }

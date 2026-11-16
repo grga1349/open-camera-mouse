@@ -266,14 +266,18 @@ fn end_to_end_select_track_lose_pause_recenter_resume() {
     assert!(close(r.cursor(), DESKTOP.center(), 2.0), "{:?}", r.cursor());
     assert_eq!(r.cam.0.borrow().opens, vec![None]);
 
-    let mut last = r.cursor();
+    // The steady zone (0.5 camera px, #11) may hold the first small step; the cursor never
+    // moves left and ends up right of where it started.
+    let start = r.cursor();
+    let mut last = start;
     for i in 1..=5 {
         r.cam.0.borrow_mut().head = (i as f32, 0.0);
         r.pump();
         let p = r.cursor();
-        assert!(p.x > last.x, "frame {i}: {p:?} should be right of {last:?}");
+        assert!(p.x >= last.x, "frame {i}: {p:?} left of {last:?}");
         last = p;
     }
+    assert!(last.x > start.x + 50.0, "{last:?} vs {start:?}");
 
     r.cam.0.borrow_mut().seed = FLAT;
     for _ in 0..3 {

@@ -17,13 +17,15 @@ pub enum Tab {
     Pointer,
     Clicking,
     Camera,
+    Screen,
     General,
 }
 
-const TABS: [(Tab, &str); 4] = [
+const TABS: [(Tab, &str); 5] = [
     (Tab::Pointer, "Pointer"),
     (Tab::Clicking, "Clicking"),
     (Tab::Camera, "Camera"),
+    (Tab::Screen, "Screen"),
     (Tab::General, "General"),
 ];
 
@@ -39,12 +41,11 @@ pub struct Facts<'a> {
 }
 
 /// "Restore defaults": behaviour back to the defaults; the chosen camera and the
-/// appearance (theme, text size, larger controls) stay, they aren't tuning.
+/// appearance (theme, larger controls) stay, they aren't tuning.
 pub fn restored(current: &Settings) -> Settings {
     Settings {
         camera: current.camera.clone(),
         theme: current.theme,
-        text_scale: current.text_scale,
         larger_controls: current.larger_controls,
         ..Settings::default()
     }
@@ -79,9 +80,10 @@ pub fn show(ui: &mut Ui, s: &mut Settings, tab: &mut Tab, facts: &Facts<'_>) -> 
                 // Lab `.panel { gap: 16px }` between fields.
                 ui.spacing_mut().item_spacing.y = 8.0;
                 match tab {
-                    Tab::Pointer => pointer(ui, s, facts),
+                    Tab::Pointer => pointer(ui, s),
                     Tab::Clicking => clicking(ui, s),
                     Tab::Camera => camera(ui, s, facts),
+                    Tab::Screen => screen(ui, s, facts),
                     Tab::General => general(ui, s, facts),
                 }
             });
@@ -118,16 +120,16 @@ fn space(ui: &mut Ui) {
     ui.add_space(8.0);
 }
 
-fn pointer(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
+fn pointer(ui: &mut Ui, s: &mut Settings) {
     let before = (s.gain_x, s.gain_y);
     slider_row(
         ui,
         "Horizontal speed",
         &mut s.gain_x,
         ranges::GAIN,
-        0.5,
-        |v| format!("{v:.1}"),
-        Some("How far the pointer moves when you turn your head. Default 6"),
+        1.0,
+        |v| format!("{v:.0}"),
+        Some("How far the pointer moves when you turn your head. Default 22"),
     );
     space(ui);
     slider_row(
@@ -135,8 +137,8 @@ fn pointer(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
         "Vertical speed",
         &mut s.gain_y,
         ranges::GAIN,
-        0.5,
-        |v| format!("{v:.1}"),
+        1.0,
+        |v| format!("{v:.0}"),
         None,
     );
     let was_linked = s.link_gain;
@@ -156,33 +158,13 @@ fn pointer(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
         ranges::SMOOTHING,
         0.01,
         |v| format!("{v:.2}"),
-        Some("Higher is steadier but slower to follow. Default 0.05"),
+        Some("Higher is steadier but slower to follow. Default 0.20"),
     );
-    space(ui);
-    // Test drive #5 (ADR-0015).
-    let mut px = s.steady_px as f32;
-    let r = slider_row(
-        ui,
-        "Steady zone",
-        &mut px,
-        (*ranges::STEADY_PX.start() as f32)..=(*ranges::STEADY_PX.end() as f32),
-        1.0,
-        |v| {
-            if v < 0.5 {
-                "Off".to_owned()
-            } else {
-                format!("{v:.0} px")
-            }
-        },
-        Some(
-            "Small head movements inside this distance don't move the pointer, so it holds \
-             perfectly still. Larger moves are followed. Default off",
-        ),
-    );
-    if r.changed() {
-        s.steady_px = px.round() as u32;
-    }
-    space(ui);
+}
+
+/// Where the pointer may go and where it starts (test drive #9): screen limits and, with
+/// several monitors, the Main monitor.
+fn screen(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
     ui.horizontal(|ui| {
         field_label(ui, "Screen limits");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -379,19 +361,6 @@ fn general(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
         &[(Theme::Carbon, "Dark"), (Theme::Paper, "Light")],
     );
     space(ui);
-    let mut pct = (s.text_scale * 100.0).round();
-    let r = slider_row(
-        ui,
-        "Text size",
-        &mut pct,
-        (ranges::TEXT_SCALE.start() * 100.0)..=(ranges::TEXT_SCALE.end() * 100.0),
-        5.0,
-        |v| format!("{v:.0} %"),
-        None,
-    );
-    if r.changed() {
-        s.text_scale = pct / 100.0;
-    }
     switch(
         ui,
         &mut s.larger_controls,
@@ -429,17 +398,15 @@ mod tests {
             gain_x: 12.0,
             camera: Some("cam-2".into()),
             theme: Theme::Paper,
-            text_scale: 1.2,
             larger_controls: true,
             loss_recovery: true,
             ..Settings::default()
         };
         let r = restored(&s);
-        assert_eq!(r.gain_x, 6.0);
+        assert_eq!(r.gain_x, 22.0);
         assert!(!r.loss_recovery);
         assert_eq!(r.camera.as_deref(), Some("cam-2"));
         assert_eq!(r.theme, Theme::Paper);
-        assert_eq!(r.text_scale, 1.2);
         assert!(r.larger_controls);
     }
 }

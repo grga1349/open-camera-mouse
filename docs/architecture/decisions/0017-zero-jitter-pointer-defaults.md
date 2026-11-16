@@ -59,3 +59,33 @@ All three changes are on by default (departures from 2018, ADR-0006):
 - Device check 2026-11-15 (user, steady zone 5): "resolved jittering good part".
 - Not fixed: losses during strong head turns (`AppearanceChanged`, the `turn_extreme` scene
   pinned at 31/90 tracked) are the next slice.
+
+## Amendment 2026-11-16 — real gain 1–60, new defaults (test drive #8, #10)
+
+User decision (Phase 6c, ADR-0019). Scaling by one monitor (point 2 above) cut the effective
+speed on multi-monitor setups; the user found speed 20 too slow. A first pass (hidden ×3 on a
+1–20 slider, steady zone growing with speed) was device-tried and replaced the same day: the
+user wants **real numbers** on the controls and more of them.
+
+- **Gain is the real mapping gain, 1–60, step 1, default 24/24** (= the user's preferred 8
+  on the ×3 scale). A departure from 2018's 6/6 (ADR-0006).
+- **Smoothing default 0.10** (2018 0.05).
+- **Steady zone: automatic, 0.5 camera px of head movement** (test drive #11, replacing a
+  same-day fixed 11 px option the user found didn't work; ADR-0015 amendment). Radius in
+  screen px = 0.5 × gain × Main-monitor size / frame size (faster axis). Measured on the real
+  S1 still recording (gain 8/24/60, 14.5 s of sitting still; moves / back-and-forth reversals):
+  no zone 202–341 / 6–11; 0.2 cam px (≈ the old 11 px at gain 24) 110–191 / 3–6; **0.5 cam px
+  67–116 / 1–2**; 1.0 cam px 41–64 / 1. The same camera-px zone gives nearly the same counts at
+  every gain. The moves left are slow head drift (1–2.5 cam px over seconds), not shake; no
+  small zone holds that.
+
+Checks: `the_cursor_does_not_move_at_rest_*` (synthetic S1 tremor, the user's two displays,
+0 cursor moves at **every gain 1–60**, a 1 camera px move still followed), `settings.rs`
+`defaults_are_valid_and_match_2018_except_tuned_ones`; filter settle tests allow 3 px of the
+1€ filter's residual lag at gain 24. Saved settings keep their values: a saved gain is now
+read as a real gain.
+
+## Amendment 2026-11-16 (later) — defaults gain 22, smoothing 0.20
+
+User decision after the device trial: default gain **22/22**, smoothing **0.20**. Further
+tuning of the steady zone and smoothing moves to Phase 6d (ADR-0020), measured on recordings.

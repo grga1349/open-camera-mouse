@@ -642,7 +642,7 @@ fn options_window_fits_at_130_percent_with_larger_controls() {
     };
     let size = Vec2::from(OPTIONS_SIZE) / 1.3;
     let mut h = options_window_sized(stopped_with(settings), size);
-    for tab in ["Pointer", "Clicking", "Camera", "General"] {
+    for tab in ["Pointer", "Clicking", "Camera", "Screen", "General"] {
         h.get_by_role_and_label(egui::accesskit::Role::Tab, tab)
             .click();
         h.run_steps(4);
@@ -678,15 +678,24 @@ fn pointer_tab_controls() {
     h.run_steps(4);
     assert_eq!(settings(&h).smoothing, 0.5);
 
-    assert_eq!(
-        settings(&h).steady_px,
-        5,
-        "steady zone on by default (ADR-0017)"
+    assert!(
+        h.query_by_label("Steady zone").is_none(),
+        "automatic, not an option (#11)"
     );
-    h.get_by_label("Steady zone").set_value_accesskit(6.0);
-    h.run_steps(4);
-    assert_eq!(settings(&h).steady_px, 6);
+    assert!(
+        h.query_by_label("Screen limits").is_none(),
+        "limits live on the Screen tab (#9)"
+    );
+}
 
+/// #9: screen limits and the Main monitor have their own tab, before General.
+#[test]
+fn screen_tab_controls() {
+    let mut h = options_window(stopped());
+    h.get_by_role_and_label(egui::accesskit::Role::Tab, "Screen")
+        .click();
+    h.run_steps(4);
+    assert_eq!(h.state().tab, Tab::Screen);
     for (label, want) in [("Left", 10), ("Right", 20), ("Top", 30), ("Bottom", 40)] {
         h.get_by_label(label).set_value_accesskit(f64::from(want));
         h.run_steps(4);
@@ -718,8 +727,8 @@ fn main_monitor_lists_the_monitors_left_to_right() {
         },
         displays: vec![right, left],
     }));
-    // A tall window: at 620 px the field is below the fold; this test is about the list.
-    let mut h = options_window_sized(sh, Vec2::new(OPTIONS_SIZE[0], 1000.0));
+    sh.tab = Tab::Screen;
+    let mut h = options_window(sh);
     assert_eq!(
         settings(&h).recenter_display,
         None,
@@ -736,7 +745,10 @@ fn main_monitor_lists_the_monitors_left_to_right() {
 
 #[test]
 fn main_monitor_is_hidden_with_one_monitor() {
-    let h = options_window_sized(stopped(), Vec2::new(OPTIONS_SIZE[0], 1000.0));
+    let mut sh = stopped();
+    sh.tab = Tab::Screen;
+    let h = options_window(sh);
+    assert!(h.query_by_label("Screen limits").is_some());
     assert!(h.query_by_label("Main monitor").is_none());
 }
 
@@ -808,9 +820,7 @@ fn general_tab_controls() {
     h.get_by_label("Dark").click();
     h.run_steps(4);
     assert_eq!(settings(&h).theme, Theme::Carbon);
-    h.get_by_label("Text size").set_value_accesskit(120.0);
-    h.run_steps(4);
-    assert!((settings(&h).text_scale - 1.2).abs() < 1e-6);
+    assert!(h.query_by_label("Text size").is_none(), "removed (#10)");
     h.get_by_label("Larger controls").click();
     h.run_steps(4);
     assert!(settings(&h).larger_controls);
@@ -833,7 +843,7 @@ fn restore_defaults_and_close() {
     let mut h = options_window(sh);
     h.get_by_label("Restore defaults").click();
     h.run_steps(4);
-    assert_eq!(settings(&h).gain_x, 6.0);
+    assert_eq!(settings(&h).gain_x, 22.0);
     h.get_by_label("Close").click();
     h.run_steps(4);
     assert!(!h.state().options_open);
@@ -862,7 +872,6 @@ fn options_controls_are_reachable_by_tab() {
         "Pointer",
         "Dark",
         "Light",
-        "Text size",
         "Larger controls",
         "Show diagnostics",
         "Restore defaults",

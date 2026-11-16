@@ -30,3 +30,13 @@ held position. Options → Pointer → "Steady zone".
 Default `steady_px` is now **5** (on), behind the 1€ filter and the per-display scale, so a
 still head moves the cursor by exactly 0 px. An axis pinned at a screen limit bypasses the
 zone so screen edges stay reachable. Users with a saved `steady_px = 0` keep it.
+
+## Amendment 2026-11-16 (test drive #11, ADR-0017 amendment)
+
+The steady zone is **no longer a user option**. User decision: the fixed screen-px zone "does
+not work properly" at higher speeds; remove the option and make the zone grow with every
+speed. It is now **0.5 camera px of head movement** (`app_core::STEADY_ZONE_CAM_PX`),
+converted to screen px through the current gain and the Main monitor scale, so it covers the
+same head movement at gain 1–60. `steady_px` is gone from the settings (old files load; the
+field is ignored). Debug builds can try another value on the device with
+`OCM_DEV_STEADY=<camera px>` (0 = off).

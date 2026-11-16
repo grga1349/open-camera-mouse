@@ -282,7 +282,7 @@ fn paint_slider(ui: &Ui, r: &Response, frac: f32) {
 /// Left/Right/Home/End move between tabs while one has focus (lab `role="tablist"`).
 ///
 /// Tabs are left-aligned with 11 px side padding; when they don't fit (130 % text with
-/// larger controls) the padding shrinks so they still do.
+/// larger controls) the padding shrinks, down to none, so they still do (five tabs since #9).
 pub fn tabs<T: Copy + PartialEq>(ui: &mut Ui, selected: &mut T, items: &[(T, &str)]) {
     let t = theme::current(ui);
     let border = theme::metrics(theme::is_larger(ui)).border_w;
@@ -296,7 +296,7 @@ pub fn tabs<T: Copy + PartialEq>(ui: &mut Ui, selected: &mut T, items: &[(T, &st
     let avail = ui.available_width();
     let text_w: f32 = galleys.iter().map(|g| g.size().x).sum();
     let n = items.len().max(1) as f32;
-    let pad = ((avail - text_w - gap * (n - 1.0)) / (2.0 * n)).clamp(2.0, 11.0);
+    let pad = ((avail - text_w - gap * (n - 1.0)) / (2.0 * n)).clamp(0.0, 11.0);
 
     let row_top = ui.cursor().min;
     let row = Rect::from_min_size(row_top, Vec2::new(avail, h));

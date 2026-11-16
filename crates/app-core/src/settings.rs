@@ -58,7 +58,8 @@ impl Default for DwellSettings {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
-    /// Per-axis gain (R-P3), 2018 default 6/6.
+    /// Per-axis gain (R-P3): the mapping's real gain, 1–60. Default 22/22 (test drive #8,
+    /// ADR-0017 amendment 2026-11-16; 2018 used 6/6 scaled by the whole desktop).
     pub gain_x: f32,
     pub gain_y: f32,
     /// "Keep both speeds the same": when on, `gain_y` follows `gain_x`.
@@ -68,11 +69,6 @@ pub struct Settings {
     /// 2018 `Damping = 0.95` is `smoothing = 0.05`. Must stay below 1 (1 would freeze the
     /// pointer, L-1).
     pub smoothing: f32,
-    /// "Steady zone" (test drive #5, ADR-0015), screen px: head movement that would move the
-    /// cursor less than this doesn't move it, so it can be held perfectly still. 0 = off
-    /// (2018); default 5 (ADR-0017). The cursor follows larger moves one to one, trailing by
-    /// at most this, except on an axis pinned at a screen limit, which reaches the edge.
-    pub steady_px: u32,
     pub limits: ScreenLimits,
     /// "Main monitor" (test drive #4, ADR-0014): the display whose centre the cursor goes to
     /// on recenter and pause, as an index into the displays sorted left to right (then top to
@@ -91,20 +87,17 @@ pub struct Settings {
     pub loss_recovery: bool,
     pub theme: Theme,
     pub show_diagnostics: bool,
-    /// UI text scale (design lab: 100–130 %).
-    pub text_scale: f32,
     pub larger_controls: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            gain_x: 6.0,
-            gain_y: 6.0,
+            // Test drive #8 (ADR-0017 amendment 2026-11-16).
+            gain_x: 22.0,
+            gain_y: 22.0,
             link_gain: true,
-            smoothing: 0.05,
-            // ADR-0017 (test drive #5): on by default, after the 1€ filter.
-            steady_px: 5,
+            smoothing: 0.20,
             limits: ScreenLimits::default(),
             recenter_display: None,
             dwell: DwellSettings::default(),
@@ -113,7 +106,6 @@ impl Default for Settings {
             loss_recovery: false,
             theme: Theme::Carbon,
             show_diagnostics: false,
-            text_scale: 1.0,
             larger_controls: false,
         }
     }
@@ -132,14 +124,12 @@ pub struct SettingsError {
 /// Inclusive ranges, shared with the UI so sliders can't offer an invalid value.
 pub mod ranges {
     use std::ops::RangeInclusive;
-    pub const GAIN: RangeInclusive<f32> = 1.0..=20.0;
+    pub const GAIN: RangeInclusive<f32> = 1.0..=60.0;
     pub const SMOOTHING: RangeInclusive<f32> = 0.0..=0.95;
     pub const LIMIT_PX: RangeInclusive<u32> = 0..=1000;
-    pub const STEADY_PX: RangeInclusive<u32> = 0..=40;
     pub const DWELL_S: RangeInclusive<f32> = 0.3..=3.0;
     pub const REFRACTORY_S: RangeInclusive<f32> = 0.5..=5.0;
     pub const DWELL_RADIUS_FRAC: RangeInclusive<f32> = 0.01..=0.15;
-    pub const TEXT_SCALE: RangeInclusive<f32> = 1.0..=1.3;
 }
 
 fn check_f32(
@@ -191,7 +181,6 @@ impl Settings {
         }
         check_f32("gain_y", self.gain_y, ranges::GAIN)?;
         check_f32("smoothing", self.smoothing, ranges::SMOOTHING)?;
-        check_u32("steady_px", self.steady_px, ranges::STEADY_PX)?;
         let l = self.limits;
         check_u32("limits.left", l.left, ranges::LIMIT_PX)?;
         check_u32("limits.right", l.right, ranges::LIMIT_PX)?;
@@ -205,7 +194,6 @@ impl Settings {
             d.radius_frac,
             ranges::DWELL_RADIUS_FRAC,
         )?;
-        check_f32("text_scale", self.text_scale, ranges::TEXT_SCALE)?;
         if self.camera.as_deref().is_some_and(|c| c.trim().is_empty()) {
             self.camera = None;
         }
@@ -229,7 +217,6 @@ impl Settings {
                 "gain_x" => s.gain_x = d.gain_x,
                 "gain_y" => s.gain_y = d.gain_y,
                 "smoothing" => s.smoothing = d.smoothing,
-                "steady_px" => s.steady_px = d.steady_px,
                 "limits.left" => s.limits.left = d.limits.left,
                 "limits.right" => s.limits.right = d.limits.right,
                 "limits.top" => s.limits.top = d.limits.top,
@@ -237,7 +224,6 @@ impl Settings {
                 "dwell.dwell_s" => s.dwell.dwell_s = d.dwell.dwell_s,
                 "dwell.refractory_s" => s.dwell.refractory_s = d.dwell.refractory_s,
                 "dwell.radius_frac" => s.dwell.radius_frac = d.dwell.radius_frac,
-                "text_scale" => s.text_scale = d.text_scale,
                 // A field `validated` checks but this list forgot: don't loop, start over.
                 _ => return (d, reset),
             }
@@ -250,11 +236,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_are_valid_and_match_2018() {
+    fn defaults_are_valid_and_match_2018_except_tuned_ones() {
         let s = Settings::default().validated().unwrap();
-        assert_eq!((s.gain_x, s.gain_y), (6.0, 6.0));
-        // 2018 Damping 0.95 is the weight of the new position: smoothing = 1 − 0.95.
-        assert!((s.smoothing - 0.05).abs() < 1e-6);
+        // Test drive #8/#10 (ADR-0017 amendments 2026-11-16): gain 22 (2018: 6 × the whole
+        // desktop), smoothing 0.20 (2018 Damping 0.95 = 0.05).
+        assert_eq!((s.gain_x, s.gain_y), (22.0, 22.0));
+        assert!((s.smoothing - 0.20).abs() < 1e-6);
         assert!(!s.loss_recovery, "Find the target again is off by default");
         assert!(!s.dwell.enabled);
         assert!(s.mirror);
@@ -282,7 +269,7 @@ mod tests {
                 "gain_y",
                 Settings {
                     link_gain: false,
-                    gain_y: 21.0,
+                    gain_y: 61.0,
                     ..Settings::default()
                 },
             ),
@@ -330,13 +317,6 @@ mod tests {
                     ..Settings::default()
                 },
             ),
-            (
-                "text_scale",
-                Settings {
-                    text_scale: 1.5,
-                    ..Settings::default()
-                },
-            ),
         ];
         for (field, s) in cases {
             let err = s.validated().expect_err(field);
@@ -366,16 +346,14 @@ mod tests {
         let s = Settings {
             gain_x: 9.0,
             smoothing: 1.0,
-            text_scale: f32::NAN,
             theme: Theme::Paper,
             ..Settings::default()
         };
         let (fixed, reset) = s.repaired();
-        assert_eq!(reset, vec!["smoothing", "text_scale"]);
+        assert_eq!(reset, vec!["smoothing"]);
         assert_eq!(fixed.gain_x, 9.0, "valid fields are kept");
         assert_eq!(fixed.theme, Theme::Paper);
         assert_eq!(fixed.smoothing, Settings::default().smoothing);
-        assert_eq!(fixed.text_scale, 1.0);
         assert_eq!(fixed.clone().validated().unwrap(), fixed);
     }
 
@@ -399,11 +377,10 @@ mod tests {
                 refractory_s: 0.0,
                 radius_frac: 0.0,
             },
-            text_scale: 0.0,
             ..Settings::default()
         };
         let (fixed, reset) = s.repaired();
-        assert_eq!(reset.len(), 11, "{reset:?}");
+        assert_eq!(reset.len(), 10, "{reset:?}");
         assert!(!fixed.link_gain, "a valid field survives a full repair");
         assert!(fixed.dwell.enabled);
     }

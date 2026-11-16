@@ -41,7 +41,7 @@ fails only because of the terminal attribution.
 | 14 | Unplug an external camera while tracking (or close the lid camera if external only) | "Camera disconnected", last frame frozen; Start retries once plugged back | 2026-11-15 | pass |
 | 15 | Options → Camera: switch camera while running | Preview restarts on the chosen camera | 2026-11-15 | pass |
 | 16 | Quit while running | Camera light goes off within ~2 s (nokhwa #224) | 2026-11-15 | pass |
-| 17 | Theme Paper, Larger controls, Text size 130 %; quit; relaunch | All three persist | 2026-11-15 | pass |
+| 17 | Theme Paper, Larger controls; quit; relaunch (Text size removed 2026-11-16, TEST_DRIVE #10) | Both persist | 2026-11-15 | pass |
 | 18 | Running states on screen (Tracking, Held, Lost, Searching, Recentering, Paused, Handover, Permission needed) | Match the design lab; nothing clipped | 2026-11-15 | pass |
 | 19 | **`.app`**: camera permission denied (System Settings → Camera off) | "Allow camera access" card, no crash; Try again works after granting | 2026-11-15 | n/a: Phase 7 (.app bundle) |
 | 20 | **`.app`**: Accessibility granted to the app itself (not the terminal) | Same as row 5 | 2026-11-15 | n/a: Phase 7 (.app bundle) |

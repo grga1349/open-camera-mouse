@@ -2,7 +2,7 @@
 
 The live phase plan for the Rust rewrite. Condensed from the frozen planning seed
 (`docs/archive/rust-rewrite-seed/02-roadmap-nine-phases.md`), which stays the historical
-source. Phase 6b (test drive) was inserted by ADR-0013 and Phase 6c (tuning round) by ADR-0019, without renumbering. Change phases here, via an ADR, never by silently renumbering. Per-task status lives in
+source. Phase 6b (test drive) was inserted by ADR-0013 and Phase 6c (tuning round) by ADR-0019 and Phase 6d (calibrated pointer behaviour) by ADR-0020, without renumbering. Change phases here, via an ADR, never by silently renumbering. Per-task status lives in
 `tasks/BACKLOG.md`. This file only tracks phase status.
 
 Working rule: when a phase starts, its coordinator writes that phase's task file(s) in
@@ -19,7 +19,8 @@ the phase.
 | 5 | Design system | DONE | task 0007; `docs/design/design-lab.html` (approved v3), `EGUI_FEASIBILITY.md` |
 | 6 | Desktop app | DONE | task 0008; ADR-0012; `docs/qa/MANUAL_QA.md` (rows 1–18 pass); CI green |
 | 6b | Test drive (ADR-0013) | DONE | task 0009; `docs/qa/TEST_DRIVE.md` #1–#6; ADR-0014…0018 |
-| 6c | Tuning round (ADR-0019) | NEXT | task 0010 (written when the phase starts); `docs/qa/TEST_DRIVE.md` from #7 |
+| 6c | Tuning round (ADR-0019) | DONE | task 0010; `docs/qa/TEST_DRIVE.md` #7–#11; closed into 6d (ADR-0020) |
+| 6d | Calibrated pointer behaviour (ADR-0020) | NEXT | task 0011 (written when the phase starts); `docs/qa/TEST_DRIVE.md` from #12 |
 | 7 | Multiplatform / release | — | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
 | 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 
@@ -87,6 +88,14 @@ that owns it. Carried in from 6b: on-device check of main-monitor recenter (#4),
 rate and dwell since the engine thread, `ui` time with Options open. *Gate:* every 6c row
 fixed or deferred with a reason; quality gates green; the user says the app is ready for
 Phase 7.
+
+**6d — Calibrated pointer behaviour (ADR-0020).** Recordings of S0–S3 (+ precise-move and
+jump scenarios), shared metrics (shake, creep, jumps, lag, precision) for replays and synthetic
+runs, a settings sweep over the recordings, synthetic signals fitted to the recordings (only the
+fitted numbers in the repo), then fixes for jitter with the smallest dead zone and for jumps.
+*Gate:* shake 0 at rest and no unexplained jumps on recordings and on calibrated CI tests at
+every gain 1–60; the smallest sufficient zone, with its sweep table; every 6d row fixed or
+deferred; quality gates green; the user says ready for Phase 7.
 
 **7 — Multiplatform / release.** Validate macOS (Apple Silicon, permissions), Windows (cursor
 injection, capture), Linux (X11/Wayland limits). Packaging, signing/notarization, licenses,

@@ -13,7 +13,7 @@ pub mod settings;
 pub use color::RgbFrame;
 pub use controller::{
     AppState, Command, Controller, Effect, Event, Input, Marker, MarkerKind, PointerAccess,
-    PointerOwner, RECENTER_US, RecenterView, Step, View,
+    PointerOwner, RECENTER_US, RecenterView, STEADY_ZONE_CAM_PX, Step, View,
 };
 pub use pointer_core::DesktopRect;
 pub use settings::{DwellSettings, ScreenLimits, Settings, SettingsError, Theme};

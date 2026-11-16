@@ -287,10 +287,19 @@ pub struct Controller {
     one_euro: OneEuro,
     smoother: Smoother,
     steady: SteadyZone,
+    /// Steady-zone radius in camera px of head movement ([`STEADY_ZONE_CAM_PX`]).
+    steady_cam_px: f32,
     dwell: Dwell,
     capture: Option<CaptureFormat>,
     error: Option<String>,
 }
+
+/// Steady zone (test drive #5, #11; ADR-0017 amendment 2026-11-16): head movement smaller than
+/// this, in camera px, doesn't move the cursor. Measured on a real still recording (S1): the
+/// zone in camera px gives the same result at every gain; 0.5 cut cursor moves at rest to about
+/// a third and back-and-forth shake to 2 reversals in 14.5 s. Real heads also drift 1–2.5 px over
+/// seconds, which no small zone can hold.
+pub const STEADY_ZONE_CAM_PX: f32 = 0.5;
 
 /// Tracker parameters for the settings: the recommended tracker, with re-detection only when
 /// "Find the target again" is on (ADR-0011 amendment).
@@ -363,10 +372,21 @@ impl Controller {
             one_euro: OneEuro::default(),
             smoother: Smoother::default(),
             steady: SteadyZone::default(),
+            steady_cam_px: STEADY_ZONE_CAM_PX,
             dwell: Dwell::default(),
             capture: None,
             error: None,
         })
+    }
+
+    /// Overrides the steady-zone radius in camera px (≥ 0; 0 = off). Not a user setting
+    /// (test drive #11): for tests and the debug-only `OCM_DEV_STEADY` device trial.
+    pub fn set_steady_zone_cam_px(&mut self, cam_px: f32) {
+        self.steady_cam_px = if cam_px.is_finite() {
+            cam_px.max(0.0)
+        } else {
+            0.0
+        };
     }
 
     pub fn state(&self) -> AppState {
@@ -902,6 +922,20 @@ impl Controller {
         self.move_pointer(home, step);
     }
 
+    /// The steady-zone radius in screen px: [`STEADY_ZONE_CAM_PX`] of head movement times the
+    /// mapping's screen px per camera px on the faster axis, so it grows with the speed and
+    /// the Main monitor's size (test drive #11).
+    fn steady_radius(&self) -> f32 {
+        let Some(frame) = &self.frame else {
+            return 0.0;
+        };
+        let size = frame_size(frame);
+        let r = self.scale_reference();
+        let sx = self.settings.gain_x * r.width / size.width;
+        let sy = self.settings.gain_y * r.height / size.height;
+        self.steady_cam_px * sx.max(sy)
+    }
+
     /// The display whose size sets the mapping scale (ADR-0017).
     fn scale_reference(&self) -> DesktopRect {
         scale_reference(
@@ -944,9 +978,8 @@ impl Controller {
         // 2018 keeps the clamped position as the filter state.
         self.smoother.set_current(limited.position);
         self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us));
-        let mut cursor = self
-            .steady
-            .update(limited.position, self.settings.steady_px as f32);
+        let radius = self.steady_radius();
+        let mut cursor = self.steady.update(limited.position, radius);
         // At a screen limit the edge itself must be reachable (menu bar, corners): a pinned
         // axis isn't held back by the steady zone's trailing radius (ADR-0017).
         if limited.x != Pin::Free {

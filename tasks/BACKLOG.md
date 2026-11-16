@@ -9,12 +9,13 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| — | Phase 6c — tuning round (ADR-0019) | NEXT — task 0010 to be written by the session that starts it, from `docs/ROADMAP.md` §6c |
+| — | Phase 6d — calibrated pointer behaviour (ADR-0020) | NEXT — task 0011 to be written by the session that starts it, from `docs/ROADMAP.md` §6d |
 
 ## Done
 
 | ID | Title | Status |
 |---|---|---|
+| 0010 | Phase 6c — tuning round (ADR-0019) | DONE — #8 real gain 1–60, #9 Screen tab, #10 Text size removed + defaults gain 22 / smoothing 0.20, #11 automatic steady zone (0.5 cam px); closed into 6d (ADR-0020) |
 | 0009 | Phase 6b — test drive (ADR-0013) | DONE — issues #1–#6 (`docs/qa/TEST_DRIVE.md`); slices 2a–2d, ADR-0014…0018, last code `df4c670`; closed into 6c (ADR-0019) |
 | 0008 | Phase 6 — desktop app | DONE — D0–D7 + D6b, final code `7e9a2bb` CI 43746097717 green on 3 OS + cargo-deny; manual QA rows 1–18 pass 2026-11-15 (`docs/qa/MANUAL_QA.md`); ADR-0012 |
 | 0007 | Phase 5 — design system | DONE — lab v3 approved 2026-11-12 (Carbon/Paper, neon-green thin-ring marker, yellow primary buttons); `docs/design/EGUI_FEASIBILITY.md` |

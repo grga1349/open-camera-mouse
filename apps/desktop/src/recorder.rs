@@ -288,7 +288,7 @@ mod tests {
         let s = Settings {
             gain_x: 7.0,
             gain_y: 7.0,
-            steady_px: 3,
+            smoothing: 0.3,
             ..Settings::default()
         };
         r.settings(&s);

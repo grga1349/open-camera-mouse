@@ -311,7 +311,6 @@ mod tests {
             camera: Some("FaceTime HD Camera".into()),
             loss_recovery: true,
             theme: Theme::Paper,
-            text_scale: 1.2,
             ..Settings::default()
         }
     }
@@ -370,7 +369,7 @@ mod tests {
         assert_eq!(loaded.settings.theme, Theme::Paper);
         assert!(loaded.settings.dwell.enabled);
         assert_eq!(loaded.settings.dwell.dwell_s, 1.0);
-        assert_eq!(loaded.settings.gain_x, 6.0);
+        assert_eq!(loaded.settings.gain_x, 22.0);
     }
 
     #[test]
@@ -440,7 +439,7 @@ mod tests {
         let mut s = store(&dir);
         write(
             &s,
-            "schema_version = 1\ngain_x = 50.0\nsmoothing = 0.4\ntheme = \"paper\"\n\
+            "schema_version = 1\ngain_x = 70.0\nsmoothing = 0.4\ntheme = \"paper\"\n\
              [dwell]\nradius_frac = 0.9\n",
         );
         let loaded = s.load();
@@ -450,7 +449,7 @@ mod tests {
                 fields: vec!["gain_x", "dwell.radius_frac"]
             })
         );
-        assert_eq!(loaded.settings.gain_x, 6.0);
+        assert_eq!(loaded.settings.gain_x, 22.0);
         assert_eq!(loaded.settings.smoothing, 0.4);
         assert_eq!(loaded.settings.theme, Theme::Paper);
         assert_eq!(loaded.settings.dwell.radius_frac, 0.05);

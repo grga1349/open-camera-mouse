@@ -1,18 +1,22 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6b DONE, task 0009 closed; Phase 6c tuning round NEXT, ADR-0019; no task file yet)
+Last updated: 2026-11-16 (Phase 6c DONE, task 0010 closed; Phase 6d calibrated pointer behaviour NEXT, ADR-0020; no task file yet)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last code: slice 2d `df4c670` (ADR-0018), handoffs after it. CI for
-`df4c670`/`71ac27a` was running at writing — verify.
+Branch: `rewrite/rust`. Last code: the 6c close-out commit (see `git log`). CI for it was
+running at writing — verify. CI on `944cbf1` failed once in macOS `test (no webcam)` (flake,
+TEST_DRIVE #7, test name unknown).
 
 ## Milestone
 
-Phases 0–6 and 6b DONE. 6b (task 0009, ADR-0013): issues #1–#6 in `docs/qa/TEST_DRIVE.md`
-fixed, slices 2a–2d (ADR-0014…0018) device-checked. **Phase 6c — tuning round (ADR-0019) is
-NEXT**: one more round of test → tune → fix on the dev Mac before Phase 7. Task 0010 is not
-written yet; the session that starts 6c writes it from `docs/ROADMAP.md` §6c.
+Phases 0–6, 6b and 6c DONE. 6c (task 0010, ADR-0019): #8 real gain 1–60, #9 Options Screen tab
+(limits + Main monitor), #10 Text size removed, #11 steady zone automatic (0.5 camera px of head
+movement, converted through gain and Main monitor; no longer an option). Defaults now gain
+22/22, smoothing 0.20 (ADR-0017 amendments). **Phase 6d — calibrated pointer behaviour
+(ADR-0020) is NEXT**: recordings → shared metrics → settings sweep → synthetic signals fitted to
+the recordings → fix jitter with the smallest dead zone and fix jumps (#12). Task 0011 is not
+written yet.
 
 ## What exists now
 
@@ -67,6 +71,11 @@ written yet; the session that starts 6c writes it from `docs/ROADMAP.md` §6c.
 - Appearance gate anchored update (ADR-0018, slice 2d): `LkParams::anchored`, on in
   `recommended()`: gate vs the window accepted 10 steps earlier (≥ 0.7) + selection floor 0.3.
   `turn_extreme` 90/90; slow-occluder scenes `occluder_slide`/`occluder_creep` pinned.
+- Pointer tuning (6c): `Settings` has no `steady_px`/`text_scale` any more (old files load,
+  unknown fields ignored). `app_core::STEADY_ZONE_CAM_PX` = 0.5; `Controller::set_steady_zone_cam_px`
+  for tests and the debug-only `OCM_DEV_STEADY=<cam px>` (engine.rs). Options tabs: Pointer ·
+  Clicking · Camera · Screen · General. Rest test `the_cursor_does_not_move_at_rest_*` covers
+  gains 1–60 in four parallel parts (synthetic, *not yet calibrated*).
 - Dev profile: deps opt 2, `app-core`/`pointer-core`/`platform` opt 3, `tracking-core` 3
   (root `Cargo.toml`). Benches: `app-core --bench frame`, `platform --bench decode`.
 
@@ -76,12 +85,14 @@ written yet; the session that starts 6c writes it from `docs/ROADMAP.md` §6c.
 
 ## Immediate next action
 
-Start Phase 6c: verify CI, write `tasks/active/0010-phase-6c-tuning-round.md` from ADR-0019
-+ ROADMAP §6c, add it to `tasks/BACKLOG.md`, then ask the user what they want to tune first and
-log it as TEST_DRIVE #7+. Carried in from 6b: #4 main-monitor on-device check; minimised rate +
-dwell on device since the engine thread; `ui` 15/17 ms with Options open.
+Start Phase 6d: verify CI, write `tasks/active/0011-phase-6d-calibrated-pointer.md` from ADR-0020
++ ROADMAP §6d, set it ACTIVE in `tasks/BACKLOG.md`, ask the user for the jump steps (#12) and the
+recordings plan, then slice per ADR-0020's order.
 
 ## Open risks
+
+- Synthetic pointer tests passed while the device still jittered: not calibrated (ADR-0020).
+- Jumps (#12) not reproduced yet.
 
 - ADR-0018 limit: a change slower than the gate allows in 10 frames is followed down to the
   selection floor (0.3); a surface correlating ≥ 0.3 with the selection could be followed

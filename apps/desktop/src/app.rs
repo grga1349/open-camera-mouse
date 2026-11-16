@@ -102,7 +102,7 @@ pub struct Shell {
     /// How long the last preview upload took, for `OCM_PERF` (taken by `main`).
     pub last_upload: Option<std::time::Duration>,
     fps: FpsMeter,
-    applied_style: Option<(Theme, bool, u32)>,
+    applied_style: Option<(Theme, bool)>,
 }
 
 impl std::fmt::Debug for Shell {
@@ -247,14 +247,10 @@ impl Shell {
         }
     }
 
-    /// Applies theme, larger controls and text size when they change.
+    /// Applies theme and larger controls when they change.
     pub fn apply_style(&mut self, ctx: &egui::Context) {
         let s = &self.settings;
-        let key = (
-            s.theme,
-            s.larger_controls,
-            (s.text_scale * 100.0).round() as u32,
-        );
+        let key = (s.theme, s.larger_controls);
         if self.applied_style == Some(key) {
             return;
         }
@@ -265,7 +261,6 @@ impl Shell {
             Theme::Paper => egui::Theme::Light,
         });
         ctx.set_global_style(style);
-        ctx.set_zoom_factor(s.text_scale);
     }
 
     /// Uploads the engine's preview image when a new frame arrived (`frame_seq`).
