@@ -33,10 +33,10 @@ use pointer_core::dwell::{Dwell, DwellParams};
 use pointer_core::handover::{
     HandoverParams, InactivityTimer, REACQUIRE_MAX_JUMP_FRAC, mouse_moved_away, within_jump_bound,
 };
-use pointer_core::limits::{Limits, Pin, apply_limits, drift_offset};
+use pointer_core::limits::{Limits, apply_limits, bounds, drift_offset};
 use pointer_core::one_euro::{OneEuro, OneEuroParams};
 use pointer_core::smoothing::Smoother;
-use pointer_core::steady::SteadyZone;
+use pointer_core::steady::{SteadyZone, approach_edge};
 use pointer_core::{DesktopRect, FrameSize, Gain, map_raw_scaled, scale_reference};
 use tracking_core::lk::{LkParams, LkTracker};
 use tracking_core::{
@@ -980,14 +980,13 @@ impl Controller {
         self.offset = drift_offset(self.offset, &limited, now_us.saturating_sub(last_us));
         let radius = self.steady_radius();
         let mut cursor = self.steady.update(limited.position, radius);
-        // At a screen limit the edge itself must be reachable (menu bar, corners): a pinned
-        // axis isn't held back by the steady zone's trailing radius (ADR-0017).
-        if limited.x != Pin::Free {
-            cursor.x = limited.position.x;
-        }
-        if limited.y != Pin::Free {
-            cursor.y = limited.position.y;
-        }
+        // The edge itself must be reachable (menu bar, corners, ADR-0017), but snapping a
+        // pinned axis onto it released the zone's trail in one frame (test drive #12,
+        // ADR-0020): near a limit the trail shortens with the target's distance to it.
+        let (lo, hi) = bounds(self.desktop, limits(&self.settings));
+        let t = limited.position;
+        cursor.x = approach_edge(cursor.x, t.x, lo.x, hi.x);
+        cursor.y = approach_edge(cursor.y, t.y, lo.y, hi.y);
         self.steady.reset_to(cursor);
         self.move_pointer(cursor, step);
         if !self.settings.dwell.enabled {

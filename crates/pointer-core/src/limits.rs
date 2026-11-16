@@ -87,6 +87,13 @@ pub fn apply_limits(p: Point2, desktop: DesktopRect, limits: Limits) -> Limited 
     }
 }
 
+/// The allowed area: its lowest (W, N) and highest (E, S) cursor positions.
+pub fn bounds(desktop: DesktopRect, limits: Limits) -> (Point2, Point2) {
+    let (x0, x1) = axis_range(desktop.x, desktop.width, limits.left, limits.right);
+    let (y0, y1) = axis_range(desktop.y, desktop.height, limits.top, limits.bottom);
+    (Point2::new(x0, y0), Point2::new(x1, y1))
+}
+
 /// Drifts the image-space `offset` back toward the centre for every pinned axis over
 /// `dt_us`. Pinned high (E/S) means the head is too far that way, so the offset decreases.
 pub fn drift_offset(offset: Point2, limited: &Limited, dt_us: u64) -> Point2 {
@@ -117,6 +124,11 @@ mod tests {
         assert_eq!((l.x, l.y), (Pin::High, Pin::Low));
         let inside = apply_limits(Point2::new(1919.0, 0.0), DESK, Limits::default());
         assert_eq!((inside.x, inside.y), (Pin::Free, Pin::Free));
+        let (lo, hi) = bounds(DESK, Limits::default());
+        assert_eq!(
+            (lo, hi),
+            (Point2::new(0.0, 0.0), Point2::new(1919.0, 1079.0))
+        );
     }
 
     /// The E/S fix: with a negative origin, every edge includes it (2018 E/S didn't).

@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; step 2 metrics committed; next = device test of #12 edge snap + step 3 sweep; corpus = existing S1/S2)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; edge-jump fix committed; next = part 3: #13 imprecise, #12 jumps?, #14 primary monitor default, LK-vs-OpenCV parity research — see task 0011)
 
 ## Branch / commit
 
@@ -85,18 +85,18 @@ written yet.
 
 ## Immediate next action
 
-Phase 6d step 3 (settings sweep) on S1/S2 with `pointer_core::metrics` via the replay tool's
-`replay_metrics`; then step 4 (calibrated synthetic signals) and step 5 (fixes; first lead for
-#12: steady-zone edge snap in `Controller::drive`). No new recordings (user decision).
+Part 3 of Phase 6d, queued in task 0011 § "Queued for part 3": #13 imprecise mouse, #12
+(edge snap fixed via `steady::approach_edge`; user not sure all jumps are gone), #14 Main
+monitor default = primary, and the LK vs OpenCV parity research (`docs/research/OPENCV_LK_PARITY.md`).
+Ask the user which slice first. No new recordings (user decision).
 
 ## Open risks
 
-- #12 lead: `drive` snaps a pinned axis to the screen limit past the steady zone's trailing
-  radius → a jump of up to the zone radius whenever the cursor reaches an edge (S2 58.54 s).
+- #12: the edge snap is fixed (`steady::approach_edge`, ADR-0017 amendment); near a limit the
+  zone holds less toward it (creep, no shake). Other jump causes not ruled out.
 - #7: CI `test (no webcam)` flaky on macOS (exit 101) and Windows (exit 1, run 43779616732).
 
 - Synthetic pointer tests passed while the device still jittered: not calibrated (ADR-0020).
-- Jumps (#12) not reproduced yet.
 
 - ADR-0018 limit: a change slower than the gate allows in 10 frames is followed down to the
   selection floor (0.3); a surface correlating ≥ 0.3 with the selection could be followed

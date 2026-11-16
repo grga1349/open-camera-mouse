@@ -3,31 +3,27 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6d step 2 metrics committed; next session = testing + step 3 sweep)
+## As of 2026-11-16 (Phase 6d part 2 done: edge-jump fix committed; next = part 3)
 
-**Branch:** `rewrite/rust`. Step 2 committed and pushed (see `git log`); verify its CI. CI on `d7728b5`: Windows
-`test (no webcam)` failed with exit 1 (#7; log needs auth — ask the user for the test name).
+**Branch:** `rewrite/rust`. Edge-jump fix committed and pushed (see `git log`); verify its CI.
 
 **User decision:** no new recordings; corpus = `~/ocm-recordings/S1-still-2026-11-15` and
 `S2-turns-2026-11-15`.
 
-**Done:** task 0011 written; replay tool ported (`bench_run_zone`, `OCM_REPLAY_STEADY` in cam
-px); metrics module `crates/pointer-core/src/metrics.rs` (creep, shake, unexplained jumps,
-lag, precision rule); `the_cursor_does_not_move_at_rest_*` use it; replay tool
-`replay_metrics` (`OCM_REPLAY_DIRS=<S1>:<S2>`) and `replay_around` (`OCM_AT_S`). Baseline
-table in task 0011. **#12 lead:** at S2 58.54 s the cursor snaps 44 px to the bottom edge —
-`Controller::drive` pins an axis at the limit past the steady zone's trailing radius.
+**Done (part 2):** #12 edge snap fixed — `pointer_core::steady::approach_edge` (`EDGE_TRAIL`
+0.25) + `limits::bounds`, ADR-0017 amendment, CI test `a_slow_move_onto_an_edge_does_not_jump`.
+User device check: edges fine, but **not sure the jumping is fixed**.
 
-**Next session (user: "2nd part, where we will test stuff"):**
-0. Testing with the user on the dev build (`cargo run -p open-camera-mouse`): ask whether the
-   jumps were at screen edges and reproduce #12 by moving the cursor to each edge at the
-   default zone vs `OCM_DEV_STEADY=0` (expect: snap with zone, none without). Note results in
-   TEST_DRIVE #12.
-1. Step 3: sweep S1/S2 over gain, smoothing, zone, 1€ params (+ candidate edge-approach fix)
-   with `replay_metrics`; table into task 0011. Also explain S2's 1084 vs 1563 controlled
-   steps (defaults vs as-recorded).
-2. Ask the user whether their jumps happened at screen edges.
-3. Then step 4 (fit synthetic signals), step 5 (fixes).
+**Next session = part 3 ("trying to fix this stuff"), queued in task 0011 § "Queued for part 3":**
+1. #13 the mouse is imprecise — triage first (zone trail/creep, filter lag, tracker noise).
+2. #12 still open — other jump causes (fast-move filter catch-up S2 29–34 s, handover,
+   display snap). Add a jump reference against the zone-off cursor (marker step over-flags
+   filter catch-up).
+3. #14 "Main monitor" default = the OS primary monitor (ADR-0014 amendment, user OK; platform
+   must report which display is primary).
+4. Research: Rust LK vs OpenCV parity → `docs/research/OPENCV_LK_PARITY.md` (brief verbatim in
+   task 0011; no production changes during research, OpenCV only outside the shipped app).
+Then step 3 sweep / step 4 calibration as before. One slice per session — ask which first.
 
 **Evidence so far (S1 replay, recorded smoothing 0.05; 2026-11-16 re-run: 0.5 cam px → 99/300 rest frames move, 0 moves needs 2.24 cam px, identical at gain 4–60). Older numbers, moves / reversals by camera-px zone:** gain 24: no
 zone 311/6, 0.2 → 169/5, 0.5 → 108/2, 1.0 → 59/1; same pattern at gain 8–60. Reversals (shake)

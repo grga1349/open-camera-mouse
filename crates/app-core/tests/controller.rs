@@ -11,6 +11,7 @@ use app_core::{
     PointerAccess, PointerOwner, RECENTER_US, STEADY_ZONE_CAM_PX, ScreenLimits, Settings, Step,
 };
 use pointer_core::metrics::{self, PathSample, Scale};
+use pointer_core::steady::EDGE_TRAIL;
 use tracking_core::{GrayFrame, LossReason, Point2, TrackStatus};
 
 const W: u32 = 640;
@@ -961,6 +962,44 @@ fn screen_limits_pin_the_cursor_and_drift_recentres_the_mapping() {
     // Head back to centre: the cursor is now left of the desktop centre (mapping shifted).
     let back = sweep(&mut r, 50.0, 0.0).pointer_target().unwrap();
     assert!(back.x < CENTER.x - 50.0, "{back:?}");
+}
+
+/// Test drive #12 (ADR-0020): a slow head move onto a screen edge with the default steady
+/// zone. The cursor trails the target by up to the zone radius; reaching the edge must not
+/// release that in one frame (it did: a snap of up to the radius, S2 58.54 s). Holding the
+/// head past the edge still brings the cursor onto the edge, and it then stays there.
+#[test]
+fn a_slow_move_onto_an_edge_does_not_jump() {
+    let mut r = Rig::tracking();
+    let edge = DESK.width - 1.0;
+    let scale = gain() * DESK.width / W as f32;
+    let radius = STEADY_ZONE_CAM_PX * scale;
+    // The edge is at dx = 959 / scale ≈ 14.5 cam px. Fast to 12, settle, then creep.
+    sweep(&mut r, 0.0, 12.0);
+    r.hold(1_000_000, 12.0, SCENE);
+    let mut path: Vec<Point2> = Vec::new();
+    let creep = 0.03; // cam px per frame ≈ 0.9 cam px/s, 2 screen px per frame
+    let mut dx = 12.0;
+    while dx < 16.0 {
+        dx += creep;
+        path.extend(moves(&r.frame(dx, 0.0, SCENE)));
+    }
+    path.extend(moves(&r.hold(1_500_000, 16.0, SCENE)));
+    let steps: Vec<f32> = path.windows(2).map(|w| dist(w[0], w[1])).collect();
+    let max = steps.iter().copied().fold(0.0, f32::max);
+    // The head moves 2 screen px per frame; near the edge the cursor closes its trail at
+    // most `EDGE_TRAIL` times faster (the old snap: one step of the whole radius, 33 px).
+    assert!(
+        max <= (1.0 + EDGE_TRAIL) * creep * scale + 1.0,
+        "jump of {max:.1} px (zone radius {radius:.1} px)"
+    );
+    let last = *path.last().unwrap();
+    assert_eq!(last.x, edge, "the held head reaches the edge");
+    let at_edge = path.iter().position(|p| p.x == edge).unwrap();
+    assert!(
+        path[at_edge..].iter().all(|p| p.x == edge),
+        "stays on the edge once there"
+    );
 }
 
 fn with_dwell() -> Settings {

@@ -89,3 +89,15 @@ read as a real gain.
 
 User decision after the device trial: default gain **22/22**, smoothing **0.20**. Further
 tuning of the steady zone and smoothing moves to Phase 6d (ADR-0020), measured on recordings.
+
+## Amendment 2026-11-16 (Phase 6d) — edge approach without a snap (test drive #12)
+
+Decision 4's "a pinned axis goes to the limit itself" released the zone's whole trail in one
+frame: a jump of up to the radius onto the edge (S2 58.54 s: 44 px; synthetic slow approach:
+33 px = the radius). Replaced by `pointer_core::steady::approach_edge`: the cursor trails the
+target by at most `EDGE_TRAIL` (0.25) × the target's distance to the limit it is heading for.
+Edges and corners stay reachable (on the limit when the target is), the trail shortens over the
+last 4 zone radii, and the cursor moves at most 1.25 × the target there. Measured on S2 (last
+steps onto the edge): zone off 26/30/27/20 px, old snap …/44, factor 1.0 …/39, 0.25
+31/37/34/25. Trade-off: within 4 radii of a limit the zone holds less toward that limit (the
+cursor may creep toward it, never shakes). CI: `a_slow_move_onto_an_edge_does_not_jump`.
