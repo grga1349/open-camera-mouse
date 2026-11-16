@@ -131,11 +131,20 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
 
 ## Queued for part 3 (user, 2026-11-16)
 
+0. **NEXT (user, 2026-11-16, after the LK research): 2018 jitter comparison.** Go through
+   `../camera-mouse-reverse/` and check (a) whether we do something differently from 2018 that
+   could cause jitter or the other symptoms (#12 jumps, #13 imprecise) — tracking, offset
+   drift, mapping, smoothing, dead zone, timing — and (b) whether 2018 has its own jitter
+   solution. Behavioural research only: label findings VERIFIED/INFERRED, never paste
+   decompiled code; write results into `docs/research/` (and RE_EVIDENCE where it fits) and
+   turn any proposed fix into a measured slice (ADR-0020 rules).
 1. **#13 the mouse is imprecise** — triage first (zone trail/creep, filter lag, tracker noise).
 2. **#12 not sure the jumping is fixed** — the edge snap is fixed; look for other causes
    (fast-move filter catch-up at S2 29–34 s, handover/re-acquisition, display snap).
 3. **#14 "Main monitor" defaults to the primary monitor** (ADR-0014 amendment + user OK).
-4. **Research: Rust LK vs OpenCV numerical parity** — the user's brief, verbatim:
+4. **DONE 2026-11-16 → `docs/research/OPENCV_LK_PARITY.md`.** Verdict: competitive, no
+   parity defects, no production change recommended (min_eigen ×1024 mapping to document;
+   optional perf experiments only). ADR-0009 21×21 now VERIFIED. **Research: Rust LK vs OpenCV numerical parity** — the user's brief, verbatim:
 
 > # Research task — Rust LK vs OpenCV numerical parity
 >

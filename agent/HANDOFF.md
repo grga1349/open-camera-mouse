@@ -3,9 +3,17 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6d part 2 done: edge-jump fix committed; next = part 3)
+## As of 2026-11-16 (Phase 6d part 3: LK-vs-OpenCV research slice done; 3 slices left)
 
-**Branch:** `rewrite/rust`. Edge-jump fix committed and pushed (see `git log`); verify its CI.
+**Branch:** `rewrite/rust`. CI on `8303dd7` (edge-jump fix) green.
+
+**Done this session (part 3, slice 4):** `docs/research/OPENCV_LK_PARITY.md` — our LK is
+competitive with OpenCV 4.12 (real pairs: 0 status disagreements, |Δ| median 0.0012 px; fully
+explained by u8 pyramid + fixed point), no parity defects, no production change. ADR-0009
+21×21 note → VERIFIED from 2.1 source. Follow-ups (not tasks yet): document `min_eigen` =
+OpenCV `minEigThreshold`×1024 in `LkParams` docs; optional perf (constant-weight sampler
+41→22 µs, ROI pyramid) only if `OCM_PERF` ever needs it. Harness not kept (user: doc only);
+re-creatable from the method in §2 of the doc.
 
 **User decision:** no new recordings; corpus = `~/ocm-recordings/S1-still-2026-11-15` and
 `S2-turns-2026-11-15`.
@@ -14,15 +22,20 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 0.25) + `limits::bounds`, ADR-0017 amendment, CI test `a_slow_move_onto_an_edge_does_not_jump`.
 User device check: edges fine, but **not sure the jumping is fixed**.
 
-**Next session = part 3 ("trying to fix this stuff"), queued in task 0011 § "Queued for part 3":**
+**Next session = 2018 jitter comparison (user, task 0011 § "Queued for part 3" item 0):**
+read `../camera-mouse-reverse/` for anything we do differently from 2018 that could cause
+jitter / jumps / imprecision, and whether 2018 has its own jitter solution. Research only,
+no decompiled code in the repo. The LK research already rules out the tracker core
+(`OPENCV_LK_PARITY.md`: jitter and drift identical to OpenCV), so focus on the pointer path.
+
+**After that, remaining part 3 slices:**
 1. #13 the mouse is imprecise — triage first (zone trail/creep, filter lag, tracker noise).
 2. #12 still open — other jump causes (fast-move filter catch-up S2 29–34 s, handover,
    display snap). Add a jump reference against the zone-off cursor (marker step over-flags
    filter catch-up).
 3. #14 "Main monitor" default = the OS primary monitor (ADR-0014 amendment, user OK; platform
    must report which display is primary).
-4. Research: Rust LK vs OpenCV parity → `docs/research/OPENCV_LK_PARITY.md` (brief verbatim in
-   task 0011; no production changes during research, OpenCV only outside the shipped app).
+4. ~~LK vs OpenCV research~~ DONE.
 Then step 3 sweep / step 4 calibration as before. One slice per session — ask which first.
 
 **Evidence so far (S1 replay, recorded smoothing 0.05; 2026-11-16 re-run: 0.5 cam px → 99/300 rest frames move, 0 moves needs 2.24 cam px, identical at gain 4–60). Older numbers, moves / reversals by camera-px zone:** gain 24: no

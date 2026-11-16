@@ -33,6 +33,8 @@ spec leaves implicit: what `win = 10×10` means, what `level = 3` means, and whe
    that Phase 4 can re-tune with measurements, not facts. (Reason (b), ADR-0006: the 2018
    resolution is unknown.)
 2. `half_window = 10` → 21×21 window (INFERRED from the C API semantics above, reason (b)).
+   *2026-11-16: now VERIFIED from OpenCV 2.1.0 source, `cvlkpyramid.cpp:575`
+   (`patchSize = winSize*2+1`); see `docs/research/OPENCV_LK_PARITY.md` §3.8.*
    `max_level = 3` → four levels (0..=3), OpenCV's convention. `max_iter = 20`,
    `epsilon = 0.03` on the update step length.
 3. Failure test: `λ_min(G)/|W| ≥ min_eigen` with `min_eigen = 1.0` intensity²/px², plus

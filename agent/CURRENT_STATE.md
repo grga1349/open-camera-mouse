@@ -1,11 +1,10 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; edge-jump fix committed; next = part 3: #13 imprecise, #12 jumps?, #14 primary monitor default, LK-vs-OpenCV parity research — see task 0011)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: LK-vs-OpenCV research DONE; next = 2018 jitter comparison, then #13 imprecise, #12 jumps?, #14 primary monitor default — see task 0011)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last code: the 6c close-out commit (see `git log`). CI for it was
-running at writing — verify. CI on `944cbf1` failed once in macOS `test (no webcam)` (flake,
+Branch: `rewrite/rust`. Last code: `8303dd7` (edge approach, #12); CI green. CI on `944cbf1` failed once in macOS `test (no webcam)` (flake,
 TEST_DRIVE #7, test name unknown).
 
 ## Milestone
@@ -14,9 +13,7 @@ Phases 0–6, 6b and 6c DONE. 6c (task 0010, ADR-0019): #8 real gain 1–60, #9 
 (limits + Main monitor), #10 Text size removed, #11 steady zone automatic (0.5 camera px of head
 movement, converted through gain and Main monitor; no longer an option). Defaults now gain
 22/22, smoothing 0.20 (ADR-0017 amendments). **Phase 6d — calibrated pointer behaviour
-(ADR-0020) is NEXT**: recordings → shared metrics → settings sweep → synthetic signals fitted to
-the recordings → fix jitter with the smallest dead zone and fix jumps (#12). Task 0011 is not
-written yet.
+(ADR-0020) is ACTIVE**, task 0011 (parts 1–2 done; part 3 in progress).
 
 ## What exists now
 
@@ -87,8 +84,9 @@ written yet.
 
 Part 3 of Phase 6d, queued in task 0011 § "Queued for part 3": #13 imprecise mouse, #12
 (edge snap fixed via `steady::approach_edge`; user not sure all jumps are gone), #14 Main
-monitor default = primary, and the LK vs OpenCV parity research (`docs/research/OPENCV_LK_PARITY.md`).
-Ask the user which slice first. No new recordings (user decision).
+monitor default = primary. (LK vs OpenCV parity research DONE: `docs/research/OPENCV_LK_PARITY.md`,
+solver competitive, no production change.) **Next: 2018 jitter comparison against
+`../camera-mouse-reverse/`** (task 0011 queue item 0), then ask which remaining slice. No new recordings (user decision).
 
 ## Open risks
 
