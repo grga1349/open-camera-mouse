@@ -146,9 +146,12 @@ impl PointerSink for SystemPointer {
         self.displays = monitors()?;
         let bounds =
             bounding(&self.displays).ok_or_else(|| PointerError::Backend("no monitor".into()))?;
+        // The primary monitor is at (0, 0) in virtual-screen coordinates by definition; the
+        // controller finds it there (`MONITORINFOF_PRIMARY` would say the same).
         Ok(Desktop {
             bounds,
             displays: self.displays.clone(),
+            primary: self.displays.iter().position(|d| d.x == 0.0 && d.y == 0.0),
         })
     }
 }

@@ -48,7 +48,7 @@ use crate::color::{RgbFrame, downsample_rgb_to_width, ingest_rgb};
 use crate::ports::{
     CameraError, CameraFrame, CaptureFormat, CaptureRequest, Desktop, PointerError,
 };
-use crate::settings::{Settings, SettingsError};
+use crate::settings::{MainMonitor, Settings, SettingsError};
 
 /// Guided recenter countdown (R-A3, user decision 2026-11-12: 5-4-3-2-1).
 pub const RECENTER_US: u64 = 5_000_000;
@@ -268,6 +268,8 @@ pub struct Controller {
     desktop: DesktopRect,
     /// The displays, sorted left to right then top to bottom (the "Main monitor" order).
     displays: Vec<DesktopRect>,
+    /// Index into `displays` of the OS primary display (#14).
+    primary: Option<usize>,
     handover: HandoverParams,
     state: AppState,
     control: Control,
@@ -345,6 +347,17 @@ fn sorted_displays(mut d: Vec<DesktopRect>) -> Vec<DesktopRect> {
     d
 }
 
+/// The primary display's index in the sorted list: the adapter's report, otherwise the
+/// display at the global origin (the OS primary on macOS and Windows by definition).
+fn primary_index(d: &Desktop, sorted: &[DesktopRect]) -> Option<usize> {
+    let at_origin = || d.displays.iter().find(|r| r.x == 0.0 && r.y == 0.0);
+    let rect = d
+        .primary
+        .and_then(|i| d.displays.get(i))
+        .or_else(at_origin)?;
+    sorted.iter().position(|r| r == rect)
+}
+
 fn frame_center(f: &GrayFrame) -> Point2 {
     Point2::new(f.width() as f32 / 2.0, f.height() as f32 / 2.0)
 }
@@ -358,6 +371,7 @@ impl Controller {
             settings,
             desktop,
             displays: Vec::new(),
+            primary: None,
             handover: HandoverParams::default(),
             state: AppState::Stopped,
             control: Control::Mouse(None),
@@ -403,12 +417,26 @@ impl Controller {
         &self.displays
     }
 
-    /// Where recenter and pause put the cursor: the chosen display's centre, or the centre of
-    /// the whole desktop (2018) when none is chosen or it's gone (ADR-0014).
+    /// The OS primary display's index in [`Self::displays`], if known (#14).
+    pub fn primary_display(&self) -> Option<usize> {
+        self.primary
+    }
+
+    /// The "Main monitor" in effect, as an index into [`Self::displays`]: the primary display,
+    /// the chosen one, or `None` for the centre of all (chosen, or the display is gone).
+    pub fn main_display(&self) -> Option<usize> {
+        match self.settings.recenter_display {
+            MainMonitor::Primary => self.primary,
+            MainMonitor::All => None,
+            MainMonitor::Display(i) => Some(i as usize).filter(|&i| i < self.displays.len()),
+        }
+    }
+
+    /// Where recenter and pause put the cursor: the main display's centre, or the centre of
+    /// the whole desktop (2018) when it is "all" or unknown (ADR-0014).
     pub fn home(&self) -> Point2 {
-        self.settings
-            .recenter_display
-            .and_then(|i| self.displays.get(i as usize))
+        self.main_display()
+            .and_then(|i| self.displays.get(i))
             .map_or_else(|| self.desktop.center(), DesktopRect::center)
     }
 
@@ -469,7 +497,9 @@ impl Controller {
             }
             Input::DesktopChanged(d) => {
                 self.desktop = d.bounds;
-                self.displays = sorted_displays(d.displays);
+                let sorted = sorted_displays(d.displays.clone());
+                self.primary = primary_index(&d, &sorted);
+                self.displays = sorted;
             }
             Input::Tick => {}
         }
@@ -943,11 +973,7 @@ impl Controller {
 
     /// The display whose size sets the mapping scale (ADR-0017).
     fn scale_reference(&self) -> DesktopRect {
-        scale_reference(
-            &self.displays,
-            self.settings.recenter_display.map(|i| i as usize),
-            self.desktop,
-        )
+        scale_reference(&self.displays, self.main_display(), self.desktop)
     }
 
     fn map_unlimited(&self, p: Point2) -> Point2 {

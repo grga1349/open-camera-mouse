@@ -45,3 +45,28 @@ displays for snapping); `Input::DesktopChanged` carries it.
 - Tests: `crates/app-core/tests/controller.rs` (`recenter_on_*`, `displays_are_numbered_*`,
   `pause_puts_the_cursor_on_the_chosen_display`), `apps/desktop/src/app_tests.rs` (`main_monitor_*`).
 
+
+## Amendment 2026-11-16 (Phase 6d, #14) — default = the OS primary display
+
+User request (test drive #14, approved): "Main monitor" defaults to the primary monitor, not
+the centre of all displays.
+
+- The setting is now `MainMonitor`: `Primary` (default), `All` (centre of all = 2018, scale by
+  the largest display), `Display(n)` (index left to right, as before). In TOML it is `"primary"`,
+  `"all"` or the index. Old indexes load unchanged. Files from before this change have no
+  value for "centre of all", so they now read as `Primary`, which is the intended new default. An
+  unknown name also reads as `Primary`.
+- `Desktop::primary` (index into the adapter's display list): macOS `CGMainDisplayID` (the menu
+  bar display); Windows the monitor at (0, 0), which is the primary monitor by definition of
+  virtual-screen coordinates; X11 the RandR primary monitor (root window → the one display).
+  The controller maps it into the sorted order. If the adapter can't say, it takes the display
+  at the global origin, and if there is none, the centre of all.
+- The primary display also sets the mapping scale (ADR-0017) when "Primary" is chosen.
+- Options → Screen → "Main monitor": "Primary monitor", "Centre of all monitors", then each
+  monitor. The "· primary" tag now comes from the adapter's report, not from the origin.
+
+Tests: `controller.rs` `the_default_main_monitor_is_the_primary_display` (the adapter's report
+wins over position), `an_unknown_primary_is_the_display_at_the_origin`,
+`with_no_primary_known_or_at_the_origin_the_centre_of_all_is_used`; `settings_store`
+`main_monitor_saves_and_loads_every_choice`; kittest `main_monitor_*`. The rest tests pin "Centre
+of all" (largest-display scale, the strictest case).

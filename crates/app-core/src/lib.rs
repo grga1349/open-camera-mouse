@@ -16,6 +16,6 @@ pub use controller::{
     PointerOwner, RECENTER_US, RecenterView, STEADY_ZONE_CAM_PX, Step, View,
 };
 pub use pointer_core::DesktopRect;
-pub use settings::{DwellSettings, ScreenLimits, Settings, SettingsError, Theme};
+pub use settings::{DwellSettings, MainMonitor, ScreenLimits, Settings, SettingsError, Theme};
 /// Tracker types that appear in [`View`], so the UI needn't depend on `tracking-core`.
 pub use tracking_core::{Diagnostics, HoldReason, LossReason, TrackStatus};

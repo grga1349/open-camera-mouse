@@ -726,13 +726,14 @@ fn main_monitor_lists_the_monitors_left_to_right() {
             ..left
         },
         displays: vec![right, left],
+        primary: Some(1),
     }));
     sh.tab = Tab::Screen;
     let mut h = options_window(sh);
     assert_eq!(
         settings(&h).recenter_display,
-        None,
-        "default: centre of all"
+        app_core::MainMonitor::Primary,
+        "default: the primary monitor (#14)"
     );
     h.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Main monitor")
         .click();
@@ -740,7 +741,10 @@ fn main_monitor_lists_the_monitors_left_to_right() {
     h.get_by_label("Monitor 1 · 1920 × 1080 · primary");
     h.get_by_label("Monitor 2 · 2560 × 1440").click();
     h.run_steps(4);
-    assert_eq!(settings(&h).recenter_display, Some(1));
+    assert_eq!(
+        settings(&h).recenter_display,
+        app_core::MainMonitor::Display(1)
+    );
 }
 
 #[test]
@@ -843,7 +847,7 @@ fn restore_defaults_and_close() {
     let mut h = options_window(sh);
     h.get_by_label("Restore defaults").click();
     h.run_steps(4);
-    assert_eq!(settings(&h).gain_x, 22.0);
+    assert_eq!(settings(&h).gain_x, 20.0);
     h.get_by_label("Close").click();
     h.run_steps(4);
     assert!(!h.state().options_open);

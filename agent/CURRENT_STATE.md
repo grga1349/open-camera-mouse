@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: #13 → steady zone 0.2 cam px + drift cap at limits (user OK on device); next = #12 / #14 — see task 0011)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3 queue done: #13 zone 0.2 + drift cap + default gain 20, #12 closed (no jumps), #14 Main monitor = OS primary; next = #14 device check, then step 3 sweep / step 4 calibration — see task 0011)
 
 ## Branch / commit
 
@@ -12,7 +12,7 @@ TEST_DRIVE #7, test name unknown).
 Phases 0–6, 6b and 6c DONE. 6c (task 0010, ADR-0019): #8 real gain 1–60, #9 Options Screen tab
 (limits + Main monitor), #10 Text size removed, #11 steady zone automatic (0.5 camera px of head
 movement, converted through gain and Main monitor; no longer an option). Defaults now gain
-22/22, smoothing 0.20 (ADR-0017 amendments). **Phase 6d — calibrated pointer behaviour
+20/20 (6d #13; was 22), smoothing 0.20 (ADR-0017 amendments). **Phase 6d — calibrated pointer behaviour
 (ADR-0020) is ACTIVE**, task 0011 (parts 1–2 done; part 3 in progress).
 
 ## What exists now
@@ -82,16 +82,16 @@ movement, converted through gain and Main monitor; no longer an option). Default
 
 ## Immediate next action
 
-Part 3 of Phase 6d (task 0011). #13 done for now: zone 0.2 cam px (user picked on device from
-`ZONE_VARIANTS.md` §5) + `drift_offset` capped at the head's overshoot (ADR-0015/-0017
-amendments). `304de65`, CI green; device-checked OK 2026-11-16 (edge hold, gain 60, 2560 Main). Leftovers in HANDOFF order: default-gain decision, #12 takeover instrumentation (jump-cause tag, CI test that
-a ≤ 5 px echo never triggers move-stop, ask if jumps follow touching the mouse), #14 Main monitor
-default = OS primary. Then step 3 sweep / step 4 calibration. No new recordings (user decision).
+Phase 6d (task 0011) part 3 queue is done: #13 (zone 0.2 cam px, drift cap, default gain 20),
+#12 closed (user: no jumps any more), #14 "Main monitor" = OS primary (`MainMonitor`,
+`Desktop::primary`, ADR-0014 amendment). Next: confirm CI (Linux RandR change is unchecked
+locally), device-check #14, then step 3 sweep / step 4 calibration. No new recordings (user
+decision).
 
 ## Open risks
 
-- #12: the edge snap is fixed (`steady::approach_edge`, ADR-0017 amendment); near a limit the
-  zone holds less toward it (creep, no shake). Other jump causes not ruled out.
+- #12 closed (user: no jumps). Near a limit the zone holds less toward it (creep, no shake).
+- #14: Linux RandR primary and Windows origin rule are compile/CI-checked only; on device in Phase 7.
 - #7: CI `test (no webcam)` flaky on macOS (exit 101) and Windows (exit 1, run 43779616732).
 
 - Synthetic pointer tests passed while the device still jittered: not calibrated (ADR-0020).

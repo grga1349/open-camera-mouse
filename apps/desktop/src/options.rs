@@ -4,7 +4,7 @@
 
 use app_core::ports::CaptureFormat;
 use app_core::settings::ranges;
-use app_core::{DesktopRect, Settings, Theme};
+use app_core::{DesktopRect, MainMonitor, Settings, Theme};
 use eframe::egui::{self, Align, Layout, RichText, ScrollArea, Ui};
 use platform::CameraDevice;
 
@@ -38,6 +38,8 @@ pub struct Facts<'a> {
     pub hotkey_lines: &'a [String],
     /// The displays in "Main monitor" order (left to right), from the controller.
     pub displays: &'a [DesktopRect],
+    /// Index of the OS primary display in `displays`, if known (#14).
+    pub primary: Option<usize>,
 }
 
 /// "Restore defaults": behaviour back to the defaults; the chosen camera and the
@@ -129,7 +131,7 @@ fn pointer(ui: &mut Ui, s: &mut Settings) {
         ranges::GAIN,
         1.0,
         |v| format!("{v:.0}"),
-        Some("How far the pointer moves when you turn your head. Default 22"),
+        Some("How far the pointer moves when you turn your head. Default 20"),
     );
     space(ui);
     slider_row(
@@ -204,14 +206,14 @@ fn screen(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
     // Only with several monitors: with one there is nothing to choose.
     if facts.displays.len() > 1 {
         space(ui);
-        main_monitor(ui, s, facts.displays);
+        main_monitor(ui, s, facts.displays, facts.primary);
     }
 }
 
 /// One monitor's name in "Main monitor": its number left to right, size, and "primary" for
-/// the display at the global origin (macOS main display, Windows primary monitor).
-pub fn display_name(i: usize, d: &DesktopRect) -> String {
-    let primary = if d.x == 0.0 && d.y == 0.0 {
+/// the OS primary display (macOS main display, Windows primary monitor, X11 RandR primary).
+pub fn display_name(i: usize, d: &DesktopRect, primary: Option<usize>) -> String {
+    let primary = if primary == Some(i) {
         " · primary"
     } else {
         ""
@@ -226,25 +228,32 @@ pub fn display_name(i: usize, d: &DesktopRect) -> String {
 
 /// "Main monitor" (test drive #4, ADR-0014): the monitor recenter and pause put the cursor
 /// on. Shown only with more than one monitor.
-fn main_monitor(ui: &mut Ui, s: &mut Settings, displays: &[DesktopRect]) {
+fn main_monitor(ui: &mut Ui, s: &mut Settings, displays: &[DesktopRect], primary: Option<usize>) {
+    const PRIMARY: &str = "Primary monitor";
     const ALL: &str = "Centre of all monitors";
     let l = field_label(ui, "Main monitor");
     let current = match s.recenter_display {
-        None => ALL.to_owned(),
-        Some(i) => displays
+        MainMonitor::Primary => PRIMARY.to_owned(),
+        MainMonitor::All => ALL.to_owned(),
+        MainMonitor::Display(i) => displays
             .get(i as usize)
-            .map(|d| display_name(i as usize, d))
+            .map(|d| display_name(i as usize, d, primary))
             .unwrap_or_else(|| format!("Monitor {} (not connected)", i + 1)),
     };
     let h = ui.spacing().interact_size.y;
     egui::ComboBox::from_id_salt("main_monitor")
         .selected_text(current)
         .width(ui.available_width())
-        .height(h * 6.0)
+        .height(h * 7.0)
         .show_ui(ui, |ui| {
-            ui.selectable_value(&mut s.recenter_display, None, ALL);
+            ui.selectable_value(&mut s.recenter_display, MainMonitor::Primary, PRIMARY);
+            ui.selectable_value(&mut s.recenter_display, MainMonitor::All, ALL);
             for (i, d) in displays.iter().enumerate() {
-                ui.selectable_value(&mut s.recenter_display, Some(i as u32), display_name(i, d));
+                ui.selectable_value(
+                    &mut s.recenter_display,
+                    MainMonitor::Display(i as u32),
+                    display_name(i, d, primary),
+                );
             }
         })
         .response
@@ -403,7 +412,7 @@ mod tests {
             ..Settings::default()
         };
         let r = restored(&s);
-        assert_eq!(r.gain_x, 22.0);
+        assert_eq!(r.gain_x, 20.0);
         assert!(!r.loss_recovery);
         assert_eq!(r.camera.as_deref(), Some("cam-2"));
         assert_eq!(r.theme, Theme::Paper);

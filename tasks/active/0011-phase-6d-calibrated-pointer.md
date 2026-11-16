@@ -180,9 +180,15 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
    reversals ≥ 2 screen px) → device check 0.2/0.25/0.35 → user: 0.2. **Shipped: zone 0.2 cam
    px + offset drift capped at the head's overshoot** (the smaller zone exposed a 5–18 px saw
    off the edge). ADR-0015/-0017 amendments; TEST_DRIVE #13 "Improved".
-2. **#12 not sure the jumping is fixed** — the edge snap is fixed; look for other causes
-   (fast-move filter catch-up at S2 29–34 s, handover/re-acquisition, display snap).
-3. **#14 "Main monitor" defaults to the primary monitor** (ADR-0014 amendment + user OK).
+   **Default gain** (`replay_gain_sweep`, `ZONE_VARIANTS.md` §6): on-screen hold error scales
+   with the gain; S2 turns reach the full Main height only at ≥ 18. Device check 22/18/16 → user:
+   **20** (one-monitor users). ADR-0017 amendment. #13 closed.
+2. **#12 — CLOSED 2026-11-16:** user: "we don't have jumps anymore" (after the edge fix,
+   zone 0.2 and the drift cap). No further instrumentation.
+3. **#14 — DONE 2026-11-16:** "Main monitor" defaults to the OS primary display
+   (`MainMonitor::Primary`; adapters report it: macOS `CGMainDisplayID`, Windows the monitor
+   at (0, 0), X11 RandR primary; controller falls back to the display at the origin).
+   ADR-0014 amendment.
 4. **DONE 2026-11-16 → `docs/research/OPENCV_LK_PARITY.md`.** Verdict: competitive, no
    parity defects, no production change recommended (min_eigen ×1024 mapping to document;
    optional perf experiments only). ADR-0009 21×21 now VERIFIED. **Research: Rust LK vs OpenCV numerical parity** — the user's brief, verbatim:

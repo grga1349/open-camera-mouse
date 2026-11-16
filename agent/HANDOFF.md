@@ -3,31 +3,31 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6d part 3: #13 device-checked OK, CI green)
+## As of 2026-11-16 (Phase 6d part 3 queue done: #13 gain 20, #12 closed, #14 primary monitor)
 
-**Branch:** `rewrite/rust`. #13 = `304de65`, CI green on macOS/Windows/Linux + licenses.
-**Device check 2026-11-16 (user): all OK** — cursor holds at the right edge and menu bar with no
-jitter (drift cap works); no wobble at rest at gain 60, nor with the 2560 px Main (22 / 40).
-Recorded in TEST_DRIVE #13.
+**Branch:** `rewrite/rust`, pushed. CI: check the run for this commit (last known green `304de65`).
 
-**Done this session (#13):** `docs/research/ZONE_VARIANTS.md` — zero shake with ≤ 0.15 cam px
-hold error is infeasible even non-causally (S1 bound 0.25 at 0.2 reversals/s); user chose
-"accept a little shake, closest to a real mouse". Sweep with a visible-shake metric (≥ 2 screen
-px swings) → device check 0.2/0.25/0.35 → user picked **0.2**. Shipped:
-`STEADY_ZONE_CAM_PX` 0.5 → 0.2; `pointer_core::limits::drift_offset(…, past)` caps the 2018
-drift at the head's overshoot (the smaller zone exposed a 5–18 px saw off screen edges). ADR-0015
-/-0017 amendments, TEST_DRIVE #13 "Improved". pointer-core / app-core / desktop tests green, fmt,
-scoped clippy, core-deps clean; CI green on `304de65`.
+**Done this session:**
+- **#13 default gain 22 → 20** (`replay_gain_sweep`, `ZONE_VARIANTS.md` §6; user tried 22/18/16
+  on device across two screens, 20 because most users have one monitor). ADR-0017 amendment.
+  `a_slow_move_onto_an_edge_does_not_jump` now derives its end point from the scale.
+- **#12 closed:** user reports no jumps any more.
+- **#14 Main monitor = OS primary:** `app_core::MainMonitor { Primary (default), All, Display(n) }`
+  (TOML `"primary"` / `"all"` / index; pre-#14 files → Primary). `Desktop::primary` from the
+  adapters: macOS `CGMainDisplayID`, Windows monitor at (0, 0), X11 RandR primary. Controller
+  `primary_display()` / `main_display()`, origin fallback, then centre of all. Options →
+  Screen → "Primary monitor" / "Centre of all monitors" / each monitor. ADR-0014 amendment.
+  Rest tests pin `MainMonitor::All` (largest scale = strictest).
+- Gates: app-core, platform lib, desktop tests green; fmt; clippy (app-core, platform, desktop;
+  platform also for the Windows target); core-deps OK. Linux can't be checked locally
+  (v4l2 headers) → CI.
 
-**Next session — left over, in this order (ask the user which slice first):**
-1. **#13 open decision:** lower the default gain 22 (`ZONE_VARIANTS.md` §4.2; only lever that
-   cuts on-screen error without shake) — user's call, ADR-0017 amendment if changed.
-2. **#12 jumps:** tag takeover recentres as a jump cause, CI test that a ≤ 5 px echo never
-   triggers move-stop; ask if jumps follow touching the mouse/trackpad.
-3. **#14** "Main monitor" default = OS primary (ADR-0014 amendment, user OK; platform must
-   report which display is primary).
-4. Then step 3 sweep / step 4 calibration (task 0011 objective).
-One slice per session.
+**Next session:**
+1. If CI is red (esp. Linux `pointer/linux.rs` RandR change), fix first.
+2. **Device check #14** (2 monitors): fresh/default settings → recenter lands on the menu-bar
+   display; Options shows "Primary monitor" and "· primary" on the right monitor. The user's own
+   saved file keeps gain 22 and their old Main monitor choice.
+3. Then task 0011 **step 3 sweep / step 4 calibration** (the phase objective). One slice per session.
 
 **Corpus (user decision, no new recordings):** `~/ocm-recordings/S1-still-2026-11-15`,
 `S2-turns-2026-11-15`. Replay tool `~/ocm-recordings/_tools/replay-tool`; run with

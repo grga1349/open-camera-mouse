@@ -7,8 +7,9 @@ use app_core::ports::{
     CameraError, CameraFrame, CaptureFormat, CaptureRequest, Desktop, PointerError, RgbFrame,
 };
 use app_core::{
-    AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MarkerKind,
-    PointerAccess, PointerOwner, RECENTER_US, STEADY_ZONE_CAM_PX, ScreenLimits, Settings, Step,
+    AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MainMonitor,
+    MarkerKind, PointerAccess, PointerOwner, RECENTER_US, STEADY_ZONE_CAM_PX, ScreenLimits,
+    Settings, Step,
 };
 use pointer_core::metrics::{self, PathSample, Scale};
 use pointer_core::steady::EDGE_TRAIL;
@@ -974,17 +975,20 @@ fn a_slow_move_onto_an_edge_does_not_jump() {
     let edge = DESK.width - 1.0;
     let scale = gain() * DESK.width / W as f32;
     let radius = STEADY_ZONE_CAM_PX * scale;
-    // The edge is at dx = 959 / scale ≈ 14.5 cam px. Fast to 12, settle, then creep.
-    sweep(&mut r, 0.0, 12.0);
-    r.hold(1_000_000, 12.0, SCENE);
+    // The edge is at dx = 959 / scale (≈ 16 cam px at the default gain). Fast to 2.5 cam px
+    // before it, settle, then creep to 1.5 cam px past it (well beyond the zone radius).
+    let edge_cam = (edge - DESK.width / 2.0) / scale;
+    let (from, to) = (edge_cam - 2.5, edge_cam + 1.5);
+    sweep(&mut r, 0.0, from);
+    r.hold(1_000_000, from, SCENE);
     let mut path: Vec<Point2> = Vec::new();
-    let creep = 0.03; // cam px per frame ≈ 0.9 cam px/s, 2 screen px per frame
-    let mut dx = 12.0;
-    while dx < 16.0 {
+    let creep = 0.03; // cam px per frame ≈ 0.9 cam px/s, ≈ 2 screen px per frame
+    let mut dx = from;
+    while dx < to {
         dx += creep;
         path.extend(moves(&r.frame(dx, 0.0, SCENE)));
     }
-    path.extend(moves(&r.hold(1_500_000, 16.0, SCENE)));
+    path.extend(moves(&r.hold(1_500_000, to, SCENE)));
     let steps: Vec<f32> = path.windows(2).map(|w| dist(w[0], w[1])).collect();
     let max = steps.iter().copied().fold(0.0, f32::max);
     // The head moves 2 screen px per frame; near the edge the cursor closes its trail at
@@ -1147,7 +1151,12 @@ const BOTH: DesktopRect = DesktopRect {
     height: 1440.0,
 };
 
-fn two_displays(recenter_display: Option<u32>) -> Rig {
+fn two_displays(recenter_display: MainMonitor) -> Rig {
+    two_displays_primary(recenter_display, None)
+}
+
+/// `primary` = the adapter's report, an index into its own order `[RIGHT, LEFT]`.
+fn two_displays_primary(recenter_display: MainMonitor, primary: Option<usize>) -> Rig {
     let mut r = Rig::started_with(Settings {
         recenter_display,
         ..Settings::default()
@@ -1156,6 +1165,7 @@ fn two_displays(recenter_display: Option<u32>) -> Rig {
     r.input(Input::DesktopChanged(Desktop {
         bounds: BOTH,
         displays: vec![RIGHT, LEFT],
+        primary,
     }));
     r
 }
@@ -1168,20 +1178,57 @@ fn recentered(r: &mut Rig) -> Step {
 
 #[test]
 fn displays_are_numbered_left_to_right() {
-    let r = two_displays(None);
+    let r = two_displays(MainMonitor::All);
     assert_eq!(r.c.displays(), &[LEFT, RIGHT]);
 }
 
 #[test]
-fn recenter_without_a_display_choice_uses_the_centre_of_all_displays() {
-    let mut r = two_displays(None);
+fn recenter_on_all_displays_uses_the_centre_of_all_displays() {
+    let mut r = two_displays(MainMonitor::All);
     let s = recentered(&mut r);
     assert_eq!(s.pointer_target(), Some(BOTH.center()));
 }
 
+// #14 (ADR-0014 amendment): the default Main monitor is the OS primary display.
+#[test]
+fn the_default_main_monitor_is_the_primary_display() {
+    assert_eq!(Settings::default().recenter_display, MainMonitor::Primary);
+    // The adapter says the right display (its index 0) is primary: that wins over position.
+    let mut r = two_displays_primary(MainMonitor::Primary, Some(0));
+    assert_eq!(r.c.primary_display(), Some(1));
+    assert_eq!(r.c.main_display(), Some(1));
+    let s = recentered(&mut r);
+    assert_eq!(s.pointer_target(), Some(RIGHT.center()));
+}
+
+#[test]
+fn an_unknown_primary_is_the_display_at_the_origin() {
+    let mut r = two_displays_primary(MainMonitor::Primary, None);
+    assert_eq!(r.c.primary_display(), Some(0));
+    let s = recentered(&mut r);
+    assert_eq!(s.pointer_target(), Some(LEFT.center()));
+}
+
+#[test]
+fn with_no_primary_known_or_at_the_origin_the_centre_of_all_is_used() {
+    let shifted = |d: DesktopRect| DesktopRect {
+        x: d.x + 100.0,
+        ..d
+    };
+    let mut r = two_displays(MainMonitor::Primary);
+    r.input(Input::DesktopChanged(Desktop {
+        bounds: shifted(BOTH),
+        displays: vec![shifted(RIGHT), shifted(LEFT)],
+        primary: None,
+    }));
+    assert_eq!(r.c.main_display(), None);
+    let s = recentered(&mut r);
+    assert_eq!(s.pointer_target(), Some(shifted(BOTH).center()));
+}
+
 #[test]
 fn recenter_on_a_display_starts_at_its_centre_and_still_reaches_the_others() {
-    let mut r = two_displays(Some(1));
+    let mut r = two_displays(MainMonitor::Display(1));
     let s = recentered(&mut r);
     assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
     assert_eq!(s.pointer_target(), Some(RIGHT.center()));
@@ -1208,7 +1255,7 @@ fn recenter_on_a_display_starts_at_its_centre_and_still_reaches_the_others() {
 
 #[test]
 fn pause_puts_the_cursor_on_the_chosen_display() {
-    let mut r = two_displays(Some(0));
+    let mut r = two_displays(MainMonitor::Display(0));
     recentered(&mut r);
     let s = r.cmd(Command::ToggleStart);
     assert_eq!(r.c.state(), AppState::Paused);
@@ -1217,15 +1264,16 @@ fn pause_puts_the_cursor_on_the_chosen_display() {
 
 #[test]
 fn recenter_on_an_unplugged_display_falls_back_to_the_centre_of_all() {
-    let mut r = two_displays(Some(1));
+    let mut r = two_displays(MainMonitor::Display(1));
     r.input(Input::DesktopChanged(Desktop {
         bounds: LEFT,
         displays: vec![LEFT],
+        primary: Some(0),
     }));
     let s = recentered(&mut r);
     assert_eq!(s.pointer_target(), Some(LEFT.center()));
     // The setting is kept for when the display comes back.
-    assert_eq!(r.c.settings().recenter_display, Some(1));
+    assert_eq!(r.c.settings().recenter_display, MainMonitor::Display(1));
 }
 
 // ---- steady zone (test drive #5, ADR-0015) ----
@@ -1356,6 +1404,7 @@ fn users_desktop() -> Desktop {
             height: 1440.0,
         },
         displays: vec![laptop, external],
+        primary: Some(0),
     }
 }
 
@@ -1398,6 +1447,7 @@ fn still_at_rest(gains: std::ops::RangeInclusive<u32>) {
         let mut r = Rig::new(Settings {
             gain_x: gain,
             gain_y: gain,
+            recenter_display: MainMonitor::All,
             ..Settings::default()
         });
         r.input(Input::DesktopChanged(users_desktop()));
@@ -1406,7 +1456,8 @@ fn still_at_rest(gains: std::ops::RangeInclusive<u32>) {
         r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
         r.hold(HANDOVER_US, 0.0, SCENE);
         assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
-        // The largest display (2560 × 1440) sets the scale.
+        // The largest display (2560 × 1440) sets the scale: the strictest case (the default
+        // primary laptop screen, #14, gives a smaller scale).
         let scale = Scale {
             x: f64::from(gain * 2560.0 / 640.0),
             y: f64::from(gain * 1440.0 / 480.0),

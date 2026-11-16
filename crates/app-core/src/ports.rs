@@ -83,6 +83,10 @@ pub struct Desktop {
     pub bounds: DesktopRect,
     /// Every active display, in the adapter's order (the controller sorts them).
     pub displays: Vec<DesktopRect>,
+    /// Index into `displays` of the OS primary display (macOS main display, Windows primary
+    /// monitor, X11 RandR primary output). `None` = the adapter can't tell; the controller then
+    /// takes the display at the global origin (ADR-0014 amendment, #14).
+    pub primary: Option<usize>,
 }
 
 /// System pointer control, in virtual-desktop screen coordinates (the OS's global pointer

@@ -77,6 +77,7 @@ impl PointerSink for FakePointer {
         Ok(Desktop {
             bounds: DESKTOP,
             displays: vec![DESKTOP],
+            primary: Some(0),
         })
     }
 }
@@ -724,6 +725,7 @@ impl PointerSink for SharedMoves {
         Ok(Desktop {
             bounds: DESKTOP,
             displays: vec![DESKTOP],
+            primary: Some(0),
         })
     }
 }

@@ -138,3 +138,40 @@ re-checked at the new zone.
 **Outcome (2026-11-16):** on the device the user tried 0.2 / 0.25 / 0.35 and chose **0.2**.
 It ships as the default (ADR-0015/-0017 amendments), together with the drift cap at screen
 limits, which the smaller zone exposed.
+
+## 6. Default gain (open #13 item, §4.2; MEASURED 2026-11-16)
+
+Replay tool `replay_gain_sweep`: today's chain (zone 0.2 cam px, 1€ default, smoothing 0.20).
+Only the gain changes. The recordings' Main is the 1440 × 900 laptop display, inside a 4000 px
+desktop. "Span % of Main" is the cursor's extent divided by the Main size. It doesn't depend on
+the Main's size, because the scale is proportional to it. Screen px numbers are for the laptop
+Main; a 2560 px Main gives ≈ 1.8× more.
+
+| gain | screen px per cam px | head cam px for edge-to-edge (x × y) | S1 visible ≥ 2 px /s | S1 hold error px | S2 cursor span x / y % of Main |
+|---|---|---|---|---|---|
+| 6 (2018) | 13.5 | 107 × 80 | 0 | 3 | 47 / 34 |
+| 10 | 22.5 | 64 × 48 | 0 | 6 | 78 / 56 |
+| 12 | 27.0 | 53 × 40 | 0 | 7 | 94 / 68 |
+| 14 | 31.5 | 46 × 34 | 0.1 | 8 | 110 / 79 |
+| 16 | 36.0 | 40 × 30 | 0.1 | 9 | 125 / 90 |
+| **18** | 40.5 | 36 × 27 | 0.1 | **10** | **141 / 102** |
+| 20 | 45.0 | 32 × 24 | 0.1 | 12 | 157 / 109 |
+| 22 (today) | 49.5 | 29 × 22 | 0.1 | 13 | 172 / 112 |
+
+- The S2 turns use about 35 × 26 cam px of head range (p2..p98). The y axis limits the gain. At
+  **gain 18** those turns still cover the whole Main height (102 %); below that, the top and bottom
+  edges need bigger turns than the user made in S2.
+- The hold error in camera px stays the same at every gain (0.26). On screen it scales linearly:
+  13 → 10 px at 18 (−23 %), 7 px at 12 (−45 %, but only 68 % of the height is reached).
+- Visible shake at rest is ≤ 0.1/s at every gain, and 0 at ≤ 12. The gain isn't a shake lever
+  at zone 0.2.
+- Caveat: S2 was recorded at gain 6 with smoothing 0.05. The user's turns follow what they saw
+  on screen then, so the 35 × 26 cam px range is an estimate of what's comfortable, not a limit.
+
+**Proposal:** device check at 22 / 18 / 16 (Options → Pointer gain). Lower the default to 18 only
+if the user agrees; that needs an ADR-0017 amendment and the rest tests re-checked. Otherwise
+keep 22 and close the item.
+
+**Outcome (2026-11-16):** the user tried 22 / 18 / 16 on the device across two screens. 20 and 22
+felt best. The default is now **20** (most users have a single monitor), recorded as an ADR-0017
+amendment.

@@ -485,6 +485,7 @@ pub fn options_ui(ui: &mut Ui, shell: &mut Shell) {
             capture: snap.view.capture,
             hotkey_lines: &shell.hotkey_lines,
             displays: &snap.displays,
+            primary: snap.primary,
         };
         ui.with_layout(Layout::top_down(Align::Min), |ui| {
             options::show(ui, &mut s, &mut shell.tab, &facts)

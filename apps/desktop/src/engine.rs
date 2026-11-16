@@ -347,6 +347,8 @@ pub struct Snapshot {
     pub view: View,
     /// The displays in "Main monitor" order.
     pub displays: Vec<DesktopRect>,
+    /// Index of the OS primary display in `displays`, if known (#14).
+    pub primary: Option<usize>,
     /// The latest canonical frame (mirrored) as an egui image, built off the UI thread.
     /// Changes when `view.frame_seq` does.
     pub preview: Option<Arc<ColorImage>>,
@@ -540,6 +542,7 @@ impl<C: CameraLink> Engine<C> {
         Snapshot {
             view,
             displays: self.controller.displays().to_vec(),
+            primary: self.controller.primary_display(),
             preview: self.preview.clone(),
         }
     }
@@ -742,7 +745,10 @@ fn run(
         }
         engine.step();
         let snap = engine.snapshot();
-        if snap.view != published.view || snap.displays != published.displays {
+        if snap.view != published.view
+            || snap.displays != published.displays
+            || snap.primary != published.primary
+        {
             published = snap.clone();
             *latest.lock().unwrap_or_else(PoisonError::into_inner) = Arc::new(snap);
             repaint();

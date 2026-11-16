@@ -369,7 +369,41 @@ mod tests {
         assert_eq!(loaded.settings.theme, Theme::Paper);
         assert!(loaded.settings.dwell.enabled);
         assert_eq!(loaded.settings.dwell.dwell_s, 1.0);
-        assert_eq!(loaded.settings.gain_x, 22.0);
+        assert_eq!(loaded.settings.gain_x, 20.0);
+    }
+
+    // #14: "Main monitor" is saved as "primary" / "all" / an index; files from before #14
+    // (no value) read as the primary monitor.
+    #[test]
+    fn main_monitor_saves_and_loads_every_choice() {
+        use app_core::MainMonitor;
+        for m in [
+            MainMonitor::Primary,
+            MainMonitor::All,
+            MainMonitor::Display(2),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let mut s = store(&dir);
+            let settings = Settings {
+                recenter_display: m,
+                ..Settings::default()
+            };
+            s.save(&settings).unwrap();
+            assert_eq!(s.load().settings.recenter_display, m);
+        }
+        for (text, want) in [
+            ("", MainMonitor::Primary),
+            ("recenter_display = 1\n", MainMonitor::Display(1)),
+            ("recenter_display = \"all\"\n", MainMonitor::All),
+            ("recenter_display = \"elsewhere\"\n", MainMonitor::Primary),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let mut s = store(&dir);
+            write(&s, &format!("schema_version = 1\n{text}"));
+            let loaded = s.load();
+            assert_eq!(loaded.notice, None, "{text:?}");
+            assert_eq!(loaded.settings.recenter_display, want, "{text:?}");
+        }
     }
 
     #[test]
@@ -449,7 +483,7 @@ mod tests {
                 fields: vec!["gain_x", "dwell.radius_frac"]
             })
         );
-        assert_eq!(loaded.settings.gain_x, 22.0);
+        assert_eq!(loaded.settings.gain_x, 20.0);
         assert_eq!(loaded.settings.smoothing, 0.4);
         assert_eq!(loaded.settings.theme, Theme::Paper);
         assert_eq!(loaded.settings.dwell.radius_frac, 0.05);

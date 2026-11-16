@@ -55,10 +55,52 @@ impl Default for DwellSettings {
 
 /// Every user-changeable setting. Missing fields deserialize to their defaults, so a file
 /// written before a field existed still loads.
+/// "Main monitor" choice (ADR-0014 + amendment for #14). Saved as `"primary"`, `"all"` or the
+/// display's index; an unknown name reads as `Primary`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(from = "MainMonitorRepr", into = "MainMonitorRepr")]
+pub enum MainMonitor {
+    /// The OS primary display (default, #14).
+    #[default]
+    Primary,
+    /// The centre of all displays together (2018). The scale uses the largest display.
+    All,
+    /// An index into the displays sorted left to right, then top to bottom. With no display
+    /// behind it (monitor unplugged) it acts as `All` without changing the setting.
+    Display(u32),
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum MainMonitorRepr {
+    Index(u32),
+    Name(String),
+}
+
+impl From<MainMonitorRepr> for MainMonitor {
+    fn from(r: MainMonitorRepr) -> Self {
+        match r {
+            MainMonitorRepr::Index(i) => Self::Display(i),
+            MainMonitorRepr::Name(n) if n == "all" => Self::All,
+            MainMonitorRepr::Name(_) => Self::Primary,
+        }
+    }
+}
+
+impl From<MainMonitor> for MainMonitorRepr {
+    fn from(m: MainMonitor) -> Self {
+        match m {
+            MainMonitor::Primary => Self::Name("primary".into()),
+            MainMonitor::All => Self::Name("all".into()),
+            MainMonitor::Display(i) => Self::Index(i),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
-    /// Per-axis gain (R-P3): the mapping's real gain, 1–60. Default 22/22 (test drive #8,
+    /// Per-axis gain (R-P3): the mapping's real gain, 1–60. Default 20/20 (test drive #8, #13;
     /// ADR-0017 amendment 2026-11-16; 2018 used 6/6 scaled by the whole desktop).
     pub gain_x: f32,
     pub gain_y: f32,
@@ -70,12 +112,11 @@ pub struct Settings {
     /// pointer, L-1).
     pub smoothing: f32,
     pub limits: ScreenLimits,
-    /// "Main monitor" (test drive #4, ADR-0014): the display whose centre the cursor goes to
-    /// on recenter and pause, as an index into the displays sorted left to right (then top to
-    /// bottom). `None` = the centre of all displays together (2018). An index with no display
-    /// behind it (monitor unplugged) falls back to `None` without changing the setting.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub recenter_display: Option<u32>,
+    /// "Main monitor" (test drive #4/#14, ADR-0014): the display whose centre the cursor goes
+    /// to on recenter and pause, and whose size sets the mapping scale. Default: the OS primary
+    /// display. Files written before #14 have no value for "centre of all" and read as
+    /// [`MainMonitor::Primary`].
+    pub recenter_display: MainMonitor,
     pub dwell: DwellSettings,
     /// Camera device id from the platform adapter; `None` = system default.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -94,12 +135,12 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             // Test drive #8 (ADR-0017 amendment 2026-11-16).
-            gain_x: 22.0,
-            gain_y: 22.0,
+            gain_x: 20.0,
+            gain_y: 20.0,
             link_gain: true,
             smoothing: 0.20,
             limits: ScreenLimits::default(),
-            recenter_display: None,
+            recenter_display: MainMonitor::Primary,
             dwell: DwellSettings::default(),
             camera: None,
             mirror: true,
@@ -238,9 +279,9 @@ mod tests {
     #[test]
     fn defaults_are_valid_and_match_2018_except_tuned_ones() {
         let s = Settings::default().validated().unwrap();
-        // Test drive #8/#10 (ADR-0017 amendments 2026-11-16): gain 22 (2018: 6 × the whole
+        // Test drive #8/#10 (ADR-0017 amendments 2026-11-16): gain 20 (#13; 2018: 6 × the whole
         // desktop), smoothing 0.20 (2018 Damping 0.95 = 0.05).
-        assert_eq!((s.gain_x, s.gain_y), (22.0, 22.0));
+        assert_eq!((s.gain_x, s.gain_y), (20.0, 20.0));
         assert!((s.smoothing - 0.20).abs() < 1e-6);
         assert!(!s.loss_recovery, "Find the target again is off by default");
         assert!(!s.dwell.enabled);

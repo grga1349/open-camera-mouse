@@ -27,6 +27,8 @@ pub struct SystemPointer {
     conn: RustConnection,
     root: Window,
     displays: Vec<DesktopRect>,
+    /// Index of the RandR primary monitor in `displays`.
+    primary: Option<usize>,
     echo: Echo,
     epoch: Instant,
 }
@@ -61,10 +63,11 @@ impl SystemPointer {
             conn,
             root,
             displays: Vec::new(),
+            primary: None,
             echo: Echo::default(),
             epoch: Instant::now(),
         };
-        me.displays = me.monitors()?;
+        (me.displays, me.primary) = me.monitors()?;
         Ok(me)
     }
 
@@ -122,15 +125,17 @@ impl SystemPointer {
         Ok(applied)
     }
 
-    /// RandR 1.5 monitors, or the root window as one display if RandR can't say.
-    fn monitors(&self) -> Result<Vec<DesktopRect>, PointerError> {
+    /// RandR 1.5 monitors and which one is primary, or the root window as one display if
+    /// RandR can't say.
+    fn monitors(&self) -> Result<(Vec<DesktopRect>, Option<usize>), PointerError> {
         let from_randr = self
             .conn
             .randr_get_monitors(self.root, true)
             .ok()
             .and_then(|c| c.reply().ok())
             .map(|r| {
-                r.monitors
+                let rects = r
+                    .monitors
                     .iter()
                     .map(|m| DesktopRect {
                         x: f32::from(m.x),
@@ -138,9 +143,10 @@ impl SystemPointer {
                         width: f32::from(m.width),
                         height: f32::from(m.height),
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>();
+                (rects, r.monitors.iter().position(|m| m.primary))
             })
-            .filter(|v| !v.is_empty());
+            .filter(|v| !v.0.is_empty());
         if let Some(v) = from_randr {
             return Ok(v);
         }
@@ -150,12 +156,15 @@ impl SystemPointer {
             .map_err(backend)?
             .reply()
             .map_err(backend)?;
-        Ok(vec![DesktopRect {
-            x: 0.0,
-            y: 0.0,
-            width: f32::from(g.width),
-            height: f32::from(g.height),
-        }])
+        Ok((
+            vec![DesktopRect {
+                x: 0.0,
+                y: 0.0,
+                width: f32::from(g.width),
+                height: f32::from(g.height),
+            }],
+            Some(0),
+        ))
     }
 }
 
@@ -181,12 +190,13 @@ impl PointerSink for SystemPointer {
     }
 
     fn desktop(&mut self) -> Result<Desktop, PointerError> {
-        self.displays = self.monitors()?;
+        (self.displays, self.primary) = self.monitors()?;
         let bounds =
             bounding(&self.displays).ok_or_else(|| PointerError::Backend("no monitor".into()))?;
         Ok(Desktop {
             bounds,
             displays: self.displays.clone(),
+            primary: self.primary,
         })
     }
 }

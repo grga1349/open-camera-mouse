@@ -283,6 +283,7 @@ mod tests {
                     ..rect(0.0)
                 },
                 displays: vec![rect(0.0), rect(100.0)],
+                primary: Some(0),
             },
         );
         let s = Settings {

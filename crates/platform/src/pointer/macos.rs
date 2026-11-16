@@ -13,7 +13,7 @@ use app_core::ports::{Desktop, DesktopRect, Point2, PointerAccess, PointerError,
 use objc2_core_foundation::{CFRetained, CGPoint};
 use objc2_core_graphics::{
     CGDirectDisplayID, CGDisplayBounds, CGError, CGEvent, CGEventSource, CGEventSourceStateID,
-    CGEventTapLocation, CGEventType, CGGetActiveDisplayList, CGMouseButton,
+    CGEventTapLocation, CGEventType, CGGetActiveDisplayList, CGMainDisplayID, CGMouseButton,
     CGPreflightPostEventAccess, CGRequestPostEventAccess,
 };
 
@@ -42,7 +42,7 @@ impl SystemPointer {
         CGEventSource::set_local_events_suppression_interval(Some(&source), 0.0);
         Ok(Self {
             source,
-            displays: active_displays()?,
+            displays: active_displays()?.0,
             echo: Echo::default(),
             epoch: Instant::now(),
         })
@@ -140,19 +140,22 @@ impl PointerSink for SystemPointer {
     }
 
     fn desktop(&mut self) -> Result<Desktop, PointerError> {
-        self.displays = active_displays()?;
+        let (displays, primary) = active_displays()?;
+        self.displays = displays;
         let bounds = bounding(&self.displays)
             .ok_or_else(|| PointerError::Backend("no active display".into()))?;
         Ok(Desktop {
             bounds,
             displays: self.displays.clone(),
+            primary,
         })
     }
 }
 
 /// Bounds of every active display in global display coordinates (points, origin at the main
-/// display's top-left, y down; other displays may have negative origins).
-fn active_displays() -> Result<Vec<DesktopRect>, PointerError> {
+/// display's top-left, y down; other displays may have negative origins), and the index of the
+/// main display (menu bar, `CGMainDisplayID`) among them.
+fn active_displays() -> Result<(Vec<DesktopRect>, Option<usize>), PointerError> {
     let mut ids: [CGDirectDisplayID; MAX_DISPLAYS] = [0; MAX_DISPLAYS];
     let mut count: u32 = 0;
     // ADR-0007: `platform` may use `unsafe` for FFI, locally and commented.
@@ -165,8 +168,9 @@ fn active_displays() -> Result<Vec<DesktopRect>, PointerError> {
             "CGGetActiveDisplayList: {err:?}"
         )));
     }
-    let n = (count as usize).min(MAX_DISPLAYS);
-    Ok(ids[..n]
+    let ids = &ids[..(count as usize).min(MAX_DISPLAYS)];
+    let main = CGMainDisplayID();
+    let rects = ids
         .iter()
         .map(|&id| {
             let b = CGDisplayBounds(id);
@@ -177,5 +181,6 @@ fn active_displays() -> Result<Vec<DesktopRect>, PointerError> {
                 height: b.size.height as f32,
             }
         })
-        .collect())
+        .collect();
+    Ok((rects, ids.iter().position(|&id| id == main)))
 }

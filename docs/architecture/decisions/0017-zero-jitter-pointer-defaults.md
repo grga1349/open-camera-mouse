@@ -126,3 +126,18 @@ moves), `a_slow_move_onto_an_edge_does_not_jump` (≤ 1.25 × the head's step, s
 edge), replay S1/S2 at the app zone: S1 175/299 moves, 12 reversals (0.5: 102 / 1); S2 step
 max unchanged. Caveat: visible wobble scales with gain × Main width; re-check at high gains
 and on the 2560 px Main in Phase 8.
+
+## Amendment 2026-11-16 (Phase 6d) — default gain 20 (#13)
+
+User decision after the device check (22 / 18 / 16 tried, across two screens): "20 and 22
+feel the best"; 20 chosen because most users have a single monitor. Evidence:
+`docs/research/ZONE_VARIANTS.md` §6 (`replay_gain_sweep`, zone 0.2). At 20 vs 22, the S1 hold
+error goes 13 → 12 px on the laptop Main (the camera-px error is unchanged; on screen it scales with
+the gain). Visible shake at rest stays 0.1/s. The S2 turns still cover the whole Main (157 / 109 %
+of width / height). Gains ≤ 16 needed bigger head turns than the user made in S2.
+
+- `Settings::default()` gain **22/22 → 20/20**. Saved settings keep their gain; only new
+  files, repaired values and "Restore defaults" get 20.
+
+Checks: `defaults_are_valid_and_match_2018_except_tuned_ones`, settings-store load/repair
+tests, Options "Restore defaults" kittest. The rest tests already cover every gain from 1 to 60.
