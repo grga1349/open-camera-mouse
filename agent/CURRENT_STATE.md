@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: LK-vs-OpenCV research DONE; next = 2018 jitter comparison, then #13 imprecise, #12 jumps?, #14 primary monitor default — see task 0011)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: LK-vs-OpenCV and 2018 jitter research DONE; next = NAKF vs dead zone (may replace 1€ too), then #13/#12/#14 — see task 0011)
 
 ## Branch / commit
 
@@ -82,11 +82,13 @@ movement, converted through gain and Main monitor; no longer an option). Default
 
 ## Immediate next action
 
-Part 3 of Phase 6d, queued in task 0011 § "Queued for part 3": #13 imprecise mouse, #12
-(edge snap fixed via `steady::approach_edge`; user not sure all jumps are gone), #14 Main
-monitor default = primary. (LK vs OpenCV parity research DONE: `docs/research/OPENCV_LK_PARITY.md`,
-solver competitive, no production change.) **Next: 2018 jitter comparison against
-`../camera-mouse-reverse/`** (task 0011 queue item 0), then ask which remaining slice. No new recordings (user decision).
+Part 3 of Phase 6d, queued in task 0011 § "Queued for part 3". Research done:
+`docs/research/OPENCV_LK_PARITY.md` (tracker = OpenCV) and
+`docs/research/CM2018_JITTER_COMPARISON.md` (2018 has no jitter fix; our zone costs +40 ms lag
+and ≈ 0.45 cam px hold error = main #13 candidate; #12 candidate = takeover-to-centre after a
+false move-stop). **Next: Noise-Adaptive Kalman Filter vs dead zone** (task 0011 item 0b; may also replace the
+1€ filter), measured on S1/S2 with the replay tool. Then ask: #13 zone variants, #12 takeover
+instrumentation, #14 Main monitor default = primary. No new recordings (user decision).
 
 ## Open risks
 

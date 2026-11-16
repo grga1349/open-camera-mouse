@@ -131,13 +131,29 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
 
 ## Queued for part 3 (user, 2026-11-16)
 
-0. **NEXT (user, 2026-11-16, after the LK research): 2018 jitter comparison.** Go through
+0. **DONE 2026-11-16 → `docs/research/CM2018_JITTER_COMPARISON.md`.** Verdict: 2018 has no
+   jitter solution (0.95 damping ≈ none, no zone; emulated on S1 it shakes 6.8 reversals/s vs
+   ours 0.1). Differences that matter: D1 sensitivity (gain 22 × Main = 1.3–3.7× 2018) and D4
+   the steady zone (+40 ms lag, ≈ 0.45 cam px hold error = main #13 candidate). S2's biggest
+   step (34.2 s) is a real fast turn, larger in 2018. #12 candidate left: takeover-to-centre
+   after a false move-stop (D7). Proposed slices in §5 of the doc. Original brief: **2018 jitter comparison.** Go through
    `../camera-mouse-reverse/` and check (a) whether we do something differently from 2018 that
    could cause jitter or the other symptoms (#12 jumps, #13 imprecise) — tracking, offset
    drift, mapping, smoothing, dead zone, timing — and (b) whether 2018 has its own jitter
    solution. Behavioural research only: label findings VERIFIED/INFERRED, never paste
    decompiled code; write results into `docs/research/` (and RE_EVIDENCE where it fits) and
    turn any proposed fix into a measured slice (ADR-0020 rules).
+0b. **NEXT (user, 2026-11-16): Noise-Adaptive Kalman Filter (NAKF) vs dead zone.** Evaluate a
+   noise-adaptive Kalman filter (e.g. constant-velocity state, measurement/process noise
+   estimated online from the tracker's innovations) as a replacement for the steady zone,
+   and possibly for the 1€ filter too (one filter instead of 1€ + EMA + zone). Measure first
+   on S1/S2 with the replay tool (`replay_2018` table + `replay_metrics`) against today's
+   pipeline: reversals/s and jitter rms at rest, residual (hold error), lag, S2 step max.
+   Target from `CM2018_JITTER_COMPARISON.md` §5: reversals/s ≤ 0.2 at rest, residual
+   ≤ 0.15 cam px, lag ≤ 80 ms. Prototype in the replay tool / `pointer-core` behind a test
+   switch; a default change needs the user's OK + ADR (new ADR or ADR-0017 amendment), a CI
+   test on calibrated signals at every gain 1–60, and a device check. This supersedes the
+   zone-only variants in §5.1 of the doc unless NAKF loses.
 1. **#13 the mouse is imprecise** — triage first (zone trail/creep, filter lag, tracker noise).
 2. **#12 not sure the jumping is fixed** — the edge snap is fixed; look for other causes
    (fast-move filter catch-up at S2 29–34 s, handover/re-acquisition, display snap).

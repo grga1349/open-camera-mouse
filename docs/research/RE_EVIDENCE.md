@@ -10,6 +10,9 @@ replacement for the original research files — go there for addresses/tokens/RE
 > unresolved (loss policy, offset evolution, config defaults), and corrected two errors here
 > (smoothing polarity, fixed below; the "dwell timing" method, which is mouse-inactivity
 > auto-start). Use `BEHAVIOR_SPEC.md` §6 for the correction list.
+>
+> Pointer-path jitter comparison against 2018 (Phase 6d, 2026-11-16):
+> `CM2018_JITTER_COMPARISON.md` — 2018 has no jitter solution in the inspected path.
 
 **Labels** (carried from the source research, which already distinguishes these):
 `VERIFIED` = direct binary/managed-code evidence. `STRONGLY INFERRED` = behavior pattern
