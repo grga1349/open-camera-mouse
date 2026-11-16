@@ -3,29 +3,33 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6c closed; next session = start Phase 6d)
+## As of 2026-11-16 (Phase 6d step 2 metrics committed; next session = testing + step 3 sweep)
 
-**Branch:** `rewrite/rust`, 6c close-out commit pushed. **First: verify CI** (`curl` below).
+**Branch:** `rewrite/rust`. Step 2 committed and pushed (see `git log`); verify its CI. CI on `d7728b5`: Windows
+`test (no webcam)` failed with exit 1 (#7; log needs auth — ask the user for the test name).
 
-**Where we are:** Phase 6c (task 0010 → `tasks/done/`) is DONE: #8 real gain 1–60, #9 Options
-Screen tab, #10 Text size removed, #11 automatic steady zone 0.5 camera px. Defaults gain 22,
-smoothing 0.20 (user, ADR-0017 amendments). The user wants **Phase 6d (ADR-0020)**: the
-smallest dead zone that fixes jitter, a fix for jumps, a broad settings sweep on recordings,
-and synthetic tests calibrated to the recordings.
+**User decision:** no new recordings; corpus = `~/ocm-recordings/S1-still-2026-11-15` and
+`S2-turns-2026-11-15`.
 
-**Next session — start 6d:**
-1. Verify CI.
-2. Write `tasks/active/0011-phase-6d-calibrated-pointer.md` from ADR-0020 + ROADMAP §6d (format:
-   `tasks/done/0010-*`), set 0011 ACTIVE in `tasks/BACKLOG.md`. Don't pre-plan slices beyond
-   ADR-0020's order.
-3. Ask the user for #12 (jumps): when, how big, what they were doing; a recording if possible.
-4. Fix the local replay tool first (`~/ocm-recordings/_tools/replay-tool`): it still sets
-   `steady_px` (removed) — use `Controller::set_steady_zone_cam_px`. It has
-   `replay_steady_sweep` and `replay_dump_path` (S1 path at gain 24 for offline zone sims).
-5. Recording asks ≈ 2 min each (`scripts/record-scenario.sh`); add scenarios to
-   `docs/qa/RECORDING_PROTOCOL.md` if needed (precise moves, jumps).
+**Done:** task 0011 written; replay tool ported (`bench_run_zone`, `OCM_REPLAY_STEADY` in cam
+px); metrics module `crates/pointer-core/src/metrics.rs` (creep, shake, unexplained jumps,
+lag, precision rule); `the_cursor_does_not_move_at_rest_*` use it; replay tool
+`replay_metrics` (`OCM_REPLAY_DIRS=<S1>:<S2>`) and `replay_around` (`OCM_AT_S`). Baseline
+table in task 0011. **#12 lead:** at S2 58.54 s the cursor snaps 44 px to the bottom edge —
+`Controller::drive` pins an axis at the limit past the steady zone's trailing radius.
 
-**Evidence so far (S1 replay, 14.5 s still, moves / reversals by camera-px zone):** gain 24: no
+**Next session (user: "2nd part, where we will test stuff"):**
+0. Testing with the user on the dev build (`cargo run -p open-camera-mouse`): ask whether the
+   jumps were at screen edges and reproduce #12 by moving the cursor to each edge at the
+   default zone vs `OCM_DEV_STEADY=0` (expect: snap with zone, none without). Note results in
+   TEST_DRIVE #12.
+1. Step 3: sweep S1/S2 over gain, smoothing, zone, 1€ params (+ candidate edge-approach fix)
+   with `replay_metrics`; table into task 0011. Also explain S2's 1084 vs 1563 controlled
+   steps (defaults vs as-recorded).
+2. Ask the user whether their jumps happened at screen edges.
+3. Then step 4 (fit synthetic signals), step 5 (fixes).
+
+**Evidence so far (S1 replay, recorded smoothing 0.05; 2026-11-16 re-run: 0.5 cam px → 99/300 rest frames move, 0 moves needs 2.24 cam px, identical at gain 4–60). Older numbers, moves / reversals by camera-px zone:** gain 24: no
 zone 311/6, 0.2 → 169/5, 0.5 → 108/2, 1.0 → 59/1; same pattern at gain 8–60. Reversals (shake)
 are already low after the 1€ filter; most moves are slow drift (1–2.5 cam px over seconds).
 So a dead zone big enough for drift costs precision: separate shake from drift (ADR-0020 §5).

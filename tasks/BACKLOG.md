@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| — | Phase 6d — calibrated pointer behaviour (ADR-0020) | NEXT — task 0011 to be written by the session that starts it, from `docs/ROADMAP.md` §6d |
+| 0011 | Phase 6d — calibrated pointer behaviour (ADR-0020) | ACTIVE — `tasks/active/0011-phase-6d-calibrated-pointer.md` |
 
 ## Done
 

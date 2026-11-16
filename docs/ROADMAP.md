@@ -20,7 +20,7 @@ the phase.
 | 6 | Desktop app | DONE | task 0008; ADR-0012; `docs/qa/MANUAL_QA.md` (rows 1–18 pass); CI green |
 | 6b | Test drive (ADR-0013) | DONE | task 0009; `docs/qa/TEST_DRIVE.md` #1–#6; ADR-0014…0018 |
 | 6c | Tuning round (ADR-0019) | DONE | task 0010; `docs/qa/TEST_DRIVE.md` #7–#11; closed into 6d (ADR-0020) |
-| 6d | Calibrated pointer behaviour (ADR-0020) | NEXT | task 0011 (written when the phase starts); `docs/qa/TEST_DRIVE.md` from #12 |
+| 6d | Calibrated pointer behaviour (ADR-0020) | ACTIVE | task 0011; `docs/qa/TEST_DRIVE.md` from #12 |
 | 7 | Multiplatform / release | — | carry-over: MANUAL_QA rows 19–20 (`.app` permissions) |
 | 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 

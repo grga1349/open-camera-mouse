@@ -4,11 +4,13 @@
 //! ADR-0008), dt-aware [`smoothing`] (R-P2), screen [`limits`] with offset drift, [`dwell`]
 //! clicking (R-K1/R-K2) and the [`handover`]/jump-bound rules (R-A2, R-P4). Each piece is
 //! pure and takes time as an argument; `app-core` composes them per frame as
-//! map → smooth → limit → drift → [`steady`] zone → dwell.
+//! map → smooth → limit → drift → [`steady`] zone → dwell. [`metrics`] measures the result
+//! (ADR-0020).
 
 pub mod dwell;
 pub mod handover;
 pub mod limits;
+pub mod metrics;
 pub mod one_euro;
 pub mod smoothing;
 pub mod steady;

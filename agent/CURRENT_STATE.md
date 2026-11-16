@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6c DONE, task 0010 closed; Phase 6d calibrated pointer behaviour NEXT, ADR-0020; no task file yet)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; step 2 metrics committed; next = device test of #12 edge snap + step 3 sweep; corpus = existing S1/S2)
 
 ## Branch / commit
 
@@ -85,11 +85,15 @@ written yet.
 
 ## Immediate next action
 
-Start Phase 6d: verify CI, write `tasks/active/0011-phase-6d-calibrated-pointer.md` from ADR-0020
-+ ROADMAP §6d, set it ACTIVE in `tasks/BACKLOG.md`, ask the user for the jump steps (#12) and the
-recordings plan, then slice per ADR-0020's order.
+Phase 6d step 3 (settings sweep) on S1/S2 with `pointer_core::metrics` via the replay tool's
+`replay_metrics`; then step 4 (calibrated synthetic signals) and step 5 (fixes; first lead for
+#12: steady-zone edge snap in `Controller::drive`). No new recordings (user decision).
 
 ## Open risks
+
+- #12 lead: `drive` snaps a pinned axis to the screen limit past the steady zone's trailing
+  radius → a jump of up to the zone radius whenever the cursor reaches an edge (S2 58.54 s).
+- #7: CI `test (no webcam)` flaky on macOS (exit 101) and Windows (exit 1, run 43779616732).
 
 - Synthetic pointer tests passed while the device still jittered: not calibrated (ADR-0020).
 - Jumps (#12) not reproduced yet.

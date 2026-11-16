@@ -10,6 +10,7 @@ use app_core::{
     AppState, Command, Controller, DesktopRect, DwellSettings, Effect, Event, Input, MarkerKind,
     PointerAccess, PointerOwner, RECENTER_US, STEADY_ZONE_CAM_PX, ScreenLimits, Settings, Step,
 };
+use pointer_core::metrics::{self, PathSample, Scale};
 use tracking_core::{GrayFrame, LossReason, Point2, TrackStatus};
 
 const W: u32 = 640;
@@ -1366,30 +1367,41 @@ fn still_at_rest(gains: std::ops::RangeInclusive<u32>) {
         r.cmd(Command::SelectTarget(Point2::new(320.0, 240.0)));
         r.hold(HANDOVER_US, 0.0, SCENE);
         assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
-        let mut cursor = Vec::new();
+        // The largest display (2560 × 1440) sets the scale.
+        let scale = Scale {
+            x: f64::from(gain * 2560.0 / 640.0),
+            y: f64::from(gain * 1440.0 / 480.0),
+        };
+        let mut path = Vec::new();
         for i in 0..150 {
             let (dx, dy) = rest_tremor(i);
-            let p = r.frame(dx, dy, SCENE).pointer_target();
+            let s = r.frame(dx, dy, SCENE);
             // The first second settles; the next 4 s are measured.
             if i >= 30 {
-                cursor.push(p.expect("camera moves the pointer every tracked frame"));
+                let cursor = s.pointer_target();
+                assert!(
+                    cursor.is_some(),
+                    "camera moves the pointer every tracked frame"
+                );
+                path.push(PathSample {
+                    t_us: r.now,
+                    cursor,
+                });
             }
         }
-        let moved = cursor.windows(2).filter(|w| w[0] != w[1]).count();
+        // Shared metric definitions (ADR-0020): no creep, no shake.
+        let m = metrics::rest(&path, scale);
         assert_eq!(
-            moved,
-            0,
-            "gain {gain}: cursor moved on {moved} of {} frames at rest",
-            cursor.len()
+            (m.moves, m.reversals),
+            (0, 0),
+            "gain {gain}: cursor moved at rest: {m:?}"
         );
 
-        // A deliberate 1 camera px move (gain × 2560 / 640 screen px; the largest display
-        // sets the scale) moves the cursor by at least half of it, past the 0.5 px zone.
-        let before = *cursor.last().unwrap();
+        // A deliberate 1 camera px move reaches the cursor (past the 0.5 px zone).
+        let before = path.last().and_then(|p| p.cursor).unwrap();
         let after = r.hold(1_000_000, 1.0, SCENE).pointer_target().unwrap();
-        let px_per_cam = gain * 2560.0 / 640.0;
         assert!(
-            after.x - before.x > 0.4 * px_per_cam,
+            metrics::reached(before, after, (1.0, 0.0), scale),
             "gain {gain}: {before:?} → {after:?}"
         );
     }
