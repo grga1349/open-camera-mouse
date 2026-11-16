@@ -143,7 +143,13 @@ is 102/299 frames: drift, not shake. S2 note: the defaults run has 1084 controll
    solution. Behavioural research only: label findings VERIFIED/INFERRED, never paste
    decompiled code; write results into `docs/research/` (and RE_EVIDENCE where it fits) and
    turn any proposed fix into a measured slice (ADR-0020 rules).
-0b. **NEXT (user, 2026-11-16): Noise-Adaptive Kalman Filter (NAKF) vs dead zone.** Evaluate a
+0b. **DONE 2026-11-16 → `docs/research/NAKF_VS_STEADY_ZONE.md`. Verdict: NAKF loses.** No
+   setting reaches ≤ 0.2 reversals/s at rest (best alone 2.4/s, with residual 0.50–0.55). As
+   1€ + EMA replacement under zone 0.5: lag 70 vs 110 ms, residual 0.35 vs 0.45, but shake
+   0.30 vs 0.10/s and S2 step max 217 vs 184 px (CV overshoot). Rest noise is low-frequency
+   head motion (adaptive r hits its 0.002 floor); a hold is needed → #13 continues with zone
+   variants (§5.1). Replay tool: `replay_nakf`, `emulate_ours` (validated vs controller).
+   Original brief: **Noise-Adaptive Kalman Filter (NAKF) vs dead zone.** Evaluate a
    noise-adaptive Kalman filter (e.g. constant-velocity state, measurement/process noise
    estimated online from the tracker's innovations) as a replacement for the steady zone,
    and possibly for the 1€ filter too (one filter instead of 1€ + EMA + zone). Measure first

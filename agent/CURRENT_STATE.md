@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: LK-vs-OpenCV and 2018 jitter research DONE; next = NAKF vs dead zone (may replace 1€ too), then #13/#12/#14 — see task 0011)
+Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: LK-vs-OpenCV, 2018 jitter and NAKF research DONE (NAKF loses); next = #13 zone variants, then #12 / #14 — see task 0011)
 
 ## Branch / commit
 
@@ -83,11 +83,11 @@ movement, converted through gain and Main monitor; no longer an option). Default
 ## Immediate next action
 
 Part 3 of Phase 6d, queued in task 0011 § "Queued for part 3". Research done:
-`docs/research/OPENCV_LK_PARITY.md` (tracker = OpenCV) and
-`docs/research/CM2018_JITTER_COMPARISON.md` (2018 has no jitter fix; our zone costs +40 ms lag
-and ≈ 0.45 cam px hold error = main #13 candidate; #12 candidate = takeover-to-centre after a
-false move-stop). **Next: Noise-Adaptive Kalman Filter vs dead zone** (task 0011 item 0b; may also replace the
-1€ filter), measured on S1/S2 with the replay tool. Then ask: #13 zone variants, #12 takeover
+`OPENCV_LK_PARITY.md` (tracker = OpenCV), `CM2018_JITTER_COMPARISON.md` (2018 has no jitter
+fix; zone hold error ≈ 0.45 cam px = main #13 candidate) and `NAKF_VS_STEADY_ZONE.md` (NAKF
+loses on shake: rest noise is low-frequency head motion, a hold is needed; keep 1€ + EMA +
+zone). **Next (user decision): #13 zone variants** (doc §5.1, reduce the zone's hold error,
+measured with the replay tool's `emulate_ours` harness). Then ask: #12 takeover
 instrumentation, #14 Main monitor default = primary. No new recordings (user decision).
 
 ## Open risks

@@ -3,33 +3,33 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6d part 3: 2018 jitter comparison done; 3 slices left)
+## As of 2026-11-16 (Phase 6d part 3: NAKF vs dead zone done, NAKF loses; 3 slices left)
 
-**Branch:** `rewrite/rust`. CI on `8303dd7` (edge-jump fix) green. Last commit `2293676` (docs).
+**Branch:** `rewrite/rust`. CI on `8303dd7` (edge-jump fix) green. Last commit `4f771ea` (docs).
 
-**Done this session (part 3, slice 0):** `docs/research/CM2018_JITTER_COMPARISON.md`.
-2018 has **no jitter solution** in the inspected path (0.95 damping ≈ no smoothing, no zone, 14 Hz
-tick). Emulated on our tracker (replay tool test `replay_2018`, local only), S1 at rest: 2018
-6.8 reversals/s, 6.9 px rms; ours (app) 0.1 reversals/s, but lag 110 ms vs 70 ms zone-off and
-residual 0.45 vs 0.12 cam px → **the steady zone's hold error is the main #13 candidate**.
-Sensitivity: gain 22 × Main = 1.3× (x) / 2.3× (y) 2018 on the user's desktop, 3.7× on a single
-1080p screen (D1, user's choice). S2's largest step (34.2 s) is a real fast head turn, larger
-in 2018. #12 candidate left: takeover-to-centre after a false move-stop (D7, S1 has one
-Camera→Handover at 22.35 s, cause unknown). Earlier: `OPENCV_LK_PARITY.md` (tracker = OpenCV).
+**Done this session (part 3, item 0b):** `docs/research/NAKF_VS_STEADY_ZONE.md`. Noise-adaptive
+CV Kalman (adaptive r from second differences, q raised by innovation NIS) prototyped in the
+replay tool (`replay_nakf`). **No setting reaches ≤ 0.2 reversals/s at rest** (best 2.4/s,
+residual then 0.50–0.55). Under zone 0.5 instead of 1€ + EMA: lag 70 vs 110 ms, residual 0.35
+vs 0.45, but shake 0.30 vs 0.10/s and S2 step max 217 vs 184 px (CV overshoot). Cause: rest
+noise is low-frequency head motion (adaptive r hits its floor 0.002 cam px²), so a hold is
+needed. Recommendation: keep 1€ + EMA + zone, no NAKF option. `emulate_ours` in the replay
+tool = today's chain outside the controller, validated (S1 zone 0.5: 0.10 rev/s, residual 0.43
+vs controller 0.45), ready as the harness for zone variants. No production code changed.
 
 **User decision:** no new recordings; corpus = `~/ocm-recordings/S1-still-2026-11-15` and
 `S2-turns-2026-11-15`. Replay tool: `~/ocm-recordings/_tools/replay-tool` (tests
-`replay_metrics`, `replay_2018`, run with `OCM_REPLAY_DIRS=<S1>:<S2>`).
+`replay_metrics`, `replay_2018`, `replay_nakf`, run with `OCM_REPLAY_DIRS=<S1>:<S2>`;
+`OCM_NAKF_GRID="q,γ,thr[,r];…"` overrides the NAKF grid).
 
-**Next session = NAKF vs dead zone (user, task 0011 queue item 0b):** compare a
-Noise-Adaptive Kalman Filter against the steady zone, and whether it can also replace the 1€
-filter (1€ + EMA + zone → one filter). Measure first on S1/S2 with the replay tool
-(`replay_2018` + `replay_metrics`), targets: reversals/s ≤ 0.2 at rest, residual ≤ 0.15 cam px,
-lag ≤ 80 ms, no larger S2 steps. Prototype behind a test switch; default change = user OK +
-ADR + CI test at gains 1–60 + device check. Research/measure slice first, then ask.
+**Next session = #13 zone variants (user decision 2026-11-16):** variants from
+`CM2018_JITTER_COMPARISON.md` §5.1 that cut the zone's hold error (0.45 cam px) while keeping
+shake ≤ 0.2 reversals/s at rest, lag ≤ 80 ms, residual ≤ 0.15 cam px, S2 step max ≤ 184 px.
+Measure in the replay tool's `emulate_ours` harness first (add variants beside `replay_nakf`),
+then prototype in `pointer_core::steady` behind a test switch; default change = user OK +
+ADR-0015/-0017 amendment + CI test at gains 1–60 + device check.
 
 **After that (ask which first):**
-1. #13 imprecise — if NAKF doesn't solve it: zone variants from the doc §5.1.
 2. #12 jumps — tag takeover recentres as a jump cause, CI test that a ≤ 5 px echo never
    triggers move-stop; ask the user if jumps follow touching the mouse/trackpad.
 3. #14 "Main monitor" default = the OS primary monitor (ADR-0014 amendment, user OK; platform
