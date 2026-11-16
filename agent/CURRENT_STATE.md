@@ -4,7 +4,7 @@ Last updated: 2026-11-16 (Phase 6d ACTIVE; part 3: #13 → steady zone 0.2 cam p
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last code: `8303dd7` (edge approach, #12); CI green. CI on `944cbf1` failed once in macOS `test (no webcam)` (flake,
+Branch: `rewrite/rust`. Last code: `304de65` (#13 zone 0.2 + drift cap); CI green. CI on `944cbf1` failed once in macOS `test (no webcam)` (flake,
 TEST_DRIVE #7, test name unknown).
 
 ## Milestone
@@ -84,7 +84,7 @@ movement, converted through gain and Main monitor; no longer an option). Default
 
 Part 3 of Phase 6d (task 0011). #13 done for now: zone 0.2 cam px (user picked on device from
 `ZONE_VARIANTS.md` §5) + `drift_offset` capped at the head's overshoot (ADR-0015/-0017
-amendments). Committed + pushed; check CI first. Leftovers in HANDOFF order: #13 device follow-ups (edge hold, wobble at high gain / 2560 Main), default-gain decision, #12 takeover instrumentation (jump-cause tag, CI test that
+amendments). `304de65`, CI green; device-checked OK 2026-11-16 (edge hold, gain 60, 2560 Main). Leftovers in HANDOFF order: default-gain decision, #12 takeover instrumentation (jump-cause tag, CI test that
 a ≤ 5 px echo never triggers move-stop, ask if jumps follow touching the mouse), #14 Main monitor
 default = OS primary. Then step 3 sweep / step 4 calibration. No new recordings (user decision).
 

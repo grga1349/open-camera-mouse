@@ -3,11 +3,12 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-16 (Phase 6d part 3: #13 → steady zone 0.2 + drift cap, committed + pushed)
+## As of 2026-11-16 (Phase 6d part 3: #13 device-checked OK, CI green)
 
-**Branch:** `rewrite/rust`. The #13 change is committed and pushed (the commit after `cf95cf0`).
-**First thing next session: check CI on it** (curl below); the full workspace gate wasn't run
-locally (only pointer-core, app-core, desktop tests + scoped clippy).
+**Branch:** `rewrite/rust`. #13 = `304de65`, CI green on macOS/Windows/Linux + licenses.
+**Device check 2026-11-16 (user): all OK** — cursor holds at the right edge and menu bar with no
+jitter (drift cap works); no wobble at rest at gain 60, nor with the 2560 px Main (22 / 40).
+Recorded in TEST_DRIVE #13.
 
 **Done this session (#13):** `docs/research/ZONE_VARIANTS.md` — zero shake with ≤ 0.15 cam px
 hold error is infeasible even non-causally (S1 bound 0.25 at 0.2 reversals/s); user chose
@@ -16,22 +17,16 @@ px swings) → device check 0.2/0.25/0.35 → user picked **0.2**. Shipped:
 `STEADY_ZONE_CAM_PX` 0.5 → 0.2; `pointer_core::limits::drift_offset(…, past)` caps the 2018
 drift at the head's overshoot (the smaller zone exposed a 5–18 px saw off screen edges). ADR-0015
 /-0017 amendments, TEST_DRIVE #13 "Improved". pointer-core / app-core / desktop tests green, fmt,
-scoped clippy, core-deps clean. Full workspace gate + CI not yet run on this change.
+scoped clippy, core-deps clean; CI green on `304de65`.
 
 **Next session — left over, in this order (ask the user which slice first):**
-1. **CI check** of the #13 commit (3 OS); if `test (no webcam)` fails, it may be #7 — get the
-   test name.
-2. **#13 device follow-ups** (user, quick): the cursor stays put on an edge / menu bar while
-   the head is held past it (drift cap); wobble at zone 0.2 at high gain (e.g. 40–60) and with
-   the 2560 px monitor as Main (visible wobble scales with gain × Main width). If it shows:
-   re-sweep with `replay_zone_sweep` at that scale.
-3. **#13 open decision:** lower the default gain 22 (`ZONE_VARIANTS.md` §4.2; only lever that
+1. **#13 open decision:** lower the default gain 22 (`ZONE_VARIANTS.md` §4.2; only lever that
    cuts on-screen error without shake) — user's call, ADR-0017 amendment if changed.
-4. **#12 jumps:** tag takeover recentres as a jump cause, CI test that a ≤ 5 px echo never
+2. **#12 jumps:** tag takeover recentres as a jump cause, CI test that a ≤ 5 px echo never
    triggers move-stop; ask if jumps follow touching the mouse/trackpad.
-5. **#14** "Main monitor" default = OS primary (ADR-0014 amendment, user OK; platform must
+3. **#14** "Main monitor" default = OS primary (ADR-0014 amendment, user OK; platform must
    report which display is primary).
-6. Then step 3 sweep / step 4 calibration (task 0011 objective).
+4. Then step 3 sweep / step 4 calibration (task 0011 objective).
 One slice per session.
 
 **Corpus (user decision, no new recordings):** `~/ocm-recordings/S1-still-2026-11-15`,
