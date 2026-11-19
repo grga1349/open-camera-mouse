@@ -113,3 +113,42 @@ by a certificate secret. Without secrets: macOS ad-hoc (`-`), Windows unsigned.
 - Follow-ups: slice 3 verifies the INFERRED tool facts above on the dev Mac and records them
   here; the eframe window icon needs PNG decoding (check `eframe`'s icon helpers before
   adding any crate — an ADR if one is needed).
+
+## Amendment 2026-11-19 — slice 3 findings (macOS, measured on the dev Mac)
+
+INFERRED facts checked:
+
+- **PNG → `.icns`: yes, with a limit.** `cargo-packager` builds the `.icns` from PNGs, but a
+  PNG only maps to an icns slot by size and an `@2x` file name; a plain 1024 px PNG fails
+  the whole package ("No matching IconType"). The config lists 16/32/128/256/512 (all @1x);
+  Retina slots (`@2x`) are a follow-up (the render script would write `icon-NNN@2x.png`).
+- **Ad-hoc `-` identity: works**, but `cargo-packager` always signs with the hardened runtime
+  (`--options runtime`), which denies the camera unless the app has
+  `com.apple.security.device.camera` → `apps/desktop/packaging/macos/entitlements.plist`
+  (also what notarization will need, P18).
+- **`license-file`** becomes a click-through licence agreement when the dmg is opened; not
+  wanted for MIT. `LICENSE` ships as a resource (`Contents/Resources/LICENSE`) instead.
+
+**Decision: ad-hoc signature with an identifier-only designated requirement.** An ad-hoc
+signature's default designated requirement is the build's cdhash; macOS keys Camera and
+Accessibility grants to it, so after every update tccd logs "Failed to match existing code
+requirement" and the grant is silently void — and switching it off and on in System Settings
+only modifies the stale entry, it does not repair it (measured; the user had to remove the
+entry). `scripts/macos-adhoc-sign.sh` (cargo-packager `before-each-package-command`, before
+the dmg step) re-signs the `.app` with `designated => identifier
+"io.github.grga1349.OpenCameraMouse"`, hardened runtime and the entitlements; the config
+sets no signing identity. Measured: a rebuilt binary kept both grants (MANUAL_QA row 22).
+Trade-off: any ad-hoc binary claiming this bundle id would match the grant — acceptable for
+an unsigned v1, documented in the release notes (slice 8); a Developer ID signature
+(team-anchored requirement) replaces it when an account exists, and the script then leaves
+that signature alone.
+
+**Pointer access check.** `CGPreflightPostEventAccess` kept its launch-time answer in the
+`.app` (false all run, even with the grant in place), while `AXIsProcessTrusted` followed the
+switch within one 3 s poll and posted events landed without a relaunch. The macOS adapter
+treats either as granted (`platform/src/pointer/macos.rs`, FFI to ApplicationServices, no
+new crate).
+
+Slice 4 note: the hook also runs for the other formats (it exits at once unless
+`CARGO_PACKAGER_FORMAT=dmg`); on the Windows runner it needs `sh` (Git Bash) on `PATH`, or a
+per-platform config.

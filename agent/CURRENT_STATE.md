@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012; slices 1–2 done, slice 3 next)
+Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012; slices 1–3 done, slice 4 next)
 
 ## Branch / commit
 
@@ -75,9 +75,15 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
   for tests and the debug-only `OCM_DEV_STEADY=<cam px>` (engine.rs). Options tabs: Pointer ·
   Clicking · Camera · Screen · General. Rest test `the_cursor_does_not_move_at_rest_*` covers
   gains 1–60 in four parallel parts (synthetic, *not yet calibrated*).
-- Packaging (ADR-0021, slice 2): icon redrawn by `scripts/render-icon.py` (Python + Pillow,
+- Packaging (ADR-0021 + amendment): icon redrawn by `scripts/render-icon.py` (Python + Pillow,
   dev only) → `assets/icon/png/` (full-bleed) and `assets/icon/macos/` (Apple grid);
-  original `assets/icon/source.png`. Nothing wired into the build yet.
+  original `assets/icon/source.png`. Workspace version 0.4.0. macOS: `cd apps/desktop &&
+  cargo packager --release` → `target/packager/Open Camera Mouse.app` + `…_0.4.0_aarch64.dmg`
+  (`[package.metadata.packager]`, `packaging/macos/{Info,entitlements}.plist`,
+  `scripts/macos-adhoc-sign.sh` = ad-hoc signature with an identifier-only requirement so
+  grants survive updates). App/dock icon set at runtime from the embedded PNG
+  (`app::app_icon`). macOS pointer access = `AXIsProcessTrusted || CGPreflightPostEventAccess`
+  (preflight is stale within a run, measured).
 - Dev profile: deps opt 2, `app-core`/`pointer-core`/`platform` opt 3, `tracking-core` 3
   (root `Cargo.toml`). Benches: `app-core --bench frame`, `platform --bench decode`.
 
@@ -87,15 +93,19 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## Immediate next action
 
-Slice 3 of task 0012: macOS `.app` + dmg per ADR-0021 (`cargo-packager` 0.11.8, id
-`io.github.grga1349.OpenCameraMouse`, workspace version → 0.4.0, icon PNGs in
-`assets/icon/macos/`, `NSCameraUsageDescription`, ad-hoc signing), verify the INFERRED tool
-facts, MANUAL_QA rows 19–20 on the bundle. Release build: ask the user first.
+Slice 4 of task 0012: release workflow (tag → macOS arm64 dmg, Windows NSIS, Linux tar.gz +
+AppImage → draft GitHub Release with checksums; `cargo-about` notices in every package;
+notarization / Windows signing steps present but skipped without secrets). The
+`before-each-package-command` hook needs `sh` on the Windows runner (ADR-0021 amendment).
+Windows/Linux icons: config currently lists the macOS-grid PNGs only.
 Still open from slice 1: on the next `test (no webcam)` failure read
 `https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
 and make the named test deterministic (#7).
 
 ## Open risks
+
+- Ad-hoc identifier-only signature: any ad-hoc binary claiming the bundle id matches the
+  grants (ADR-0021 amendment); Developer ID later. `.icns` lacks Retina `@2x` slots.
 
 - #12 closed (user: no jumps). Near a limit the zone holds less toward it (creep, no shake).
 - #14: macOS checked on device; Linux RandR primary and the Windows origin rule are compile/CI-checked only (Phase 7 on device).

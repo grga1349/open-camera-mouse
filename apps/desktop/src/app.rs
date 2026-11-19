@@ -501,7 +501,22 @@ pub fn options_ui(ui: &mut Ui, shell: &mut Shell) {
     }
 }
 
-/// Viewport builders for the two fixed-size windows.
+/// The app icon PNG (ADR-0021). eframe sets the window / dock icon at runtime and would
+/// otherwise show its own "e" — even inside the `.app`, where it overrides the `.icns`. So
+/// macOS gets the Apple-grid variant (same as the bundle's), the others the full-bleed one.
+#[cfg(target_os = "macos")]
+const APP_ICON_PNG: &[u8] = include_bytes!("../../../assets/icon/macos/icon-512.png");
+#[cfg(not(target_os = "macos"))]
+const APP_ICON_PNG: &[u8] = include_bytes!("../../../assets/icon/png/icon-256.png");
+
+/// The decoded app icon; `None` (eframe's default icon) only if the embedded PNG is broken,
+/// which a test rules out.
+pub fn app_icon() -> Option<egui::IconData> {
+    eframe::icon_data::from_png_bytes(APP_ICON_PNG).ok()
+}
+
+/// Viewport builders for the two fixed-size windows. The Options window inherits the root
+/// viewport's icon (eframe).
 pub fn tracking_viewport() -> egui::ViewportBuilder {
     egui::ViewportBuilder::default()
         .with_title("Open Camera Mouse")

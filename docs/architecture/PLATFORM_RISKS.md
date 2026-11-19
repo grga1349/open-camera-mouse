@@ -24,7 +24,7 @@ retired.
 | P15 | UI | all | AccessKit/screen-reader behaviour differs per OS | M | M | INFERRED | Phase 8 accessibility testing | 8 |
 | P16 | Build | Windows | Symlinks / POSIX scripts in a checkout | L | M | INFERRED | No symlinks (ADR-0002). The only script, `check-core-deps.sh`, runs on the Linux job | 2 ✓ |
 | P17 | Build | all | Toolchain drift between dev and CI | L | M | VERIFIED | `rust-toolchain.toml` pins 1.99.1. `--locked` in CI | 2 ✓ |
-| P18 | Release | macOS | Notarization, hardened runtime and camera entitlement | H | H | INFERRED | Phase 7 packaging task | 7 |
+| P18 | Release | macOS | Notarization, hardened runtime and camera entitlement (entitlement + stable ad-hoc requirement VERIFIED 2026-11-19, ADR-0021 amendment; notarization open) | H | H | INFERRED | Phase 7 packaging task | 7 |
 | P19 | Release | Windows | Unsigned binaries trigger SmartScreen | H | M | INFERRED | Code-signing decision in Phase 7 | 7 |
 | P20 | Deps | all | A transitive dependency adds a non-permissive license or OpenCV | L | H | VERIFIED policy (`deny.toml`) | `cargo deny check` in CI | 2 ✓ |
 

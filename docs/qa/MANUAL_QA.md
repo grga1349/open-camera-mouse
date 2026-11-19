@@ -43,8 +43,9 @@ fails only because of the terminal attribution.
 | 16 | Quit while running | Camera light goes off within ~2 s (nokhwa #224) | 2026-11-15 | pass |
 | 17 | Theme Paper, Larger controls; quit; relaunch (Text size removed 2026-11-16, TEST_DRIVE #10) | Both persist | 2026-11-15 | pass |
 | 18 | Running states on screen (Tracking, Held, Lost, Searching, Recentering, Paused, Handover, Permission needed) | Match the design lab; nothing clipped | 2026-11-15 | pass |
-| 19 | **`.app`**: camera permission denied (System Settings → Camera off) | "Allow camera access" card, no crash; Try again works after granting | 2026-11-15 | n/a: Phase 7 (.app bundle) |
-| 20 | **`.app`**: Accessibility granted to the app itself (not the terminal) | Same as row 5 | 2026-11-15 | n/a: Phase 7 (.app bundle) |
+| 19 | **`.app`**: camera permission denied (System Settings → Camera off) | "Allow camera access" card, no crash; Try again works after granting | 2026-11-19 | pass (Try again starts the preview without a relaunch) |
+| 20 | **`.app`**: Accessibility granted to the app itself (not the terminal) | Same as row 5 | 2026-11-19 | pass (after the slice-3 fix: switched on mid-run, Check again clears the card, pointer moves without a relaunch) |
+| 22 | **`.app`**: rebuild / update, then relaunch (no `tccutil reset`) | No camera prompt, no Accessibility card: grants survive (identifier-only signature, ADR-0021 amendment) | 2026-11-19 | pass |
 | 21 | Reduce Motion on (System Settings → Accessibility → Display) | Searching animation — known gap: egui has no reduced-motion flag, record what it does | 2026-11-15 | deferred: Phase 8 (accessibility testing), user decision |
 
 ## Frame recordings (for Phase 4 threshold re-measurement)
@@ -58,5 +59,7 @@ partial occlusion (hand); turning away and back (re-detection arming); dim light
 ## Runs
 
 (Newest first. One line per run: date, build commit, who, rows run, summary.)
+
+- 2026-11-19, slice-3 `.app` (release, ad-hoc, 0.4.0), user + Claude, rows 20, 22: first run **failed** — Check again never cleared the Accessibility card. tccd log: "Failed to match existing code requirement" (stale cdhash-keyed grant from an earlier build; the System Settings switch only modifies it), and `CGPreflightPostEventAccess` kept its launch-time answer. Fixed (identifier-only designated requirement + `AXIsProcessTrusted`); rerun: both pass. Row 19 on the final bundle: pass.
 
 - 2026-11-15, `7e9a2bb` (debug build, `OCM_DEV_SETTINGS`), user + Claude, rows 1–18: all pass (global F10/F12 work from another app; minimised ~10 Hz usable). Rows 19–20 n/a until the Phase 7 `.app`; row 21 and the `OCM_RECORD` threshold sessions deferred to Phase 8 (user). Row 10: whether F10/F12 needed `Fn` was not noted.

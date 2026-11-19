@@ -966,3 +966,15 @@ fn preview_texture_follows_frames() {
     h.run_steps(4);
     assert_eq!(h.state().uploaded_seq, seq + 1);
 }
+
+// ---- packaging ----
+
+#[test]
+fn the_embedded_app_icon_decodes_to_a_square_opaque_centre() {
+    let icon = app_icon().expect("embedded icon PNG decodes");
+    assert_eq!(icon.width, icon.height);
+    assert!(icon.width >= 256, "icon too small for the dock / task bar");
+    assert_eq!(icon.rgba.len(), (icon.width * icon.height * 4) as usize);
+    let c = (icon.height / 2 * icon.width + icon.width / 2) as usize * 4;
+    assert_eq!(icon.rgba[c + 3], 255, "icon centre must be opaque");
+}

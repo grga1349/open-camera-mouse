@@ -99,3 +99,13 @@ with Options open.
   line weight (user's pick), PNGs in `assets/icon/{png,macos}/`, original in
   `assets/icon/source.png`. Next: slice 3 (macOS `.app` + dmg), verifying the INFERRED
   `cargo-packager` facts (icns conversion, ad-hoc `-` signing).
+- 2026-11-19: slice 3 done — macOS `.app` + dmg via `cargo packager --release` (from
+  `apps/desktop`): workspace 0.4.0, `Info.plist` (`NSCameraUsageDescription`), camera
+  entitlement (cargo-packager always uses the hardened runtime), app/dock icon from the
+  embedded PNG (eframe overrides the `.icns` otherwise; test added), `LICENSE` as a resource
+  (not `license-file`: dmg click-through). Found + fixed on device: ad-hoc grants keyed to the
+  cdhash were lost on every rebuild and Check again could never clear the card →
+  `scripts/macos-adhoc-sign.sh` signs with an identifier-only requirement; pointer access =
+  `AXIsProcessTrusted || CGPreflightPostEventAccess` (preflight is stale within a run).
+  ADR-0021 amendment. MANUAL_QA rows 19, 20, 22 pass. Open: Retina `@2x` icns slots; third-party
+  notices (`cargo-about`) land with the release workflow (slice 4). Next: slice 4.

@@ -36,8 +36,12 @@ const SAVE_REPAINT: Duration = Duration::from_millis(100);
 
 fn main() -> eframe::Result {
     let (settings, notice, store) = load_settings();
+    let mut viewport = tracking_viewport();
+    if let Some(icon) = app::app_icon() {
+        viewport = viewport.with_icon(icon);
+    }
     let options = eframe::NativeOptions {
-        viewport: tracking_viewport(),
+        viewport,
         ..Default::default()
     };
     eframe::run_native(

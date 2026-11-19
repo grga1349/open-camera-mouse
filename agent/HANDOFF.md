@@ -3,26 +3,24 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-19 (Phase 7 ACTIVE, task 0012, slice 2 done)
+## As of 2026-11-19 (Phase 7 ACTIVE, task 0012, slice 3 done)
 
-**Branch:** `rewrite/rust`. Last code `2ae2a5c`: CI 44604964205 green on 3 OS; the slice-1
-failure-summary step was skipped as intended. Flake #7 not seen since.
+**Branch:** `rewrite/rust`. CI last green at `2ae2a5c` (44604964205); slice 3 commit not yet
+pushed/CI-checked when this was written — check the run first.
 
-**This session:** slice 2 — ADR-0021 (Accepted): `cargo-packager` 0.11.8 (macOS app+dmg,
-Windows NSIS per-user, Linux AppImage; plain tar.gz by a workflow step), `cargo-about` 0.9.3 →
-`THIRD_PARTY_LICENSES.html` in every package (generated, never committed), app id
-`io.github.grga1349.OpenCameraMouse`, first release 0.4.0 / tag `v0.4.0`. Icon: the user's
-design redrawn as geometry by `scripts/render-icon.py` with 1.6× line weight at every size (the
-user picked this over a two-weight set) → `assets/icon/png/icon-{16…1024}.png` and
-`assets/icon/macos/…` (824/1024 rounded square). Original in `assets/icon/source.png`.
-Re-render: venv + `pip install pillow==11.3.0`, then run the script.
+**This session:** slice 3 — macOS `.app` + dmg (`cd apps/desktop && cargo packager
+--release`; `cargo-packager` 0.11.8 installed locally). Version 0.4.0, Info.plist with
+`NSCameraUsageDescription`, camera entitlement (hardened runtime is forced), runtime app/dock
+icon (`app::app_icon`, test), `LICENSE` as resource. On-device bug found + fixed: ad-hoc
+grants were keyed to the build's cdhash (lost every rebuild; System Settings toggle can't
+repair; tccd "Failed to match existing code requirement") → `scripts/macos-adhoc-sign.sh`
+signs with `designated => identifier "io.github.grga1349.OpenCameraMouse"`; and
+`CGPreflightPostEventAccess` is stale within a run → access = `AXIsProcessTrusted || preflight`.
+ADR-0021 amendment; MANUAL_QA rows 19, 20, 22 pass. Diagnose TCC with
+`/usr/bin/log show --predicate 'process == "tccd"'` (zsh `log` is a builtin).
 
-**Next:** slice 3 — macOS `.app` + dmg: `[package.metadata.packager]` in
-`apps/desktop/Cargo.toml`, workspace version 0.4.0, `NSCameraUsageDescription`, ad-hoc
-signing; verify the INFERRED tool facts in ADR-0021 (icns from PNGs, `-` identity); eframe
-window icon (check eframe's PNG helper before adding a crate); MANUAL_QA rows 19–20 on the
-bundle, including whether permissions survive a rebuild. Installing `cargo-packager` and the
-release build are heavy: ask first. #7: read the annotation on the next failure.
+**Next:** slice 4 — release workflow (see CURRENT_STATE "Immediate next action"). #7: read
+the annotation on the next failure.
 
 **User decisions (Phase 7):** macOS Apple Silicon only, ad-hoc signed dmg, notarization hook
 behind secrets (off); Windows unsigned NSIS per-user installer; Linux tar.gz + AppImage, X11
@@ -36,10 +34,11 @@ diagnosis-only; one slice per session.
 release builds: ask first.
 
 **How the user runs the app:** `export PATH="$HOME/.cargo/bin:$PATH"` then
-`cargo run -p open-camera-mouse` (dev build).
+`cargo run -p open-camera-mouse` (dev build), or the `.app` from `target/packager/`.
 
 **Known, not bugs:** Searching animation ignores Reduce Motion (Phase 8); font egui default;
-F10 not F11 on macOS; re-detection off by default; no auto-recenter; 16 px icon slightly muddy.
+F10 not F11 on macOS; re-detection off by default; no auto-recenter; 16 px icon slightly
+muddy; Gatekeeper rejects the ad-hoc app (documented in slice 8).
 
 **User direction (don't drift):** start from 2018 but improve; new behaviour as options, off by
 default unless approved; monochrome UI, neon green ring marker, yellow primary buttons,

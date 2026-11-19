@@ -49,7 +49,8 @@ impl SystemPointer {
     }
 
     /// Asks macOS to show its Accessibility prompt (only the first time per app; afterwards it
-    /// returns the current state without a prompt). The grant takes effect without a restart.
+    /// returns the current state without a prompt). The grant takes effect without a restart,
+    /// but only `granted()` sees it before one (measured, see there).
     pub fn request_access(&self) -> PointerAccess {
         to_access(CGRequestPostEventAccess())
     }
@@ -107,6 +108,30 @@ impl SystemPointer {
     }
 }
 
+// ApplicationServices (HIServices) Accessibility trust. `Boolean` is a C `unsigned char`.
+#[allow(unsafe_code)]
+#[link(name = "ApplicationServices", kind = "framework")]
+unsafe extern "C" {
+    fn AXIsProcessTrusted() -> u8;
+}
+
+/// Whether posted events will land. `AXIsProcessTrusted` follows the Accessibility switch
+/// live; `CGPreflightPostEventAccess` kept its launch-time answer in the `.app` (measured
+/// 2026-11-19, task 0012 slice 3: switched on mid-run, AX turned true within one 3 s poll and
+/// the pointer moved, preflight stayed false for the whole run). Either one is enough.
+fn granted() -> bool {
+    ax_trusted() || CGPreflightPostEventAccess()
+}
+
+/// Whether this process is trusted for Accessibility, queried live from TCC.
+fn ax_trusted() -> bool {
+    // ADR-0007: `platform` may use `unsafe` for FFI, locally and commented.
+    #[allow(unsafe_code)]
+    // SAFETY: no arguments, no pointers; documented as callable from any thread.
+    let trusted = unsafe { AXIsProcessTrusted() };
+    trusted != 0
+}
+
 fn to_access(granted: bool) -> PointerAccess {
     if granted {
         PointerAccess::Granted
@@ -117,7 +142,7 @@ fn to_access(granted: bool) -> PointerAccess {
 
 impl PointerSink for SystemPointer {
     fn access(&self) -> PointerAccess {
-        to_access(CGPreflightPostEventAccess())
+        to_access(granted())
     }
 
     fn move_to(&mut self, p: Point2) -> Result<(), PointerError> {
@@ -127,7 +152,7 @@ impl PointerSink for SystemPointer {
     fn click(&mut self, p: Point2) -> Result<(), PointerError> {
         // Posting without Accessibility is a silent no-op; a click is rare enough to afford
         // the ≈10 ms check and report it.
-        if !CGPreflightPostEventAccess() {
+        if !granted() {
             return Err(PointerError::PermissionDenied);
         }
         let at = self.move_inner(p)?;

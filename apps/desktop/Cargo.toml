@@ -18,3 +18,35 @@ tempfile.workspace = true
 
 [lints]
 workspace = true
+
+# Packaging (ADR-0021): `cargo packager --release` from this directory. Paths are relative to
+# this file. macOS: `.app` + `.dmg`. No signing identity here: before the dmg step
+# `scripts/macos-adhoc-sign.sh` ad-hoc signs the .app with an identifier-only requirement so
+# Camera / Accessibility grants survive updates (ADR-0021 amendment). A Developer ID identity
+# (release workflow, when the secrets exist, slice 4) makes cargo-packager sign instead.
+[package.metadata.packager]
+product-name = "Open Camera Mouse"
+identifier = "io.github.grga1349.OpenCameraMouse"
+description = "Control the mouse pointer with head movement, using a webcam."
+homepage = "https://github.com/grga1349/open-camera-mouse"
+category = "Utility"
+# Not `license-file`: on macOS it turns into a click-through licence agreement on the dmg.
+resources = [{ src = "../../LICENSE", target = "LICENSE" }]
+before-packaging-command = "cargo build --release --locked -p open-camera-mouse"
+before-each-package-command = "sh ../../scripts/macos-adhoc-sign.sh"
+binaries-dir = "../../target/release"
+out-dir = "../../target/packager"
+binaries = [{ path = "open-camera-mouse", main = true }]
+formats = ["app", "dmg"]
+icons = [
+    "../../assets/icon/macos/icon-16.png",
+    "../../assets/icon/macos/icon-32.png",
+    "../../assets/icon/macos/icon-128.png",
+    "../../assets/icon/macos/icon-256.png",
+    "../../assets/icon/macos/icon-512.png",
+]
+
+[package.metadata.packager.macos]
+minimum-system-version = "11.0"
+info-plist-path = "packaging/macos/Info.plist"
+entitlements = "packaging/macos/entitlements.plist"
