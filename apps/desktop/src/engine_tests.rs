@@ -683,8 +683,14 @@ fn a_stalled_engine_gets_the_newest_frame_next() {
     poll_until(&mut cam, |m| {
         m.iter().any(|m| matches!(m, CameraMsg::Frame(_)))
     });
-    // The engine is busy for 100 ms (≈ 50 frames produced meanwhile).
-    std::thread::sleep(Duration::from_millis(100));
+    // The engine is busy while ≥ 20 frames are produced. Counted, not timed: a 2 ms sleep
+    // takes ~15 ms on Windows runners and a fixed 100 ms gave < 11 frames there (#7).
+    let start = produced.load(Ordering::SeqCst);
+    let waited = Instant::now();
+    while produced.load(Ordering::SeqCst) < start + 20 {
+        assert!(waited.elapsed() < Duration::from_secs(5), "camera stopped");
+        std::thread::sleep(Duration::from_millis(1));
+    }
     let newest = produced.load(Ordering::SeqCst);
     let frames: Vec<u64> = cam
         .poll()
