@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Render the app icon PNGs (ADR-0021).
 
-The art is the user's design (assets/icon/source.png, a 1254 px AI-generated raster)
-redrawn as clean geometry so small sizes stay sharp. Line weight is 1.6x the source
-("F" weight, user decision 2026-11-19), the same at every size.
+The art is the user's design (assets/icon/source.png, a 1254 px AI-generated raster, second
+version 2026-11-19: solid black camera, yellow "C" around "M" and a small ring) redrawn as
+clean geometry, measured from the source, so small sizes stay sharp.
 
 Writes into assets/icon/:
   png/icon-<N>.png        full-bleed square (Windows .ico, Linux, eframe window icon)
@@ -21,8 +21,7 @@ from PIL import Image, ImageDraw
 
 YELLOW = (255, 209, 0)
 INK = (0, 0, 0)
-STROKE = 32  # source units; the source art's stroke is ~20 on a 1254 canvas
-ART = (279, 351, 976, 886)  # source art bounding box
+ART = (184, 225, 1068, 950)  # source art bounding box (camera incl. viewfinder hump)
 FILL = 0.84  # art width / tile width
 SS = 8  # supersampling factor
 SIZES = [16, 24, 32, 48, 64, 128, 256, 512, 1024]
@@ -31,51 +30,74 @@ OUT = Path(__file__).resolve().parent.parent / "assets" / "icon"
 
 
 def art(size: int) -> Image.Image:
-    """Line art on a full-bleed yellow square, `size` px."""
-    w = STROKE
+    """The camera on a full-bleed yellow square, `size` px. Coordinates are source px."""
     n = size * SS
-    art_w = ART[2] - ART[0] + w
-    art_h = ART[3] - ART[1] + w
-    scale = n * FILL / art_w
-    ox = n / 2 - (ART[0] - w / 2 + art_w / 2) * scale
-    oy = n / 2 - (ART[1] - w / 2 + art_h / 2) * scale
+    scale = n * FILL / (ART[2] - ART[0])
+    ox = n / 2 - (ART[0] + ART[2]) / 2 * scale
+    oy = n / 2 - (ART[1] + ART[3]) / 2 * scale
 
     def p(x, y):
         return (ox + x * scale, oy + y * scale)
 
-    def arc(cx, cy, r, a0, a1, steps=16):
-        return [
-            (cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / steps)),
-             cy + r * math.sin(math.radians(a0 + (a1 - a0) * i / steps)))
-            for i in range(steps + 1)
-        ]
+    def box(x0, y0, x1, y1):
+        return [*p(x0, y0), *p(x1, y1)]
+
+    def disk(cx, cy, r, fill):
+        d.ellipse(box(cx - r, cy - r, cx + r, cy + r), fill=fill)
 
     im = Image.new("RGB", (n, n), YELLOW)
     d = ImageDraw.Draw(im)
-    lw = max(1, round(w * scale))
 
-    # Camera body with the viewfinder hump, one closed outline.
-    x0, x1, top, bottom, hump, r = 289, 966, 454, 876, 361, 60
-    pts = arc(x0 + r, top + r, r, 180, 270)
-    pts += [(452, top), (465, top - 6), (505, hump + 25)]
-    pts += arc(541, hump + 30, 30, 215, 270, 6)
-    pts += [(712, hump)]
-    pts += arc(712, hump + 30, 30, 270, 325, 6)
-    pts += [(785, top - 6), (800, top)]
-    pts += arc(x1 - r, top + r, r, 270, 360)
-    pts += arc(x1 - r, bottom - r, r, 0, 90)
-    pts += arc(x0 + r, bottom - r, r, 90, 180)
-    pts.append(pts[0])
-    d.line([p(*q) for q in pts], fill=INK, width=lw, joint="curve")
+    # Body.
+    d.rounded_rectangle(box(184, 345, 1068, 950), radius=round(123 * scale), fill=INK)
 
-    def ring(cx, cy, rad, a0=0, a1=360):
-        box = [*p(cx - rad - w / 2, cy - rad - w / 2), *p(cx + rad + w / 2, cy + rad + w / 2)]
-        d.arc(box, a0, a1, fill=INK, width=lw)
+    def corner(v, a, b, r, inner, outer):
+        """Round the corner at `v` (edges towards `a` and `b`) with a radius-`r` arc:
+        the wedge outside the arc gets `outer`, the arc's disk `inner`."""
+        u1 = ((a[0] - v[0]), (a[1] - v[1]))
+        u2 = ((b[0] - v[0]), (b[1] - v[1]))
+        l1, l2 = math.hypot(*u1), math.hypot(*u2)
+        u1, u2 = (u1[0] / l1, u1[1] / l1), (u2[0] / l2, u2[1] / l2)
+        half = math.acos(u1[0] * u2[0] + u1[1] * u2[1]) / 2
+        t = r / math.tan(half)
+        bis = (u1[0] + u2[0], u1[1] + u2[1])
+        lb = math.hypot(*bis)
+        c = (v[0] + bis[0] / lb * r / math.sin(half), v[1] + bis[1] / lb * r / math.sin(half))
+        t1 = (v[0] + u1[0] * t, v[1] + u1[1] * t)
+        t2 = (v[0] + u2[0] * t, v[1] + u2[1] * t)
+        d.polygon([p(*v), p(*t1), p(*t2)], fill=outer)
+        disk(*c, r, inner)
 
-    ring(626, 654, 181)  # lens
-    ring(626, 652, 108, 34, 326)  # "C", open to the right
-    m = [(584, 694), (584, 609), (628, 672), (672, 609), (672, 694)]
-    d.line([p(*q) for q in m], fill=INK, width=lw, joint="curve")
+    # Viewfinder hump: trapezoid on the body, rounded top corners, small concave fillets.
+    top, base = 225, 345
+    bl, tl, tr, br = (405, base), (483, top), (769, top), (847, base)
+    d.polygon([p(bl[0], base + 1), p(*tl), p(*tr), p(br[0], base + 1)], fill=INK)
+    corner(tl, bl, tr, 58, INK, YELLOW)
+    corner(tr, tl, br, 58, INK, YELLOW)
+    corner(bl, (bl[0] - 100, base), tl, 18, YELLOW, INK)
+    corner(br, (br[0] + 100, base), tr, 18, YELLOW, INK)
+
+    # Small ring, top left.
+    disk(302, 490, 66, YELLOW)
+    disk(302, 490, 33, INK)
+
+    # "C": an annulus, open to the right, with round ends.
+    cx, cy, ro, ri = 626, 635, 231, 175
+    rm, half = (ro + ri) / 2, (ro - ri) / 2
+    a0, a1 = 40, 320  # PIL angles: clockwise from 3 o'clock
+    d.pieslice(box(cx - ro, cy - ro, cx + ro, cy + ro), a0, a1, fill=YELLOW)
+    disk(cx, cy, ri, INK)
+    for a in (a0, a1):
+        disk(cx + rm * math.cos(math.radians(a)), cy + rm * math.sin(math.radians(a)), half, YELLOW)
+
+    # "M": two stems and a V, stroke 47.
+    sw = 47
+    for x0 in (535, 688):
+        d.rounded_rectangle(box(x0, 548, x0 + sw, 723), radius=round(12 * scale), fill=YELLOW)
+    mx, vy = 635, 668
+    d.line([p(558, 572), p(mx, vy), p(711, 572)], fill=YELLOW, width=round(sw * scale),
+           joint="curve")
+    disk(mx, vy, sw / 2, YELLOW)
     return im.resize((size, size), Image.LANCZOS)
 
 

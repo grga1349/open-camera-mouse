@@ -13,7 +13,8 @@ Windows NSIS, Linux AppImage + tar.gz → draft GitHub Release with `SHA256SUMS`
 hooks behind secrets), `cargo-about` notices shipped in every package (`about.toml`,
 `apps/desktop/packaging/about.hbs`, CI `deny` job checks them), Windows `.ico`, CI also on
 `main`. macOS packaging verified locally (`cargo packager --release`; `cargo-about` 0.9.3
-installed with `--features cli`). Findings in the ADR-0021 slice-4 amendment.
+installed with `--features cli`). Findings in the ADR-0021 slice-4 amendment. Then the
+new icon design (user): redrawn by `render-icon.py`, all PNGs + `.ico` regenerated.
 
 **Next session = CLEANUP** (user decision 2026-11-19; one session, may need several
 commits). Read task 0012 "User decisions (2026-11-19, after slice 3)" first. Order:
@@ -50,7 +51,7 @@ the draft release.
 
 **User decisions (Phase 7):** macOS Apple Silicon only, ad-hoc signed dmg, notarization hook
 behind secrets (off); Windows unsigned NSIS per-user installer; Linux tar.gz + AppImage, X11
-only, Wayland documented; GitHub Releases; version 0.4.0; icon = F weight everywhere.
+only, Wayland documented; GitHub Releases; version 0.4.0; icon = the user's solid-camera design (ADR-0021 icon amendment).
 
 **Rules (ADR-0019/-0020):** measure first; changed defaults need the user's OK + ADR
 amendment; every fix gets a CI test / replay metric / `OCM_PERF` + device check; recordings
@@ -63,8 +64,8 @@ release builds: ask first.
 `cargo run -p open-camera-mouse` (dev build), or the `.app` from `target/packager/`.
 
 **Known, not bugs:** Searching animation ignores Reduce Motion (Phase 8); font egui default;
-F10 not F11 on macOS; re-detection off by default; no auto-recenter; 16 px icon slightly
-muddy; Gatekeeper rejects the ad-hoc app (documented in slice 8).
+F10 not F11 on macOS; re-detection off by default; no auto-recenter;
+Gatekeeper rejects the ad-hoc app (documented in slice 8).
 
 **User direction (don't drift):** start from 2018 but improve; new behaviour as options, off by
 default unless approved; monochrome UI, neon green ring marker, yellow primary buttons,

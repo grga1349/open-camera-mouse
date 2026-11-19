@@ -75,7 +75,7 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
   for tests and the debug-only `OCM_DEV_STEADY=<cam px>` (engine.rs). Options tabs: Pointer ·
   Clicking · Camera · Screen · General. Rest test `the_cursor_does_not_move_at_rest_*` covers
   gains 1–60 in four parallel parts (synthetic, *not yet calibrated*).
-- Packaging (ADR-0021 + amendment): icon redrawn by `scripts/render-icon.py` (Python + Pillow,
+- Packaging (ADR-0021 + amendments): icon (solid black camera design, user 2026-11-19) redrawn by `scripts/render-icon.py` (Python + Pillow,
   dev only) → `assets/icon/png/` (full-bleed) and `assets/icon/macos/` (Apple grid);
   original `assets/icon/source.png`. Workspace version 0.4.0. macOS: `cd apps/desktop &&
   cargo packager --release` → `target/packager/Open Camera Mouse.app` + `…_0.4.0_aarch64.dmg`

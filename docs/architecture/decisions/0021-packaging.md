@@ -171,3 +171,14 @@ per-platform config.
   step).
 - AppImage: `linuxdeploy` runs with `APPIMAGE_EXTRACT_AND_RUN=1` (no FUSE on the runner);
   built on ubuntu-22.04 for an older glibc floor.
+
+## Amendment 2026-11-19 — new icon design (user)
+
+The user replaced the icon design: a **solid black camera** (viewfinder hump, small ring top
+left) on the same yellow, with the "C" and "M" in yellow inside it. It replaces the outline
+art and the 1.6× line-weight decision above. `assets/icon/source.png` is the new 1254 px
+raster (AI-generated, the user's asset); `scripts/render-icon.py` redraws it as geometry
+measured from the source (body, hump with rounded corners and fillets, ring, C annulus with
+round ends, M), same outputs, sizes and framing (art = 0.84 of the tile width). The filled
+shape reads better at 16–32 px than the outline did. The 1.6× outline redraw is in git
+history.
