@@ -1,0 +1,26 @@
+[package]
+name = "app-core"
+description = "UI-less app controller: commands in, state/events out; owns the port traits platform adapters implement."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No GUI framework, no OS crates and no I/O here (ADR-0007). Adapters live in `platform`.
+# `serde` (derive only, for `Settings`) is the one extra crate ADR-0012 allows.
+[dependencies]
+tracking-core.workspace = true
+pointer-core.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+divan.workspace = true
+
+[[bench]]
+name = "frame"
+harness = false
+
+[lints]
+workspace = true

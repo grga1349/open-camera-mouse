@@ -1,132 +1,191 @@
+# Release (ADR-0021, task 0012 slice 4). A `v*` tag builds every package and attaches them,
+# with SHA256SUMS, to a DRAFT GitHub Release for a human to review and publish.
+# `workflow_dispatch` is the dry run: same builds, artifacts uploaded to the run, no release.
+#
+# Signing is off until the secrets exist (user decision 2026-11-19):
+#   macOS:   APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY
+#            → Developer ID signature; plus APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID → notarized.
+#            Without them: ad-hoc, identifier-only requirement (scripts/macos-adhoc-sign.sh).
+#   Windows: WINDOWS_CERTIFICATE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD → exe + installer
+#            signed by cargo-packager via signtool. Without them: unsigned.
 name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PACKAGER_VERSION: 0.11.8
+  CARGO_ABOUT_VERSION: 0.9.3
 
 jobs:
-  build-macos:
-    runs-on: macos-14
+  package:
+    name: package (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            os: macos-latest # Apple Silicon runner; arm64 only (user decision)
+            formats: app,dmg
+          - name: windows-x64
+            os: windows-latest
+            formats: nsis
+          # The oldest supported runner, so the binary runs on older glibc too.
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            formats: appimage
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify tag matches VERSION
-        run: bash ci/verify-tag.sh
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install native deps
+      - name: Version matches the tag
+        id: version
         run: |
-          brew update
-          brew install opencv pkg-config
+          version=$(cargo metadata --no-deps --format-version 1 --locked \
+            | jq -r '.packages[] | select(.name == "open-camera-mouse") | .version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match the workspace version $version"
+            exit 1
+          fi
 
-      - name: Install frontend deps
-        run: npm ci
-        working-directory: frontend
+      # Same set as ci.yml; linuxdeploy (AppImage) runs extracted, so no FUSE needed.
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libx11-dev \
+            libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev libclang-dev
 
-      - name: Build
-        run: bash ci/macos/build.sh
+      - name: Toolchain
+        run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release
 
-      - name: Bundle dylibs
-        run: bash ci/macos/bundle.sh
+      # Pinned (ADR-0021). `cargo install` is a no-op when the cached binary is this version.
+      - name: Packaging tools
+        run: |
+          cargo install cargo-packager --version "$CARGO_PACKAGER_VERSION" --locked
+          cargo install cargo-about --version "$CARGO_ABOUT_VERSION" --locked --features cli
+
+      # cargo-packager runs its hooks under `cmd /C` on Windows; the dmg-only signing hook
+      # is `sh …` and exits at once for nsis, but `sh` itself must resolve.
+      - name: sh on PATH (Windows hook)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: where sh
+
+      # cargo-packager takes the identity from the config only, so add it there.
+      - name: macOS Developer ID identity (only with secrets)
+        if: runner.os == 'macOS' && env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          perl -0pi -e 's/(\[package\.metadata\.packager\.macos\]\n)/$1signing-identity = "$ENV{APPLE_SIGNING_IDENTITY}"\n/' \
+            apps/desktop/Cargo.toml
+          grep -q '^signing-identity' apps/desktop/Cargo.toml
+
+      - name: Windows code-signing certificate (only with secrets)
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP cert.pfx
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $pw = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+          Remove-Item $pfx
+          Add-Content apps/desktop/Cargo.toml @"
+
+          [package.metadata.packager.windows]
+          certificate-thumbprint = "$($cert.Thumbprint)"
+          digest-algorithm = "sha256"
+          tsp = true
+          timestamp-url = "http://timestamp.digicert.com"
+          "@
 
       - name: Package
-        run: bash ci/macos/package.sh
+        working-directory: apps/desktop
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: cargo packager --release --formats "${{ matrix.formats }}"
 
-      - name: Smoke test
-        run: bash ci/macos/smoke-test.sh
+      # Plain tarball next to the AppImage (ADR-0021): binary, .desktop, icon, licences.
+      - name: Linux tar.gz
+        if: runner.os == 'Linux'
+        run: |
+          dir="open-camera-mouse-${{ steps.version.outputs.version }}-linux-x86_64"
+          mkdir -p "target/tarball/$dir"
+          cp target/release/open-camera-mouse LICENSE target/THIRD_PARTY_LICENSES.html \
+            apps/desktop/packaging/linux/io.github.grga1349.OpenCameraMouse.desktop \
+            "target/tarball/$dir/"
+          cp assets/icon/macos/icon-256.png "target/tarball/$dir/io.github.grga1349.OpenCameraMouse.png"
+          tar -C target/tarball -czf "target/tarball/$dir.tar.gz" "$dir"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      # Stable, space-free names (GitHub rewrites spaces in asset names).
+      - name: Collect
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          mkdir dist
+          shopt -s nullglob
+          case "${{ runner.os }}" in
+            macOS)   files=(target/packager/*.dmg);       name="open-camera-mouse-$v-macos-arm64.dmg" ;;
+            Windows) files=(target/packager/*-setup.exe); name="open-camera-mouse-$v-windows-x64-setup.exe" ;;
+            Linux)   files=(target/packager/*.AppImage);  name="open-camera-mouse-$v-linux-x86_64.AppImage"
+                     cp target/tarball/*.tar.gz dist/ ;;
+          esac
+          [ "${#files[@]}" -eq 1 ] || { echo "::error::expected one package, got: ${files[*]}"; ls -la target/packager; exit 1; }
+          cp "${files[0]}" "dist/$name"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: macos
-          path: build/open-camera-mouse_${{ github.ref_name }}_macOS.zip
-
-  build-windows:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Verify tag matches VERSION
-        shell: bash
-        run: bash ci/verify-tag.sh
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: false
-          install: >-
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-opencv
-            mingw-w64-x86_64-qt6-base
-            mingw-w64-x86_64-qt6-5compat
-            zip
-            unzip
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install frontend deps
-        run: npm ci
-        working-directory: frontend
-
-      - name: Build
-        shell: msys2 {0}
-        run: bash ci/windows/build.sh
-
-      - name: Bundle DLLs and Qt plugins
-        shell: msys2 {0}
-        run: bash ci/windows/bundle.sh
-
-      - name: Smoke test
-        shell: msys2 {0}
-        run: bash ci/windows/smoke-test.sh
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows
-          path: build/open-camera-mouse_${{ github.ref_name }}_Windows.zip
+          name: ${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
 
   release:
-    needs: [build-macos, build-windows]
+    name: draft release
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
+      - name: Checksums
+        working-directory: dist
+        run: |
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+            --title "Open Camera Mouse ${GITHUB_REF_NAME#v}" \
+            --notes "Draft built by the release workflow from $GITHUB_SHA. Write the release notes before publishing."

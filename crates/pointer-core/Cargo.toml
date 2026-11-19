@@ -1,0 +1,15 @@
+[package]
+name = "pointer-core"
+description = "Pure image-to-screen pointer mapping, smoothing, limits and dwell. No I/O."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Keep this list empty of camera/OS/GUI crates (ADR-0003, ADR-0007). CI checks it.
+[dependencies]
+tracking-core.workspace = true
+
+[lints]
+workspace = true

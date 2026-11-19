@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged by cargo-packager into the generated Info.plist (ADR-0021). -->
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Open Camera Mouse follows a point on your face in the camera image to move the pointer. Video is processed on this Mac and never sent anywhere.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,945 @@
+//! Synthetic fixture generator and metrics for tracker validation (`tracking-validation`
+//! skill, corpus and metrics in docs/BEHAVIOR.md).
+//!
+//! Ground truth comes from the scene transform, never from a tracker. Scenes are defined in
+//! *reference units* (1 unit = 1 px at 640 wide), so one fixture is the same motion, as a
+//! fraction of frame width, at every resolution. Everything is seeded and deterministic.
+#![allow(dead_code)]
+
+use tracking_core::lk::LkParams;
+use tracking_core::redetect::RedetectParams;
+use tracking_core::{GrayFrame, Point2, TrackStatus, Tracker, downsample_to_width};
+
+/// Phase 4 E4 candidate (ADR-0010): E2 zncc ≥ 0.7 + E3 + re-detection with the default
+/// search parameters (τ 0.9, δ 0.1, K 16, level 2) and a 0.25-width spatial prior. Spelled
+/// out here (not via `LkParams::recommended()`) so the ablation row stays fixed if the
+/// recommendation changes; a fixture test pins the two equal (ADR-0011).
+pub fn e4_candidate() -> LkParams {
+    LkParams {
+        gain_bias: true,
+        min_ref_zncc: Some(0.7),
+        redetect: Some(RedetectParams {
+            max_radius_frac: Some(0.25),
+            ..RedetectParams::default()
+        }),
+        ..LkParams::default()
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Deterministic randomness and texture.
+
+/// SplitMix64. Small, seedable, platform-independent.
+#[derive(Debug, Clone)]
+pub struct Rng(u64);
+
+impl Rng {
+    pub fn new(seed: u64) -> Self {
+        Self(seed)
+    }
+    pub fn next_u64(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+    pub fn unit(&mut self) -> f64 {
+        (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
+    }
+    /// Standard normal (Box–Muller).
+    pub fn normal(&mut self) -> f64 {
+        let u1 = self.unit().max(1e-12);
+        let u2 = self.unit();
+        (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
+    }
+}
+
+fn lattice(seed: u64, ix: i64, iy: i64) -> f64 {
+    let mut r = Rng::new(
+        seed ^ (ix as u64).wrapping_mul(0x632B_E59B_D9B4_E019)
+            ^ (iy as u64).wrapping_mul(0x8CB9_2BA7_2F3D_8DD7),
+    );
+    r.unit()
+}
+
+fn fade(t: f64) -> f64 {
+    t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
+}
+
+/// Smooth value noise in [0, 1], cell size `cell` (reference units).
+fn value_noise(seed: u64, x: f64, y: f64, cell: f64) -> f64 {
+    let (gx, gy) = (x / cell, y / cell);
+    let (x0, y0) = (gx.floor(), gy.floor());
+    let (fx, fy) = (fade(gx - x0), fade(gy - y0));
+    let (ix, iy) = (x0 as i64, y0 as i64);
+    let a = lattice(seed, ix, iy);
+    let b = lattice(seed, ix + 1, iy);
+    let c = lattice(seed, ix, iy + 1);
+    let d = lattice(seed, ix + 1, iy + 1);
+    let top = a + (b - a) * fx;
+    let bot = c + (d - c) * fx;
+    top + (bot - top) * fy
+}
+
+/// Fractal value noise, 4 octaves, normalised to [0, 1].
+pub fn texture(seed: u64, x: f64, y: f64, cell: f64) -> f64 {
+    let (mut sum, mut amp, mut norm, mut c) = (0.0, 1.0, 0.0, cell);
+    for o in 0..4 {
+        sum += amp * value_noise(seed.wrapping_add(o * 7919), x, y, c);
+        norm += amp;
+        amp *= 0.5;
+        c *= 0.5;
+    }
+    sum / norm
+}
+
+// ---------------------------------------------------------------------------------------
+// Scene description.
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Surface {
+    /// Fractal texture: `base + contrast · texture(seed, cell)`.
+    Texture {
+        seed: u64,
+        cell: f64,
+        base: f64,
+        contrast: f64,
+    },
+    /// Sinusoidal grating along x with the given period (a repeated-texture distractor).
+    Grating {
+        period: f64,
+        base: f64,
+        contrast: f64,
+    },
+    Flat(f64),
+}
+
+impl Surface {
+    fn eval(&self, x: f64, y: f64) -> f64 {
+        match *self {
+            Surface::Texture {
+                seed,
+                cell,
+                base,
+                contrast,
+            } => base + contrast * texture(seed, x, y, cell),
+            Surface::Grating {
+                period,
+                base,
+                contrast,
+            } => base + contrast * 0.5 * (1.0 + (std::f64::consts::TAU * x / period).sin()),
+            Surface::Flat(v) => v,
+        }
+    }
+}
+
+/// Per-frame scene state. Positions/sizes in reference units.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Pose {
+    pub center: (f64, f64),
+    pub angle_rad: f64,
+    pub scale: f64,
+    pub gain: f64,
+    pub bias: f64,
+    /// Occluder rectangle `(x0, y0, x1, y1)`, drawn over the target.
+    pub occluder: Option<(f64, f64, f64, f64)>,
+    /// Illumination gradient: every pixel's clean value is multiplied by
+    /// `1 + gx·(x − cx) + gy·(y − cy)` around the target centre (light from one side).
+    pub illum_grad: (f64, f64),
+    /// Non-rigid warp of the target texture (2D stand-in for an out-of-plane turn): in
+    /// target-local units the texture is sampled at `l + A·(sin((ly − oy)/P), sin((lx − ox)/P))`
+    /// with `(ox, oy)` the selected offset, so the selected point itself never moves (ground
+    /// truth stays exact) while its surroundings deform. `(A, P)`; `A = 0` is none.
+    pub warp: (f64, f64),
+}
+
+impl Pose {
+    pub fn at(center: (f64, f64)) -> Self {
+        Self {
+            center,
+            angle_rad: 0.0,
+            scale: 1.0,
+            gain: 1.0,
+            bias: 0.0,
+            occluder: None,
+            illum_grad: (0.0, 0.0),
+            warp: (0.0, 25.0),
+        }
+    }
+}
+
+/// A static second disc (same radius as the target, no rotation/scale) drawn over the
+/// background, under the target and occluder, for frames `frames.0..frames.1`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Distractor {
+    pub surface: Surface,
+    pub center: (f64, f64),
+    pub frames: (usize, usize),
+}
+
+#[derive(Debug, Clone)]
+pub struct Scene {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub frames: usize,
+    pub background: Surface,
+    pub target: Surface,
+    pub occluder_surface: Surface,
+    /// Target disc radius.
+    pub radius: f64,
+    /// Selected point relative to the target centre, in target-local coordinates.
+    pub select_offset: (f64, f64),
+    pub noise_sigma: f64,
+    /// Motion-blur sub-samples between consecutive poses (1 = none).
+    pub blur_samples: usize,
+    pub pose: fn(usize) -> Pose,
+    /// Frames to repeat verbatim (a stalled camera): `(start, len)`.
+    pub stall: Option<(usize, usize)>,
+    pub distractor: Option<Distractor>,
+    pub seed: u64,
+}
+
+impl Scene {
+    /// Ground-truth position of the selected point at frame `t` (reference units).
+    pub fn truth_ref(&self, t: usize) -> (f64, f64) {
+        let p = (self.pose)(self.source_frame(t));
+        let (ox, oy) = self.select_offset;
+        let (s, c) = p.angle_rad.sin_cos();
+        (
+            p.center.0 + p.scale * (c * ox - s * oy),
+            p.center.1 + p.scale * (s * ox + c * oy),
+        )
+    }
+
+    /// Whether the selected point is visible at frame `t`: not occluded and inside the frame.
+    pub fn visible(&self, t: usize, ref_w: f64, ref_h: f64) -> bool {
+        let (x, y) = self.truth_ref(t);
+        let inside = x >= 0.0 && y >= 0.0 && x <= ref_w && y <= ref_h;
+        let occluded = (self.pose)(self.source_frame(t))
+            .occluder
+            .is_some_and(|(x0, y0, x1, y1)| x >= x0 && x <= x1 && y >= y0 && y <= y1);
+        inside && !occluded
+    }
+
+    fn source_frame(&self, t: usize) -> usize {
+        match self.stall {
+            Some((start, len)) if t >= start && t < start + len => start,
+            _ => t,
+        }
+    }
+
+    /// The noise-free value at `(x, y)` (reference units) at frame `t`, before the global
+    /// gain/bias: for generator tests.
+    pub fn clean_at(&self, t: usize, x: f64, y: f64) -> f64 {
+        let src = self.source_frame(t);
+        self.clean_value(src, &(self.pose)(src), x, y)
+    }
+
+    fn clean_value(&self, t: usize, p: &Pose, x: f64, y: f64) -> f64 {
+        let (gx, gy) = p.illum_grad;
+        let light = 1.0 + gx * (x - p.center.0) + gy * (y - p.center.1);
+        light * self.unlit_value(t, p, x, y)
+    }
+
+    fn unlit_value(&self, t: usize, p: &Pose, x: f64, y: f64) -> f64 {
+        if let Some((x0, y0, x1, y1)) = p.occluder
+            && x >= x0
+            && x <= x1
+            && y >= y0
+            && y <= y1
+        {
+            return self.occluder_surface.eval(x, y);
+        }
+        let (dx, dy) = (x - p.center.0, y - p.center.1);
+        let (s, c) = p.angle_rad.sin_cos();
+        let (lx, ly) = ((c * dx + s * dy) / p.scale, (-s * dx + c * dy) / p.scale);
+        let r = (lx * lx + ly * ly).sqrt();
+        let mut bg = self.background.eval(x, y);
+        if let Some(d) = self.distractor
+            && (d.frames.0..d.frames.1).contains(&t)
+        {
+            let (lx, ly) = (x - d.center.0, y - d.center.1);
+            let wd = ((self.radius - lx.hypot(ly)) / 2.0 + 0.5).clamp(0.0, 1.0);
+            if wd > 0.0 {
+                bg += wd * (d.surface.eval(lx + 1000.0, ly + 1000.0) - bg);
+            }
+        }
+        // Soft 2-unit edge so the disc boundary is band-limited.
+        let w = ((self.radius - r) / 2.0 + 0.5).clamp(0.0, 1.0);
+        if w == 0.0 {
+            bg
+        } else {
+            let (a, period) = p.warp;
+            let (ox, oy) = self.select_offset;
+            let (sx, sy) = if a == 0.0 {
+                (lx, ly)
+            } else {
+                (
+                    lx + a * ((ly - oy) / period).sin(),
+                    ly + a * ((lx - ox) / period).sin(),
+                )
+            };
+            bg + w * (self.target.eval(sx + 1000.0, sy + 1000.0) - bg)
+        }
+    }
+
+    /// Renders the full sequence at `width × height`, then (if wider than 640) box-downsamples
+    /// to ≤ 640 wide exactly as the app does (ADR-0008).
+    pub fn render(&self, width: u32, height: u32) -> Sequence {
+        let k = f64::from(width) / 640.0; // device px per reference unit
+        let mut rng = Rng::new(self.seed);
+        let mut frames = Vec::with_capacity(self.frames);
+        let mut cache: Option<(usize, Vec<f64>)> = None;
+        for t in 0..self.frames {
+            let src = self.source_frame(t);
+            let clean = match &cache {
+                Some((s, buf)) if *s == src || self.is_static_between(*s, src) => buf.clone(),
+                _ => {
+                    let buf = self.render_clean(src, width, height, k);
+                    cache = Some((src, buf.clone()));
+                    buf
+                }
+            };
+            let pose = (self.pose)(src);
+            let data: Vec<u8> = clean
+                .iter()
+                .map(|&v| {
+                    let n = if self.noise_sigma > 0.0 {
+                        self.noise_sigma * rng.normal()
+                    } else {
+                        0.0
+                    };
+                    (pose.gain * v + pose.bias + n).round().clamp(0.0, 255.0) as u8
+                })
+                .collect();
+            frames.push(downsample_to_width(
+                GrayFrame::from_vec(width, height, data).unwrap(),
+                640,
+            ));
+        }
+        let (tw, th) = (frames[0].width(), frames[0].height());
+        let f = f64::from(width / tw); // integer downsample factor (1 if none)
+        // Reference → tracker px: device px p_d = ref·k; after box factor f, p = (p_d + 0.5)/f − 0.5.
+        let to_px = |(x, y): (f64, f64)| {
+            Point2::new(
+                ((x * k + 0.5) / f - 0.5) as f32,
+                ((y * k + 0.5) / f - 0.5) as f32,
+            )
+        };
+        let (ref_w, ref_h) = (640.0, f64::from(height) / k);
+        Sequence {
+            name: self.name,
+            device_size: (width, height),
+            size: (tw, th),
+            truth: (0..self.frames).map(|t| to_px(self.truth_ref(t))).collect(),
+            visible: (0..self.frames)
+                .map(|t| self.visible(t, ref_w, ref_h))
+                .collect(),
+            frames,
+        }
+    }
+
+    fn is_static_between(&self, a: usize, b: usize) -> bool {
+        let (pa, pb) = ((self.pose)(a), (self.pose)(b));
+        self.blur_samples <= 1
+            && pa.center == pb.center
+            && pa.angle_rad == pb.angle_rad
+            && pa.scale == pb.scale
+            && pa.occluder == pb.occluder
+            && pa.illum_grad == pb.illum_grad
+            && pa.warp == pb.warp
+            && self.distractor.is_none_or(|d| {
+                (d.frames.0..d.frames.1).contains(&a) == (d.frames.0..d.frames.1).contains(&b)
+            })
+    }
+
+    fn render_clean(&self, t: usize, width: u32, height: u32, k: f64) -> Vec<f64> {
+        let samples = self.blur_samples.max(1);
+        let poses: Vec<Pose> = (0..samples)
+            .map(|s| {
+                let cur = (self.pose)(t);
+                if samples == 1 || t == 0 {
+                    return cur;
+                }
+                // Exposure centred on the frame time: samples span ±½ of the last frame's
+                // motion around the current pose, so ground truth (the current pose) is the
+                // blur's centre, not its trailing edge.
+                let prev = (self.pose)(t - 1);
+                let a = (s as f64 + 0.5) / samples as f64 - 0.5;
+                Pose {
+                    center: (
+                        cur.center.0 + a * (cur.center.0 - prev.center.0),
+                        cur.center.1 + a * (cur.center.1 - prev.center.1),
+                    ),
+                    ..cur
+                }
+            })
+            .collect();
+        let mut out = Vec::with_capacity((width * height) as usize);
+        for py in 0..height {
+            for px in 0..width {
+                let (x, y) = (f64::from(px) / k, f64::from(py) / k);
+                let v = poses
+                    .iter()
+                    .map(|p| self.clean_value(t, p, x, y))
+                    .sum::<f64>()
+                    / samples as f64;
+                out.push(v);
+            }
+        }
+        out
+    }
+}
+
+/// A rendered sequence in tracker pixel coordinates.
+#[derive(Debug, Clone)]
+pub struct Sequence {
+    pub name: &'static str,
+    pub device_size: (u32, u32),
+    pub size: (u32, u32),
+    pub frames: Vec<GrayFrame>,
+    pub truth: Vec<Point2>,
+    pub visible: Vec<bool>,
+}
+
+// ---------------------------------------------------------------------------------------
+// The corpus (docs/BEHAVIOR.md).
+
+const BG: Surface = Surface::Texture {
+    seed: 11,
+    cell: 48.0,
+    base: 40.0,
+    contrast: 150.0,
+};
+const TARGET: Surface = Surface::Texture {
+    seed: 23,
+    cell: 14.0,
+    base: 30.0,
+    contrast: 200.0,
+};
+const OCCLUDER: Surface = Surface::Texture {
+    seed: 37,
+    cell: 30.0,
+    base: 60.0,
+    contrast: 120.0,
+};
+const C0: (f64, f64) = (320.0, 180.0);
+
+fn base(
+    name: &'static str,
+    description: &'static str,
+    frames: usize,
+    pose: fn(usize) -> Pose,
+) -> Scene {
+    Scene {
+        name,
+        description,
+        frames,
+        background: BG,
+        target: TARGET,
+        occluder_surface: OCCLUDER,
+        radius: 45.0,
+        select_offset: (12.0, -8.0),
+        noise_sigma: 2.0,
+        blur_samples: 1,
+        pose,
+        stall: None,
+        distractor: None,
+        seed: 0xC0FFEE,
+    }
+}
+
+fn sway(t: usize) -> (f64, f64) {
+    let t = t as f64;
+    (
+        C0.0 + 110.0 * (t * 0.07).sin(),
+        C0.1 + 50.0 * (t * 0.045).sin(),
+    )
+}
+
+/// Slow drift right; the whole target is occluded for frames 30–49.
+fn occluded_drift(t: usize) -> Pose {
+    let mut p = Pose::at((C0.0 + 0.5 * t as f64, C0.1));
+    if (30..50).contains(&t) {
+        p.occluder = Some((
+            p.center.0 - 70.0,
+            p.center.1 - 70.0,
+            p.center.0 + 70.0,
+            p.center.1 + 70.0,
+        ));
+    }
+    p
+}
+
+fn edge_path(t: usize, dir: (f64, f64), reach: f64) -> Pose {
+    // Out over 40 frames, back over 40.
+    let s = if t <= 40 {
+        t as f64 / 40.0
+    } else {
+        (80 - t.min(80)) as f64 / 40.0
+    };
+    Pose::at((C0.0 + dir.0 * reach * s, C0.1 + dir.1 * reach * s))
+}
+
+pub fn corpus() -> Vec<Scene> {
+    let mut v = vec![
+        base(
+            "translate_int",
+            "integer translation +2/−1 ref px per frame",
+            60,
+            |t| Pose::at((C0.0 + 2.0 * t as f64, C0.1 - t as f64)),
+        ),
+        base(
+            "translate_subpx",
+            "sub-pixel translation 0.37/0.23 ref px per frame",
+            60,
+            |t| Pose::at((C0.0 + 0.37 * t as f64, C0.1 + 0.23 * t as f64)),
+        ),
+        base(
+            "head_sway",
+            "smooth sinusoidal head motion (±110, ±50 ref px)",
+            90,
+            |t| Pose::at(sway(t)),
+        ),
+        base(
+            "fast_40px",
+            "40 ref px/frame burst for 5 frames (crosses the 35 px guard)",
+            30,
+            |t| {
+                let k = t.clamp(10, 15) - 10;
+                Pose::at((C0.0 - 100.0 + 40.0 * k as f64, C0.1))
+            },
+        ),
+        base(
+            "brightness_step",
+            "gain 1.0 → 0.7 at frame 30, slow sway",
+            60,
+            |t| Pose {
+                gain: if t < 30 { 1.0 } else { 0.7 },
+                ..Pose::at(sway(t / 3))
+            },
+        ),
+        base(
+            "brightness_ramp",
+            "gain ramps 1.0 → 1.4 over 60 frames",
+            60,
+            |t| Pose {
+                gain: 1.0 + 0.4 * t as f64 / 60.0,
+                bias: -20.0 * t as f64 / 60.0,
+                ..Pose::at(sway(t / 3))
+            },
+        ),
+        base(
+            "contrast_drop",
+            "contrast halves around mid-grey at frame 30",
+            60,
+            |t| {
+                let c = if t < 30 { 1.0 } else { 0.5 };
+                Pose {
+                    gain: c,
+                    bias: 128.0 * (1.0 - c),
+                    ..Pose::at(sway(t / 3))
+                }
+            },
+        ),
+        base(
+            "occlusion_partial",
+            "occluder covers the left half of the target, frames 30–49",
+            70,
+            |t| {
+                let mut p = Pose::at((C0.0 + 0.5 * t as f64, C0.1));
+                if (30..50).contains(&t) {
+                    p.occluder = Some((
+                        p.center.0 - 60.0,
+                        p.center.1 - 60.0,
+                        p.center.0,
+                        p.center.1 + 60.0,
+                    ));
+                }
+                p
+            },
+        ),
+        base(
+            "occlusion_full",
+            "occluder covers the whole target, frames 30–49",
+            70,
+            occluded_drift,
+        ),
+        base(
+            "rotate_15",
+            "in-plane rotation 0 → +15° → −15° (head roll)",
+            60,
+            |t| Pose {
+                angle_rad: (15.0f64).to_radians() * (t as f64 * std::f64::consts::TAU / 60.0).sin(),
+                ..Pose::at(C0)
+            },
+        ),
+        base(
+            "scale_10",
+            "scale 1.0 → 1.1 → 0.9 (lean in/out)",
+            60,
+            |t| Pose {
+                scale: 1.0 + 0.1 * (t as f64 * std::f64::consts::TAU / 60.0).sin(),
+                ..Pose::at(C0)
+            },
+        ),
+        base(
+            "edge_left",
+            "target leaves through the left edge and returns",
+            81,
+            |t| edge_path(t, (-1.0, 0.0), 360.0),
+        ),
+        base(
+            "edge_right",
+            "target leaves through the right edge and returns",
+            81,
+            |t| edge_path(t, (1.0, 0.0), 360.0),
+        ),
+        base(
+            "edge_top",
+            "target leaves through the top edge and returns",
+            81,
+            |t| edge_path(t, (0.0, -1.0), 200.0),
+        ),
+        base(
+            "edge_bottom",
+            "target leaves through the bottom edge and returns",
+            81,
+            |t| edge_path(t, (0.0, 1.0), 340.0),
+        ),
+        base(
+            "stall",
+            "camera stalls for 10 frames, then resumes mid-sway",
+            60,
+            |t| Pose::at(sway(t)),
+        ),
+        base(
+            "static_60s",
+            "static target for 60 s at 30 fps (drift)",
+            1800,
+            |_| Pose::at(C0),
+        ),
+    ];
+    v.iter_mut().find(|s| s.name == "stall").unwrap().stall = Some((20, 10));
+
+    let mut blur = base(
+        "motion_blur",
+        "head sway ×2 speed with 5-sample motion blur",
+        45,
+        |t| Pose::at(sway(2 * t)),
+    );
+    blur.blur_samples = 5;
+    v.push(blur);
+
+    let mut noise = base(
+        "sensor_noise",
+        "head sway with σ = 10 sensor noise",
+        90,
+        |t| Pose::at(sway(t)),
+    );
+    noise.noise_sigma = 10.0;
+    v.push(noise);
+
+    let mut flat = base(
+        "textureless",
+        "flat target on flat background, σ = 2 noise (expected failure)",
+        30,
+        |_| Pose::at(C0),
+    );
+    flat.background = Surface::Flat(120.0);
+    flat.target = Surface::Flat(125.0);
+    v.push(flat);
+
+    let mut grating = base(
+        "repeated_texture",
+        "grating target on a same-period grating background (distractor)",
+        60,
+        |t| Pose::at((C0.0 + 1.5 * t as f64, C0.1)),
+    );
+    grating.background = Surface::Grating {
+        period: 16.0,
+        base: 60.0,
+        contrast: 120.0,
+    };
+    grating.target = Surface::Grating {
+        period: 16.0,
+        base: 70.0,
+        contrast: 120.0,
+    };
+    v.push(grating);
+
+    // Phase 4 E4 distractors: a second disc 190 units left of the target while the target is
+    // fully occluded (frames 30–49). Re-detection must not lock onto it.
+    let twin_at = (C0.0 - 190.0, C0.1);
+    let distractor = |name, description, surface, frames| {
+        let mut s = base(name, description, 70, occluded_drift);
+        s.distractor = Some(Distractor {
+            surface,
+            center: twin_at,
+            frames,
+        });
+        s
+    };
+    v.push(distractor(
+        "distractor_twin",
+        "identical twin disc visible throughout; target occluded 30–49",
+        TARGET,
+        (0, 70),
+    ));
+    v.push(distractor(
+        "distractor_late_twin",
+        "identical twin disc appears at frame 30 while the target is occluded (known gap)",
+        TARGET,
+        (30, 70),
+    ));
+    v.push(distractor(
+        "distractor_similar",
+        "same-statistics disc (other seed) visible throughout; target occluded 30–49",
+        Surface::Texture {
+            seed: 29,
+            cell: 14.0,
+            base: 30.0,
+            contrast: 200.0,
+        },
+        (0, 70),
+    ));
+    v
+}
+
+// ---------------------------------------------------------------------------------------
+// Appearance-change corpus (task 0009 slice 2b): what a real head does to the selected patch
+// besides translating. Separate from `corpus()` so the Phase 3/4 tables and fingerprints
+// stay as they were. 640×480 only (CI time); pinned in `tests/appearance.rs`.
+
+/// 0 → 1 → 0 over `n` frames (out and back).
+fn there_and_back(t: usize, n: usize) -> f64 {
+    (t as f64 * std::f64::consts::PI / n as f64).sin().max(0.0)
+}
+
+/// A head turn as the 2D generator can show it, at strength `k` (1 = moderate): the patch
+/// translates sideways, shrinks (foreshortening), rolls a little, deforms non-rigidly and
+/// the light falls off across it, all out and back over the scene.
+fn turn(t: usize, k: f64) -> Pose {
+    let s = there_and_back(t, 90);
+    Pose {
+        scale: 1.0 - 0.12 * k * s,
+        angle_rad: (6.0 * k).to_radians() * s,
+        illum_grad: (0.003 * k * s, 0.0),
+        warp: (4.0 * k * s, 25.0),
+        ..Pose::at((C0.0 + 90.0 * s, C0.1 + 10.0 * s))
+    }
+}
+
+pub fn appearance_corpus() -> Vec<Scene> {
+    vec![
+        base(
+            "illum_gradient",
+            "light sweeps across the target: gain gradient ±0.004/ref px (≈ ±18 % at the rim)",
+            90,
+            |t| Pose {
+                illum_grad: (
+                    0.004 * (t as f64 * std::f64::consts::TAU / 90.0).sin(),
+                    0.002 * (t as f64 * std::f64::consts::TAU / 45.0).sin(),
+                ),
+                ..Pose::at(sway(t / 3))
+            },
+        ),
+        base(
+            "nonrigid_warp",
+            "texture around the selected point deforms (warp 0 → 5 → 0 ref px, period 25)",
+            90,
+            |t| Pose {
+                warp: (5.0 * there_and_back(t, 90), 25.0),
+                ..Pose::at(sway(t / 3))
+            },
+        ),
+        base(
+            "scale_rotate",
+            "scale 1 → 0.85 and roll 0 → 12° together, out and back",
+            90,
+            |t| {
+                let s = there_and_back(t, 90);
+                Pose {
+                    scale: 1.0 - 0.15 * s,
+                    angle_rad: 12f64.to_radians() * s,
+                    ..Pose::at((C0.0 + 40.0 * s, C0.1))
+                }
+            },
+        ),
+        base(
+            "turn_moderate",
+            "head-turn stand-in: translate + shrink 12 % + roll 6° + warp 4 + light gradient",
+            90,
+            |t| turn(t, 1.0),
+        ),
+        base(
+            "turn_strong",
+            "head-turn stand-in at 2× strength (shrink 24 %, roll 12°, warp 8, gradient 0.006)",
+            90,
+            |t| turn(t, 2.0),
+        ),
+        base(
+            "turn_extreme",
+            "head-turn stand-in at 3× strength (shrink 36 %, roll 18°, warp 12, gradient 0.009)",
+            90,
+            |t| turn(t, 3.0),
+        ),
+        // Slice 2d adversary: an adaptive appearance reference must not absorb an occluder
+        // that slides in slowly (a hand), so its edge sweeps over the selected point at
+        // ≤ 4.2 ref px/frame, covers it, and goes back.
+        base(
+            "occluder_slide",
+            "occluder edge slides slowly over the selected point and back (≤ 4.2 ref px/frame)",
+            90,
+            |t| {
+                let mut p = Pose::at((C0.0 + 0.3 * t as f64, C0.1));
+                let x1 = p.center.0 - 50.0 + 120.0 * there_and_back(t, 90);
+                p.occluder = Some((x1 - 200.0, p.center.1 - 70.0, x1, p.center.1 + 70.0));
+                p
+            },
+        ),
+        base(
+            "occluder_creep",
+            "as occluder_slide, 2.7× slower (≤ 1.6 ref px/frame)",
+            240,
+            |t| {
+                let mut p = Pose::at((C0.0 + 0.1 * t as f64, C0.1));
+                let x1 = p.center.0 - 50.0 + 120.0 * there_and_back(t, 240);
+                p.occluder = Some((x1 - 200.0, p.center.1 - 70.0, x1, p.center.1 + 70.0));
+                p
+            },
+        ),
+    ]
+}
+
+pub fn scene(name: &str) -> Scene {
+    corpus()
+        .into_iter()
+        .chain(appearance_corpus())
+        .find(|s| s.name == name)
+        .unwrap_or_else(|| panic!("no scene {name}"))
+}
+
+pub const RESOLUTIONS: [(u32, u32); 3] = [(320, 240), (640, 480), (1280, 720)];
+
+// ---------------------------------------------------------------------------------------
+// Running and metrics.
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Step {
+    pub position: Point2,
+    pub status: TrackStatus,
+}
+
+/// Selects at the ground-truth point on frame 0, then steps every later frame.
+pub fn run<T: Tracker>(tracker: &mut T, seq: &Sequence) -> Vec<Step> {
+    tracker
+        .select(&seq.frames[0], seq.truth[0])
+        .expect("selection inside frame");
+    let mut out = vec![Step {
+        position: seq.truth[0],
+        status: TrackStatus::Tracking,
+    }];
+    for f in &seq.frames[1..] {
+        let o = tracker.step(f).expect("same-size frames");
+        out.push(Step {
+            position: o.position,
+            status: o.status,
+        });
+    }
+    out
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Metrics {
+    pub frames: usize,
+    pub visible: usize,
+    /// EPE over visible frames whose status is `Tracking` (px in tracker resolution).
+    pub epe_mean: f64,
+    pub epe_median: f64,
+    pub epe_p95: f64,
+    pub epe_max: f64,
+    /// Fraction of visible frames that are `Tracking` with EPE ≤ 2 % of width.
+    pub tracked_ok: f64,
+    /// Visible frames reported `Tracking` but more than 2 % of width off (silent wrong lock).
+    pub wrong_lock: usize,
+    /// Invisible frames reported `Tracking` (false tracking during occlusion / out of frame).
+    pub false_tracking: usize,
+    /// Frames from the first invisible frame to the first non-`Tracking` status.
+    pub frames_to_detect_loss: Option<usize>,
+    /// Frames from visibility returning to `Tracking` within tolerance again.
+    pub frames_to_recover: Option<usize>,
+    /// EPE at the last frame if `Tracking`.
+    pub final_epe: Option<f64>,
+    pub width: u32,
+}
+
+fn percentile(sorted: &[f64], q: f64) -> f64 {
+    if sorted.is_empty() {
+        return f64::NAN;
+    }
+    let i = ((sorted.len() - 1) as f64 * q).round() as usize;
+    sorted[i]
+}
+
+pub fn metrics(seq: &Sequence, steps: &[Step]) -> Metrics {
+    let width = seq.size.0;
+    let tol = 0.02 * f64::from(width);
+    let epe = |t: usize| {
+        let (p, g) = (steps[t].position, seq.truth[t]);
+        f64::from((p.x - g.x).hypot(p.y - g.y))
+    };
+    let mut errs = Vec::new();
+    let (mut ok, mut wrong, mut false_t) = (0, 0, 0);
+    for (t, step) in steps.iter().enumerate() {
+        let tracking = step.status == TrackStatus::Tracking;
+        if seq.visible[t] {
+            if tracking {
+                let e = epe(t);
+                errs.push(e);
+                if e <= tol { ok += 1 } else { wrong += 1 }
+            }
+        } else if tracking {
+            false_t += 1;
+        }
+    }
+    errs.sort_by(f64::total_cmp);
+    let visible = seq.visible.iter().filter(|&&v| v).count();
+    let first_invisible = seq.visible.iter().position(|&v| !v);
+    let frames_to_detect_loss = first_invisible.and_then(|s| {
+        (s..steps.len())
+            .find(|&t| steps[t].status != TrackStatus::Tracking)
+            .map(|t| t - s)
+    });
+    let frames_to_recover = first_invisible.and_then(|s| {
+        let back = (s..steps.len()).find(|&t| seq.visible[t])?;
+        (back..steps.len())
+            .find(|&t| steps[t].status == TrackStatus::Tracking && epe(t) <= tol)
+            .map(|t| t - back)
+    });
+    let last = steps.len() - 1;
+    Metrics {
+        frames: steps.len(),
+        visible,
+        epe_mean: if errs.is_empty() {
+            f64::NAN
+        } else {
+            errs.iter().sum::<f64>() / errs.len() as f64
+        },
+        epe_median: percentile(&errs, 0.5),
+        epe_p95: percentile(&errs, 0.95),
+        epe_max: errs.last().copied().unwrap_or(f64::NAN),
+        tracked_ok: if visible == 0 {
+            0.0
+        } else {
+            ok as f64 / visible as f64
+        },
+        wrong_lock: wrong,
+        false_tracking: false_t,
+        frames_to_detect_loss,
+        frames_to_recover,
+        final_epe: (steps[last].status == TrackStatus::Tracking).then(|| epe(last)),
+        width,
+    }
+}

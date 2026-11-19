@@ -1,0 +1,70 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/tracking-core",
+    "crates/pointer-core",
+    "crates/app-core",
+    "crates/platform",
+    "apps/desktop",
+]
+
+[workspace.package]
+version = "0.4.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+repository = "https://github.com/grga1349/open-camera-mouse"
+publish = false
+
+[workspace.dependencies]
+tracking-core = { path = "crates/tracking-core" }
+pointer-core = { path = "crates/pointer-core" }
+app-core = { path = "crates/app-core" }
+platform = { path = "crates/platform" }
+thiserror = "2.0.21"
+eframe = "0.37.0"
+egui = "0.37.0"
+egui_kittest = "0.37.0"
+divan = "0.1.21"
+serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
+toml = "1.2.1"
+tempfile = "3.27.0"
+# Camera backend (ADR-0012, task 0008 D3): native backends only, no JPEG decoder, no OpenCV.
+nokhwa = { version = "0.10.11", default-features = false, features = ["input-native"] }
+# Pointer adapters (ADR-0012 §"Pointer adapter", task 0008 D4). All three were already in the
+# lockfile through eframe/winit; same versions, so no duplicates.
+objc2-core-graphics = { version = "0.3.2", default-features = false, features = ["std", "CGDirectDisplay", "CGError", "CGEvent", "CGEventSource", "CGEventTypes"] }
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+x11rb = { version = "0.13.2", default-features = false, features = ["randr", "xtest"] }
+# Global hotkeys F11/F12 (ADR-0012 §"Global hotkeys", task 0008 D5).
+global-hotkey = { version = "0.10.0", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# Tracking tests and fixture generation are numeric-heavy; optimise them even in dev/test
+# builds so `cargo test` stays fast. Doesn't change semantics (R-T1 is per-profile).
+[profile.dev.package.tracking-core]
+opt-level = 3
+
+# Dev builds are what the test drive runs (ADR-0013), and per-pixel code at opt-level 0 is not
+# representative of anything: the colour mirror alone took 17.8 ms per frame (task 0009 2a,
+# `cargo bench -p app-core --bench frame --profile dev`). Dependencies (camera decode in
+# nokhwa, egui's image/texture code) at 2, the per-frame workspace crates at 3. Debug info
+# and debug assertions stay on.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.pointer-core]
+opt-level = 3
+
+[profile.dev.package.app-core]
+opt-level = 3
+
+[profile.dev.package.platform]
+opt-level = 3

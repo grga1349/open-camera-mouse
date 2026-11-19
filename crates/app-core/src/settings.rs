@@ -1,0 +1,437 @@
+//! User settings (BEHAVIOR.md R-A5): one struct, validated on every update and on load, so
+//! an invalid value can't be set (R-P2, fixes L-1). The serde derives define the on-disk
+//! field names; reading and writing the file (format, schema version, fallbacks) is
+//! `platform::settings_store` (ADR-0012), outside this pure crate.
+//!
+//! Defaults follow ADR-0006 (2018) and the approved design lab (task 0007). Improvements on
+//! 2018 are opt-in and off by default (`loss_recovery`, `dwell.enabled`).
+
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+/// Colour theme (design lab: Carbon = dark, default; Paper = light).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    #[default]
+    Carbon,
+    Paper,
+}
+
+/// Distance the pointer keeps from each edge of the virtual desktop, in screen px (design
+/// lab "Screen limits", default 0; 2018 W/E/N/S limits, ADR-0006).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ScreenLimits {
+    pub left: u32,
+    pub right: u32,
+    pub top: u32,
+    pub bottom: u32,
+}
+
+/// Dwell clicking (R-K1/R-K2, ADR-0006 provisional defaults). Behaviour is slice D1.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DwellSettings {
+    pub enabled: bool,
+    /// Hold still this long to click.
+    pub dwell_s: f32,
+    /// No second click until the pointer leaves the radius or this time passes.
+    pub refractory_s: f32,
+    /// "Hold-still area" as a fraction of the screen size.
+    pub radius_frac: f32,
+}
+
+impl Default for DwellSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            dwell_s: 1.0,
+            refractory_s: 2.0,
+            radius_frac: 0.05,
+        }
+    }
+}
+
+/// Every user-changeable setting. Missing fields deserialize to their defaults, so a file
+/// written before a field existed still loads.
+/// "Main monitor" choice (ADR-0014 + amendment for #14). Saved as `"primary"`, `"all"` or the
+/// display's index; an unknown name reads as `Primary`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(from = "MainMonitorRepr", into = "MainMonitorRepr")]
+pub enum MainMonitor {
+    /// The OS primary display (default, #14).
+    #[default]
+    Primary,
+    /// The centre of all displays together (2018). The scale uses the largest display.
+    All,
+    /// An index into the displays sorted left to right, then top to bottom. With no display
+    /// behind it (monitor unplugged) it acts as `All` without changing the setting.
+    Display(u32),
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum MainMonitorRepr {
+    Index(u32),
+    Name(String),
+}
+
+impl From<MainMonitorRepr> for MainMonitor {
+    fn from(r: MainMonitorRepr) -> Self {
+        match r {
+            MainMonitorRepr::Index(i) => Self::Display(i),
+            MainMonitorRepr::Name(n) if n == "all" => Self::All,
+            MainMonitorRepr::Name(_) => Self::Primary,
+        }
+    }
+}
+
+impl From<MainMonitor> for MainMonitorRepr {
+    fn from(m: MainMonitor) -> Self {
+        match m {
+            MainMonitor::Primary => Self::Name("primary".into()),
+            MainMonitor::All => Self::Name("all".into()),
+            MainMonitor::Display(i) => Self::Index(i),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Settings {
+    /// Per-axis gain (R-P3): the mapping's real gain, 1–60. Default 20/20 (test drive #8, #13;
+    /// ADR-0017 amendment 2026-11-16; 2018 used 6/6 scaled by the whole desktop).
+    pub gain_x: f32,
+    pub gain_y: f32,
+    /// "Keep both speeds the same": when on, `gain_y` follows `gain_x`.
+    pub link_gain: bool,
+    /// Pointer smoothing, **higher = steadier** (R-P2: the name matches the polarity). This
+    /// is `1 − d` for the 2018 damping `d` (weight of the new position) per 70 ms, so the
+    /// 2018 `Damping = 0.95` is `smoothing = 0.05`. Must stay below 1 (1 would freeze the
+    /// pointer, L-1).
+    pub smoothing: f32,
+    pub limits: ScreenLimits,
+    /// "Main monitor" (test drive #4/#14, ADR-0014): the display whose centre the cursor goes
+    /// to on recenter and pause, and whose size sets the mapping scale. Default: the OS primary
+    /// display. Files written before #14 have no value for "centre of all" and read as
+    /// [`MainMonitor::Primary`].
+    pub recenter_display: MainMonitor,
+    pub dwell: DwellSettings,
+    /// Camera device id from the platform adapter; `None` = system default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub camera: Option<String>,
+    /// Mirror at ingest (ADR-0008), default on: head right moves the pointer right.
+    pub mirror: bool,
+    /// "Find the target again" (ADR-0010, ADR-0011 amendment): re-detection after a loss.
+    /// Off by default (2018: a loss waits for re-selection or recenter).
+    pub loss_recovery: bool,
+    pub theme: Theme,
+    pub show_diagnostics: bool,
+    pub larger_controls: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            // Test drive #8 (ADR-0017 amendment 2026-11-16).
+            gain_x: 20.0,
+            gain_y: 20.0,
+            link_gain: true,
+            smoothing: 0.20,
+            limits: ScreenLimits::default(),
+            recenter_display: MainMonitor::Primary,
+            dwell: DwellSettings::default(),
+            camera: None,
+            mirror: true,
+            loss_recovery: false,
+            theme: Theme::Carbon,
+            show_diagnostics: false,
+            larger_controls: false,
+        }
+    }
+}
+
+/// A setting outside its allowed range. NaN and infinities are always out of range.
+#[derive(Debug, Clone, PartialEq, Error)]
+#[error("{field} = {value} is outside {min}..={max}")]
+pub struct SettingsError {
+    pub field: &'static str,
+    pub value: f64,
+    pub min: f64,
+    pub max: f64,
+}
+
+/// Inclusive ranges, shared with the UI so sliders can't offer an invalid value.
+pub mod ranges {
+    use std::ops::RangeInclusive;
+    pub const GAIN: RangeInclusive<f32> = 1.0..=60.0;
+    pub const SMOOTHING: RangeInclusive<f32> = 0.0..=0.95;
+    pub const LIMIT_PX: RangeInclusive<u32> = 0..=1000;
+    pub const DWELL_S: RangeInclusive<f32> = 0.3..=3.0;
+    pub const REFRACTORY_S: RangeInclusive<f32> = 0.5..=5.0;
+    pub const DWELL_RADIUS_FRAC: RangeInclusive<f32> = 0.01..=0.15;
+}
+
+fn check_f32(
+    field: &'static str,
+    v: f32,
+    r: std::ops::RangeInclusive<f32>,
+) -> Result<(), SettingsError> {
+    if r.contains(&v) {
+        Ok(())
+    } else {
+        Err(SettingsError {
+            field,
+            value: v.into(),
+            min: (*r.start()).into(),
+            max: (*r.end()).into(),
+        })
+    }
+}
+
+fn check_u32(
+    field: &'static str,
+    v: u32,
+    r: std::ops::RangeInclusive<u32>,
+) -> Result<(), SettingsError> {
+    if r.contains(&v) {
+        Ok(())
+    } else {
+        Err(SettingsError {
+            field,
+            value: v.into(),
+            min: (*r.start()).into(),
+            max: (*r.end()).into(),
+        })
+    }
+}
+
+impl Settings {
+    /// Version of the persisted settings schema (R-A5). Bump on any incompatible change and
+    /// teach the loader (slice D2) to migrate or fall back to defaults.
+    pub const SCHEMA_VERSION: u32 = 1;
+
+    /// Validates every field and returns the normalised settings: linked gains are made
+    /// equal (`gain_y := gain_x`), an empty camera id becomes `None`. Used on every update
+    /// and on load.
+    pub fn validated(mut self) -> Result<Self, SettingsError> {
+        check_f32("gain_x", self.gain_x, ranges::GAIN)?;
+        if self.link_gain {
+            self.gain_y = self.gain_x;
+        }
+        check_f32("gain_y", self.gain_y, ranges::GAIN)?;
+        check_f32("smoothing", self.smoothing, ranges::SMOOTHING)?;
+        let l = self.limits;
+        check_u32("limits.left", l.left, ranges::LIMIT_PX)?;
+        check_u32("limits.right", l.right, ranges::LIMIT_PX)?;
+        check_u32("limits.top", l.top, ranges::LIMIT_PX)?;
+        check_u32("limits.bottom", l.bottom, ranges::LIMIT_PX)?;
+        let d = self.dwell;
+        check_f32("dwell.dwell_s", d.dwell_s, ranges::DWELL_S)?;
+        check_f32("dwell.refractory_s", d.refractory_s, ranges::REFRACTORY_S)?;
+        check_f32(
+            "dwell.radius_frac",
+            d.radius_frac,
+            ranges::DWELL_RADIUS_FRAC,
+        )?;
+        if self.camera.as_deref().is_some_and(|c| c.trim().is_empty()) {
+            self.camera = None;
+        }
+        Ok(self)
+    }
+
+    /// Like [`validated`](Self::validated), but never fails: each out-of-range field is reset
+    /// to its default and named in the returned list (empty = nothing was repaired). Used on
+    /// load, so one bad value in a hand-edited file doesn't throw away every other setting.
+    pub fn repaired(self) -> (Self, Vec<&'static str>) {
+        let d = Self::default();
+        let mut s = self;
+        let mut reset = Vec::new();
+        loop {
+            let err = match s.clone().validated() {
+                Ok(v) => return (v, reset),
+                Err(e) => e,
+            };
+            reset.push(err.field);
+            match err.field {
+                "gain_x" => s.gain_x = d.gain_x,
+                "gain_y" => s.gain_y = d.gain_y,
+                "smoothing" => s.smoothing = d.smoothing,
+                "limits.left" => s.limits.left = d.limits.left,
+                "limits.right" => s.limits.right = d.limits.right,
+                "limits.top" => s.limits.top = d.limits.top,
+                "limits.bottom" => s.limits.bottom = d.limits.bottom,
+                "dwell.dwell_s" => s.dwell.dwell_s = d.dwell.dwell_s,
+                "dwell.refractory_s" => s.dwell.refractory_s = d.dwell.refractory_s,
+                "dwell.radius_frac" => s.dwell.radius_frac = d.dwell.radius_frac,
+                // A field `validated` checks but this list forgot: don't loop, start over.
+                _ => return (d, reset),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults_are_valid_and_match_2018_except_tuned_ones() {
+        let s = Settings::default().validated().unwrap();
+        // Test drive #8/#10 (ADR-0017 amendments 2026-11-16): gain 20 (#13; 2018: 6 × the whole
+        // desktop), smoothing 0.20 (2018 Damping 0.95 = 0.05).
+        assert_eq!((s.gain_x, s.gain_y), (20.0, 20.0));
+        assert!((s.smoothing - 0.20).abs() < 1e-6);
+        assert!(!s.loss_recovery, "Find the target again is off by default");
+        assert!(!s.dwell.enabled);
+        assert!(s.mirror);
+        assert_eq!(s.theme, Theme::Carbon);
+    }
+
+    #[test]
+    fn out_of_range_and_non_finite_values_are_rejected() {
+        let cases: Vec<(&str, Settings)> = vec![
+            (
+                "gain_x",
+                Settings {
+                    gain_x: 0.0,
+                    ..Settings::default()
+                },
+            ),
+            (
+                "gain_x",
+                Settings {
+                    gain_x: f32::NAN,
+                    ..Settings::default()
+                },
+            ),
+            (
+                "gain_y",
+                Settings {
+                    link_gain: false,
+                    gain_y: 61.0,
+                    ..Settings::default()
+                },
+            ),
+            (
+                "smoothing",
+                Settings {
+                    smoothing: 1.0,
+                    ..Settings::default()
+                },
+            ),
+            (
+                "smoothing",
+                Settings {
+                    smoothing: -0.01,
+                    ..Settings::default()
+                },
+            ),
+            (
+                "limits.bottom",
+                Settings {
+                    limits: ScreenLimits {
+                        bottom: 1001,
+                        ..ScreenLimits::default()
+                    },
+                    ..Settings::default()
+                },
+            ),
+            (
+                "dwell.dwell_s",
+                Settings {
+                    dwell: DwellSettings {
+                        dwell_s: f32::INFINITY,
+                        ..DwellSettings::default()
+                    },
+                    ..Settings::default()
+                },
+            ),
+            (
+                "dwell.radius_frac",
+                Settings {
+                    dwell: DwellSettings {
+                        radius_frac: 0.0,
+                        ..DwellSettings::default()
+                    },
+                    ..Settings::default()
+                },
+            ),
+        ];
+        for (field, s) in cases {
+            let err = s.validated().expect_err(field);
+            assert_eq!(err.field, field);
+        }
+    }
+
+    #[test]
+    fn linked_gain_is_normalised_and_unlinked_is_kept() {
+        let s = Settings {
+            gain_x: 8.0,
+            gain_y: 3.0,
+            ..Settings::default()
+        };
+        assert_eq!(s.validated().unwrap().gain_y, 8.0);
+        let s = Settings {
+            gain_x: 8.0,
+            gain_y: 3.0,
+            link_gain: false,
+            ..Settings::default()
+        };
+        assert_eq!(s.validated().unwrap().gain_y, 3.0);
+    }
+
+    #[test]
+    fn repaired_resets_only_the_bad_fields() {
+        let s = Settings {
+            gain_x: 9.0,
+            smoothing: 1.0,
+            theme: Theme::Paper,
+            ..Settings::default()
+        };
+        let (fixed, reset) = s.repaired();
+        assert_eq!(reset, vec!["smoothing"]);
+        assert_eq!(fixed.gain_x, 9.0, "valid fields are kept");
+        assert_eq!(fixed.theme, Theme::Paper);
+        assert_eq!(fixed.smoothing, Settings::default().smoothing);
+        assert_eq!(fixed.clone().validated().unwrap(), fixed);
+    }
+
+    #[test]
+    fn repaired_reaches_every_checked_field() {
+        // Every field `validated` can reject must be resettable, not hit the catch-all.
+        let s = Settings {
+            gain_x: 0.0,
+            gain_y: 0.0,
+            link_gain: false,
+            smoothing: 2.0,
+            limits: ScreenLimits {
+                left: 5000,
+                right: 5000,
+                top: 5000,
+                bottom: 5000,
+            },
+            dwell: DwellSettings {
+                enabled: true,
+                dwell_s: 0.0,
+                refractory_s: 0.0,
+                radius_frac: 0.0,
+            },
+            ..Settings::default()
+        };
+        let (fixed, reset) = s.repaired();
+        assert_eq!(reset.len(), 10, "{reset:?}");
+        assert!(!fixed.link_gain, "a valid field survives a full repair");
+        assert!(fixed.dwell.enabled);
+    }
+
+    #[test]
+    fn blank_camera_id_means_default_camera() {
+        let s = Settings {
+            camera: Some("  ".into()),
+            ..Settings::default()
+        };
+        assert_eq!(s.validated().unwrap().camera, None);
+    }
+}

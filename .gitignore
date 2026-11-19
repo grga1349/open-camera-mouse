@@ -1,25 +1,7 @@
-# Wails build output
-build/bin/
-build/windows/
-build/darwin/
-
-# Frontend
-node_modules/
-frontend/dist/
-
-# Go
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-/vendor/
-
-# GoCV / OpenCV build artifacts
-*.a
-*.o
+# Rust
+/target/
+**/target/
+# Cargo.lock is committed for apps/binaries; nothing to ignore there.
 
 # IDE
 .vscode/
@@ -43,10 +25,3 @@ $RECYCLE.BIN/
 .env
 .env.local
 .env.*.local
-
-# Wails dev server
-wailsjs/
-
-# Test coverage
-coverage.out
-coverage.html

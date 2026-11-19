@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Open Camera Mouse
+Comment=Control the mouse pointer with head movement, using a webcam
+Exec=open-camera-mouse
+Icon=io.github.grga1349.OpenCameraMouse
+Terminal=false
+Categories=Utility;Accessibility;

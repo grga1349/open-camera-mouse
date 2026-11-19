@@ -1,100 +1,122 @@
-# Open Camera Mouse <img src="build/appicon.png" alt="Open Camera Mouse icon" width="40" height="40" />
+# Open Camera Mouse
 
-Control your computer cursor with head movements using just a webcam. No special hardware needed.
+Control the mouse pointer with your head, using an ordinary webcam. Click a spot on your face
+in the camera preview (the tip of the nose works well); the app tracks it and moves the
+pointer as you move your head. Hold still over something to click it (dwell click, optional).
+Everything runs on your computer; no camera image leaves it.
 
-<img src="docs/screenshot.png" alt="Screenshot" width="288" />
+Written in Rust (egui), no OpenCV. Behaviour follows the classic Camera Mouse 2018, with
+improvements. Free software under the MIT licence.
 
-## Download
+## Install
 
-Get the latest release for your platform:
+Download the file for your system from the
+[latest release](https://github.com/grga1349/open-camera-mouse/releases/latest) and check
+it against `SHA256SUMS` if you like.
 
-- **[macOS](https://github.com/grga1349/open-camera-mouse/releases/latest)** (Apple Silicon)
-- **[Windows](https://github.com/grga1349/open-camera-mouse/releases/latest)** (64-bit)
+### macOS (Apple Silicon)
 
-## Installation
+1. Open `open-camera-mouse-<version>-macos-arm64.dmg` and drag **Open Camera Mouse** to
+   Applications.
+2. The app isn't notarized yet, so macOS blocks the first launch. Open it once, then go to
+   **System Settings → Privacy & Security** and click **Open Anyway**. (Or, in Terminal:
+   `xattr -dr com.apple.quarantine "/Applications/Open Camera Mouse.app"`.)
+3. Allow **Camera** when asked. Then grant **Accessibility** (System Settings → Privacy &
+   Security → Accessibility → Open Camera Mouse on); the app shows a button that opens the
+   right page. It notices the grant within a few seconds, no restart needed.
 
-### macOS
+Updates keep both permissions. Intel Macs aren't supported.
 
-1. Download `open-camera-mouse_vX.X.X_macOS.zip` from releases
-2. Extract and drag `open-camera-mouse.app` to Applications
-3. Launch from Applications or Spotlight
+### Windows (x64)
 
-**Note:** On first launch, you may need to right-click → Open to bypass Gatekeeper (unsigned application).
+1. Run `open-camera-mouse-<version>-windows-x64-setup.exe` (installs for your user only, no
+   admin rights needed).
+2. The installer isn't signed yet, so SmartScreen may warn: click **More info → Run anyway**.
+3. Allow camera access if Windows asks (Settings → Privacy & security → Camera → let desktop
+   apps access your camera).
 
-### Windows
+### Linux (x86_64, X11)
 
-1. Download `open-camera-mouse_vX.X.X_Windows.zip` from releases
-2. Extract to a folder
-3. Run `open-camera-mouse.exe`
+AppImage: `chmod +x open-camera-mouse-<version>-linux-x86_64.AppImage` and run it (needs FUSE
+2, e.g. `libfuse2`). Or unpack the `.tar.gz` and run `open-camera-mouse`; a `.desktop` file
+and icon are included. Your user needs access to the camera (usually the `video` group).
 
-**Note:** Requires [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section) (pre-installed on Windows 11 and most Windows 10 systems).
+**Use an X11 session.** On Wayland the app can't move the pointer or catch global hotkeys
+(see Known limitations).
 
-## Features
+## Use
 
-- **Head tracking** — Move your cursor by moving your head
-- **Dwell clicking** — Hover to click, no physical input needed
-- **Adjustable sensitivity** — Fine-tune cursor speed and smoothing
-- **Global hotkeys** — F11 to start/stop, F12 to recenter
-- **Works in background** — Hotkeys work even when app is minimized
+1. Press **Start** (or the start key) and click a spot on your face in the preview.
+2. Keep the mouse still for 4 s: the camera takes over the pointer. Moving the physical mouse
+   takes it back at once; 4 s still hands it to the camera again.
+3. **Recenter** (F12) puts a circle in the middle of the preview and counts 5-4-3-2-1; look
+   straight at the screen, and the spot in the circle becomes the new target.
+4. **Options** has speed (gain), smoothing, dwell click, camera, screen limits, main monitor,
+   theme and larger controls. Changes are saved at once.
 
-## Quick Start
+| Key | macOS | Windows / Linux |
+|---|---|---|
+| Start / pause | F10 | F11 |
+| Recenter | F12 | F12 |
 
-1. **Launch** the app and click **Start** (or press F11)
-2. **Click** on your face in the preview to set the tracking point
-3. **Move** your head to control the cursor
-4. **Enable Dwell** to click by hovering (optional)
+On a Mac laptop keyboard you may need `Fn`. The keys work from any app where the OS allows
+it, and always inside the app window; the window shows which ones work globally.
 
-## Settings
+## Known limitations
 
-One screen, no tabs:
+These are the release criteria's explicit exceptions for v0.4.0:
 
-| Setting | Options |
-|---------|---------|
-| Template size | Tracking template patch size |
-| Sensitivity | Gain multiplier, smoothing |
-| Dwell time | How long to hold still before a dwell click fires |
-| Auto-start | Start tracking automatically on launch |
+| Platform | Limitation |
+|---|---|
+| macOS | Ad-hoc signed, not notarized: Gatekeeper blocks the first launch (see Install). Apple Silicon only. |
+| Windows | Unsigned: SmartScreen warning. The pointer can't control windows running as administrator, the UAC prompt or the lock screen (Windows UIPI). **Not yet tested on a real Windows device**: built and unit-tested in CI only. |
+| Linux | X11 only; on Wayland the pointer and global hotkeys are unsupported (in-window keys still work). **Not yet tested on a real Linux device**: built and unit-tested in CI only. |
+| All | External USB webcams are untested on device; cameras that only deliver MJPEG are unsupported. The "Searching" animation ignores the OS reduce-motion setting. |
 
-See [docs/SETTINGS.md](docs/SETTINGS.md) for full details, ranges, and the recenter flow.
+Please report problems on [GitHub Issues](https://github.com/grga1349/open-camera-mouse/issues).
 
-## Tips
+## Develop
 
-- **Good lighting** helps tracking accuracy
-- **Marker turns red** when tracking is lost — try a larger template size
-- **Press F12** to recenter — tracking pauses, position the tracked point in the white box, and it locks in after a short countdown
-- **Increase sensitivity** for less head movement, decrease for more precision
+Needs [rustup](https://rustup.rs); the toolchain is pinned in `rust-toolchain.toml`. On Linux
+install the eframe/camera libraries first:
+`libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev libclang-dev`.
 
-## Troubleshooting
+```sh
+cargo run -p open-camera-mouse     # dev build (optimised deps, fast enough to use)
+cargo test --workspace             # no webcam needed
+```
 
-| Problem | Solution |
-|---------|----------|
-| Cursor jumps around | Increase template size, improve lighting |
-| Tracking lost frequently | Use a higher contrast point, improve lighting |
-| Cursor too fast/slow | Adjust sensitivity in Pointer settings |
-| Cursor doesn't move | macOS: Grant Accessibility permissions in System Settings → Privacy & Security |
-| Hotkeys don't work | Ensure no other app claims F11/F12 |
+When run from a terminal, macOS asks for camera and Accessibility permission for the
+**terminal app**, not for Open Camera Mouse. Diagnostics: `OCM_PERF=1` prints frame timing;
+`OCM_RECORD=<folder>` records raw frames for debugging (contains your face; never commit it).
 
-## Platforms
+Docs: [`AGENTS.md`](AGENTS.md) (how to work in this repo, also for AI agents),
+[`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/BEHAVIOR.md`](docs/BEHAVIOR.md),
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/TESTING.md`](docs/TESTING.md),
+[`docs/ROADMAP.md`](docs/ROADMAP.md), decisions in
+[`docs/architecture/decisions/`](docs/architecture/decisions/).
 
-| Platform | Status | Notes |
-|----------|--------|-------|
-| macOS | ✅ | Requires Accessibility permissions for mouse control |
-| Windows | ✅ | Tested on Windows 10/11 |
-| Linux | ⚠️ | X11 only, requires libx11-dev |
+### Package
 
----
+```sh
+cargo install cargo-packager --version 0.11.8 --locked
+cargo install cargo-about --version 0.9.3 --locked --features cli
+cd apps/desktop && cargo packager --release
+```
 
-## Contributing
+Builds the package for the current OS into `target/packager/` (macOS: `.app` + `.dmg`,
+Windows: NSIS installer, Linux: AppImage), with `THIRD_PARTY_LICENSES.html` inside.
 
-See [docs/RUNBOOK.md](docs/RUNBOOK.md) for build setup, dev workflow, and release steps.
+### Release
 
-## Documentation
+1. Set the version in the root `Cargo.toml` (`[workspace.package] version`) and commit.
+2. Tag `vX.Y.Z` (must equal that version) on `main` and push the tag.
+3. `.github/workflows/release.yml` builds all three platforms and creates a **draft**
+   GitHub Release with `SHA256SUMS`. Check it, then publish.
 
-- [Architecture & data flow](docs/ARCHITECTURE.md)
-- [Full tech stack](docs/STACK.md)
-- [CI/CD and release process](docs/CI.md)
-- [Dev runbook](docs/RUNBOOK.md)
+Signing turns on by itself when the repository secrets exist (macOS Developer ID +
+notarization, Windows certificate; listed at the top of `release.yml`).
 
-## License
+## Licence
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT, see [`LICENSE`](LICENSE). Third-party licences ship with every package.

@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, rewrite/rust]
+  pull_request:
+    branches: [main, rewrite/rust]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      # libclang-dev: nokhwa's V4L2 bindings (v4l2-sys-mit) run bindgen at build time.
+      - name: Linux system libraries for eframe/winit and the camera
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libx11-dev \
+            libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev libclang-dev
+      # rustup on the runner image reads rust-toolchain.toml and installs the pinned version.
+      - name: Toolchain
+        run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      # Output is teed so a failure can be summarised as an annotation: annotations are
+      # readable through the unauthenticated API, job logs are not.
+      - name: test (no webcam)
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --locked --no-fail-fast 2>&1 | tee test.log
+      - name: summarise test failures
+        if: failure()
+        shell: bash
+        run: |
+          [ -f test.log ] || exit 0
+          # "error: test failed, to rerun pass `-p …`" names the failing test binary.
+          summary=$(grep -E "\.\.\. FAILED$|^error|panicked at|process didn't exit|STATUS_|signal:" test.log | tail -40)
+          [ -n "$summary" ] || summary=$(tail -40 test.log)
+          summary=${summary//'%'/'%25'}
+          summary=${summary//$'\r'/}
+          summary=${summary//$'\n'/'%0A'}
+          echo "::error title=test (no webcam) failed::$summary"
+      - name: core crate boundary
+        if: runner.os == 'Linux'
+        shell: bash
+        run: scripts/check-core-deps.sh
+
+  deny:
+    name: licenses and bans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses bans sources
+      # The release packages ship these notices (ADR-0021); a licence cargo-about can't
+      # resolve should fail here, not in the release workflow.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: about
+      - name: third-party notices generate
+        run: |
+          cargo install cargo-about --version 0.9.3 --locked --features cli
+          cargo about generate --locked --fail -c about.toml \
+            -o THIRD_PARTY_LICENSES.html apps/desktop/packaging/about.hbs
