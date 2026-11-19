@@ -93,6 +93,8 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## Immediate next action
 
+(User 2026-11-19: no Win/Linux devices → slices 5–6 deferred, slice 8 dropped; after slice 4
+comes cleanup incl. removing `legacy/`, then the user merges to `main` — see task 0012.)
 Slice 4 of task 0012: release workflow (tag → macOS arm64 dmg, Windows NSIS, Linux tar.gz +
 AppImage → draft GitHub Release with checksums; `cargo-about` notices in every package;
 notarization / Windows signing steps present but skipped without secrets). The

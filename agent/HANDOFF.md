@@ -5,8 +5,7 @@ git history is the log if you need the past. See `agent/WORKFLOW.md` for when to
 
 ## As of 2026-11-19 (Phase 7 ACTIVE, task 0012, slice 3 done)
 
-**Branch:** `rewrite/rust`. CI last green at `2ae2a5c` (44604964205); slice 3 commit not yet
-pushed/CI-checked when this was written — check the run first.
+**Branch:** `rewrite/rust`. Last code `2688256` (slice 3): CI 44616244159 green on 3 OS.
 
 **This session:** slice 3 — macOS `.app` + dmg (`cd apps/desktop && cargo packager
 --release`; `cargo-packager` 0.11.8 installed locally). Version 0.4.0, Info.plist with
@@ -19,8 +18,13 @@ signs with `designated => identifier "io.github.grga1349.OpenCameraMouse"`; and
 ADR-0021 amendment; MANUAL_QA rows 19, 20, 22 pass. Diagnose TCC with
 `/usr/bin/log show --predicate 'process == "tccd"'` (zsh `log` is a builtin).
 
-**Next:** slice 4 — release workflow (see CURRENT_STATE "Immediate next action"). #7: read
-the annotation on the next failure.
+**Next:** slice 4 — release workflow (see CURRENT_STATE "Immediate next action"). Then
+cleanup (close Phase 7 with slices 5–8 deferred/dropped, Rust README + doc tidy, tasks/
+cleanup (ask how: archive/condense), remove the rewrite tooling (candidate list in task 0012
+"User decisions … after slice 3", confirm item by item), remove
+`legacy/` via ADR + AGENTS.md update — user decision 2026-11-19), then the **user** merges to
+`main`. No Windows/Linux machine exists: CI-built packages only. #7: read the annotation on
+the next failure.
 
 **User decisions (Phase 7):** macOS Apple Silicon only, ad-hoc signed dmg, notarization hook
 behind secrets (off); Windows unsigned NSIS per-user installer; Linux tar.gz + AppImage, X11
@@ -48,4 +52,4 @@ fix; real numbers on controls.
 **Toolchain:** `export PATH="$HOME/.cargo/bin:$PATH"`. No `gh`; CI via the GitHub API with curl
 (`.../actions/runs/<run>/jobs`, `.../check-runs/<job id>/annotations`).
 
-**Blockers:** none. Windows/Linux on-device slices need machines — ask the user.
+**Blockers:** none. No Windows/Linux machines (slices 5–6 deferred, user 2026-11-19).

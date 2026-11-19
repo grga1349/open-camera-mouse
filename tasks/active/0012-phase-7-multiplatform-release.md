@@ -39,6 +39,29 @@ with Options open.
   icon. Thin strokes vanish at 16–32 px: likely a redrawn SVG with heavier strokes for small
   sizes — show the user the small sizes before adopting.
 
+## User decisions (2026-11-19, after slice 3)
+
+- **No Windows or Linux machine:** slices 5 and 6 are not run on device; Windows/Linux
+  packages are CI-built only and recorded as untested on device (known exception).
+- **Slice 8 dropped** as redundant (user).
+- **Order to finish:** slice 4 (release workflow) → cleanup → the user merges `rewrite/rust`
+  into `main`. Cleanup = close Phase 7 (slices 5–8 deferred/dropped with reasons, task to
+  `done/`, ROADMAP/state), repo/doc tidy (Rust README: build/run/package, stale docs, dead dev
+  code), **tasks cleanup** (user, 2026-11-19: tidy `tasks/` — 11 done task files +
+`BACKLOG.md`; decide with the user whether to archive/condense them, keep Phase 8 open items),
+and **remove `legacy/`** (user's explicit decision 2026-11-19 under AGENTS.md
+  "Never"; the Go app stays in git history / `main` history / the 0.3.0 tag — record it in an
+  ADR and update AGENTS.md / CLAUDE.md references when doing it).
+- **Remove the rewrite tooling** (user, 2026-11-19: "all things we used as rewrite tools").
+  Candidates to confirm with the user item by item in the cleanup session: the seed archive
+  `docs/archive/` (AGENTS.md-protected → explicit OK), `docs/research/tools/` and
+  `TEST_DRIVE_RESEARCH_PROMPT.md`, the RE/legacy-comparison research docs, `agent/`,
+  `.agents/skills/`, `tasks/`, `scripts/record-scenario.sh`, rewrite-only parts of `ROADMAP.md`;
+  then slim `AGENTS.md`/`CLAUDE.md` to a post-rewrite version. Keep what the product build,
+  CI and packaging need (`scripts/check-core-deps.sh`, `macos-adhoc-sign.sh`,
+  `render-icon.py`?, ADRs, QA docs?).
+- Slice 7 (external webcams) not asked; treat as deferred unless the user has one for the Mac.
+
 ## Slices (one per session, planned one at a time)
 
 1. **CI flake #7 diagnosable.** Failing test names and the cargo error surface as GitHub
@@ -109,3 +132,6 @@ with Options open.
   `AXIsProcessTrusted || CGPreflightPostEventAccess` (preflight is stale within a run).
   ADR-0021 amendment. MANUAL_QA rows 19, 20, 22 pass. Open: Retina `@2x` icns slots; third-party
   notices (`cargo-about`) land with the release workflow (slice 4). Next: slice 4.
+- 2026-11-19: slice 3 CI green (`2688256`, run 44616244159). User decisions above: no
+  Win/Linux devices, slice 8 dropped; next slice 4, then cleanup (incl. removing `legacy/`),
+  then the user merges to `main`.
