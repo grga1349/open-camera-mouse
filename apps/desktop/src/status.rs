@@ -1,7 +1,7 @@
 //! What the Tracking window says about the current [`View`]: the status line (icon, title,
 //! pointer owner, body, hint, actions), the preview overlay and which controls are enabled.
 //! Pure, so every state's wording is unit-tested without a GUI. Wording follows the approved
-//! design lab (`docs/design/design-lab.html` v3, `STATES`); it is draft-quality until the
+//! design lab (`docs/design-lab.html` v3, `STATES`); it is draft-quality until the
 //! Phase 8 user review.
 
 use app_core::{AppState, HoldReason, MarkerKind, PointerOwner, TrackStatus, View};
@@ -375,7 +375,7 @@ pub fn describe(view: &View, start_key: &str, recenter_key: &str) -> Status {
         st.camera = Camera::Live;
     }
 
-    // Pointer sub-state (orthogonal to the app state, BEHAVIOR_SPEC R-A1).
+    // Pointer sub-state (orthogonal to the app state, BEHAVIOR.md R-A1).
     if can_pick(view.state) {
         match view.pointer {
             PointerOwner::PermissionNeeded => {

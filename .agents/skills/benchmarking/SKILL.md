@@ -12,7 +12,7 @@ search), allocations and end-to-end latency separately, across resolutions.
 
 ## When to use
 
-Comparing ADR-0004's tracking candidates, evaluating a proposed optimization (SIMD, buffer
+Comparing tracker variants (e.g. a new `LkParams` option against `recommended()`), evaluating a proposed optimization (SIMD, buffer
 reuse) only *after* profiling identifies a real cost, or tracking performance trend over time.
 
 ## When not to use
@@ -24,4 +24,4 @@ claim (see `tracking-validation`).
 
 A baseline report with min/median/p95, input sizes and device metadata; comparisons stated as
 measured deltas with the same fixture corpus on both sides, not cross-machine absolute
-numbers. Tool: `divan` (or Criterion — pick one and stay consistent).
+numbers. Tool: `divan` (benches in `tracking-core`, `app-core --bench frame`, `platform --bench decode`); for the running app, `OCM_PERF=1` (`docs/TESTING.md`).

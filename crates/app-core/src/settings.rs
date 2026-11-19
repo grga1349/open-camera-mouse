@@ -1,4 +1,4 @@
-//! User settings (BEHAVIOR_SPEC R-A5): one struct, validated on every update and on load, so
+//! User settings (BEHAVIOR.md R-A5): one struct, validated on every update and on load, so
 //! an invalid value can't be set (R-P2, fixes L-1). The serde derives define the on-disk
 //! field names; reading and writing the file (format, schema version, fallbacks) is
 //! `platform::settings_store` (ADR-0012), outside this pure crate.

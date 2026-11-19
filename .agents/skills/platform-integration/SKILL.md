@@ -22,6 +22,6 @@ Don't use this for the tracking algorithm or UI — only for the OS-facing adapt
 
 ## Deliverables and gates
 
-An adapter trait + fake implementation with unit tests covering the contract; a documented
-manual OS smoke-test checklist (permissions prompt, capture starts, cursor moves, pause
-works); licensing/maintenance check on any chosen camera backend crate before adopting it.
+An adapter trait + fake implementation with unit tests covering the contract; the manual QA
+checklist in `docs/TESTING.md` updated, and the risk table (P1–P20) in
+`docs/ARCHITECTURE.md` updated; say plainly which OS a change was not run on; licensing/maintenance check on any chosen camera backend crate before adopting it.

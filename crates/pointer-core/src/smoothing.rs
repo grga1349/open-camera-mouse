@@ -1,4 +1,4 @@
-//! Time-based (dt-aware) position smoothing (BEHAVIOR_SPEC R-P2, ADR-0006).
+//! Time-based (dt-aware) position smoothing (BEHAVIOR.md R-P2, ADR-0006).
 //!
 //! 2018 damps once per ~70 ms cursor tick: `c = d·m + (1 − d)·c_prev` with `d = Damping`
 //! (weight of the new position, default 0.95). Here the same filter runs once per camera

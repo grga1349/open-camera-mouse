@@ -20,7 +20,7 @@ use crate::{
     Tracker, check_selection,
 };
 
-/// LK parameters. Defaults are the 2018 preset (BEHAVIOR_SPEC §2.4, ADR-0006, ADR-0009).
+/// LK parameters. Defaults are the 2018 preset (ADR-0006, ADR-0009).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LkParams {
     /// Half window: the window is `(2·half_window + 1)²`. 2018 passed `win = 10×10` to the
@@ -59,7 +59,7 @@ pub struct LkParams {
     /// match the reference window `I` (`α = σ_I/σ_J`, `β = μ_I − α·μ_J`). The residual is
     /// formed against the mapped `J`, so a global lighting change doesn't bias the solve.
     /// The map is held fixed while that level iterates; re-estimating it every iteration
-    /// measured worse on `rotate_15` (TRACKING_IMPROVEMENTS §E3). A flat `J` gets bias-only
+    /// measured worse on `rotate_15` (ADR-0011). A flat `J` gets bias-only
     /// (`α = 1`). `false` = B-LK18 (brightness constancy).
     pub gain_bias: bool,
     /// Loss recovery (Phase 4 E4, ADR-0010): a step the 2018 policy turns into `Lost` keeps
@@ -1135,8 +1135,8 @@ mod tests {
             .unwrap();
         assert_eq!(out.status, TrackStatus::Tracking, "{out:?}");
         let z = out.diagnostics.score.expect("gate ran");
-        // Not ~1: plain LK's position is biased by the gain change (TRACKING_BASELINE
-        // finding 5) and halving doubles 8-bit quantisation. Undimmed it scores > 0.97.
+        // Not ~1: plain LK's position is biased by the gain change (baseline
+        // measurement) and halving doubles 8-bit quantisation. Undimmed it scores > 0.97.
         assert!(z > 0.9, "zncc {z}");
         // Off: no score recorded.
         let mut t = LkTracker::default();

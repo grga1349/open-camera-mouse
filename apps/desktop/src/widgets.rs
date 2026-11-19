@@ -1,4 +1,4 @@
-//! The lab's controls, painted to its CSS (`docs/design/design-lab.html`, task 0008 D6b):
+//! The lab's controls, painted to its CSS (`docs/design-lab.html`):
 //! switch, slider, tabs, segmented control, buttons with a key chip, field frames and help
 //! text. egui's own widgets keep the behaviour where they have it (the slider's dragging,
 //! keys and AccessKit value); the look is ours. Each control takes keyboard focus, draws the

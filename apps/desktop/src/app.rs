@@ -532,7 +532,7 @@ pub fn options_viewport(next_to: Option<egui::Rect>) -> egui::ViewportBuilder {
         .with_resizable(false)
         .with_maximize_button(false)
         .with_minimize_button(false);
-    // Best effort: Wayland can't position windows (PLATFORM_RISKS P10/P11).
+    // Best effort: Wayland can't position windows (ARCHITECTURE.md P10/P11).
     if let Some(r) = next_to {
         b = b.with_position(r.right_top() + Vec2::new(16.0, 0.0));
     }

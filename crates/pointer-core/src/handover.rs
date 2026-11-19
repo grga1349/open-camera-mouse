@@ -1,4 +1,4 @@
-//! Control handover between the physical mouse and the camera (BEHAVIOR_SPEC R-A2, §2.7,
+//! Control handover between the physical mouse and the camera (BEHAVIOR.md R-A2, §2.7,
 //! ADR-0006) and the re-acquisition jump bound (R-P4). Pure: positions and times come in as
 //! arguments, the caller owns the clock.
 

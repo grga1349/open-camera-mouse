@@ -8,7 +8,7 @@
 //!   needs no permission but blocks the physical mouse, so handover can't work.
 //! - Windows: `SetCursorPos` + `SendInput` clicks. Compiled in CI, validated in Phase 7.
 //! - Linux: X11 XTest through `x11rb` (pure-Rust connection). A Wayland session is
-//!   `Unsupported` (PLATFORM_RISKS P10/P11). Compiled in CI, validated in Phase 7.
+//!   `Unsupported` (ARCHITECTURE.md P10/P11). Compiled in CI, validated in Phase 7.
 
 pub mod geometry;
 

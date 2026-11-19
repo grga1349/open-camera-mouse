@@ -1,7 +1,7 @@
 //! Pure tracking core (ADR-0003/ADR-0007).
 //!
 //! Frames in, position + status + diagnostics out. No camera, OS, GUI, clock or I/O
-//! (BEHAVIOR_SPEC R-T1). The API is deliberately algorithm-neutral so pyramidal LK and NCC
+//! (BEHAVIOR.md R-T1). The API is deliberately algorithm-neutral so pyramidal LK and NCC
 //! (ADR-0004) both fit behind [`Tracker`]: [`lk::LkTracker`] (B-LK18) and
 //! [`ncc::NccTracker`] (B-NCC).
 

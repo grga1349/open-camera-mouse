@@ -8,7 +8,7 @@
 //! a [`LatestSlot`]: the newest frame replaces an unread one. [`NokhwaCamera::next_frame`]
 //! waits on the slot with a timeout.
 //!
-//! # Failure mapping (PLATFORM_RISKS P1, P2, P3, P5)
+//! # Failure mapping (ARCHITECTURE.md P1, P2, P3, P5)
 //!
 //! | What happens | Result |
 //! |---|---|

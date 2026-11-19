@@ -1,8 +1,7 @@
 //! Fixture-level correctness tests (fast subset; the full comparison is `tests/baseline.rs`).
 //!
 //! These assert what must hold for any acceptable baseline, including *expected failures*
-//! (a flat region must not be reported as tracked). Known gaps that Phase 4 is meant to fix
-//! are documented in docs/research/TRACKING_BASELINE.md, not hidden here.
+//! (a flat region must not be reported as tracked).
 
 mod support;
 

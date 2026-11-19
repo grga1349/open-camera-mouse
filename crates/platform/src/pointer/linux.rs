@@ -1,7 +1,7 @@
 //! Linux pointer: X11 XTest through `x11rb`'s pure-Rust connection (task 0008 D4, ADR-0012
 //! §"Pointer adapter"). Compiled in CI; on-device validation is Phase 7.
 //!
-//! A Wayland session is `Unsupported` (PLATFORM_RISKS P10/P11): there is no general global
+//! A Wayland session is `Unsupported` (ARCHITECTURE.md P10/P11): there is no general global
 //! pointer injection or position, and XTest under XWayland only reaches X11 windows.
 
 use std::time::Instant;

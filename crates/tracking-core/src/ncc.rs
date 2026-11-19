@@ -1,5 +1,5 @@
 //! B-NCC: fixed-template zero-mean normalised cross-correlation, legacy preset
-//! (`legacy/internal/tracking/tracking.go`, BEHAVIOR_SPEC §3.4).
+//! (the v0.3.0 Go app's tracker, tag `v0.3.0` `internal/tracking/tracking.go`).
 //!
 //! Score at offset `(u, v)` is OpenCV's `TM_CCOEFF_NORMED`:
 //! `Σ T'·I' / sqrt(Σ T'² · Σ I'²)` with `T' = T − mean(T)` and `I'` the zero-mean patch.

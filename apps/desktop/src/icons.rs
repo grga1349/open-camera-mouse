@@ -1,4 +1,4 @@
-//! Icons painted with `Painter` primitives (EGUI_FEASIBILITY: no SVG crate, no licence
+//! Icons painted with `Painter` primitives (no SVG crate, no licence
 //! notice). Simplified shapes after the lab's sprite, drawn in the text colour.
 
 use std::f32::consts::TAU;

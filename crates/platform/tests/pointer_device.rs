@@ -1,4 +1,4 @@
-//! On-device pointer checks (task 0008 D4, PLATFORM_RISKS P6, R-P5). Ignored by default: it
+//! On-device pointer checks (task 0008 D4, ARCHITECTURE.md P6, R-P5). Ignored by default: it
 //! moves the real cursor, and CI has no desktop session. Run on a machine with a display and,
 //! on macOS, Accessibility granted to the terminal:
 //!

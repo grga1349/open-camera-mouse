@@ -1,96 +1,106 @@
-# Open Camera Mouse — Rust rewrite
+# Open Camera Mouse — agent instructions
 
 Canonical instructions for any AI agent (Claude Code, Codex, or other) working in this
-repository. Keep this file short; link to topic docs instead of duplicating detail here.
+repository. Keep this file short; link to the docs instead of duplicating them.
 
-## Status
+## The project
 
-This repository is mid-migration from a working Go/Wails/GoCV v0.3.0 application to a
-from-scratch Rust desktop app. The old app is fully preserved under `legacy/` with build
-instructions, history and its own former `CLAUDE.md`. **It is archived, not active policy.**
+A hands-free pointer: a webcam tracks a point on the user's face and drives the OS cursor.
+Rust workspace, egui desktop app, macOS / Windows / Linux (X11). v0.4.0 is the first Rust
+release (the earlier Go app is in git history, tag `v0.3.0`).
 
-The live phase plan is **`docs/ROADMAP.md`** (nine phases, current status, per-phase gates).
-Phases 0–2 are done; the next phase is listed there as NEXT. When a phase starts, its
-coordinator writes that phase's task file(s) in `tasks/` from the roadmap. See
-`agent/CURRENT_STATE.md` for exactly where things stand.
-
-## Read before acting
-
-1. `agent/CURRENT_STATE.md` — current branch, phase, in-flight task, last verified state.
-2. `tasks/BACKLOG.md` and `tasks/active/` — what's next and its acceptance criteria.
-3. The relevant topic doc under `docs/` (see map below) — don't guess architecture or RE facts.
-4. `git status` — never assume the working tree matches the last handoff note.
-
-## Repository map
-
-| Path | Purpose |
+| Read | For |
 |---|---|
-| `legacy/` | Old Go/Wails/GoCV app, frozen as reference and regression baseline. Not built by default; see `legacy/README.md` to restore it. |
-| `docs/ROADMAP.md` | Live nine-phase plan: status, deliverables, gates. |
-| `docs/product/` | Why this product exists, goals, non-goals, v1 scope. |
-| `docs/research/` | Camera Mouse 2018 reverse-engineering evidence, labeled VERIFIED/INFERRED/HYPOTHESIS, and comparison against `legacy/`. |
-| `docs/architecture/decisions/` | ADRs. Record before, not after, a non-trivial architectural choice. |
-| `docs/design/` | UI design plan; the interactive HTML design lab lands here in Phase 5. |
-| `docs/archive/rust-rewrite-seed/` | The original planning seed (ex-`dump/`). Historical input, not live instructions — see `SEED_CONSUMPTION_REPORT.md` for what was extracted where. |
-| `tasks/` | `BACKLOG.md` + `active/` `done/` `blocked/` task files. Source of truth for what's being worked on. |
-| `agent/` | `CURRENT_STATE.md`, `HANDOFF.md`, `WORKFLOW.md` — durable session state. Update before you stop, don't rely on chat compaction. |
-| `.agents/skills/` | Project-local skill catalog (see table below). |
+| `README.md` | Install, use, build, package, release |
+| `docs/PRODUCT.md` | What it does, defaults, UI design rules and tokens |
+| `docs/BEHAVIOR.md` | The R-* requirements code is held to |
+| `docs/ARCHITECTURE.md` | Crates, runtime threads, adapters, platform risks P1–P20, dependencies, packaging |
+| `docs/TESTING.md` | Gates, where tests live, manual QA, diagnostics |
+| `docs/ROADMAP.md` | Open items and what was deferred |
+| `docs/architecture/decisions/` | ADRs: why things are the way they are |
+| `docs/design-lab.html` | Approved visual reference (open in a browser) |
 
-## Principles (carried from product decisions, see ADRs for detail)
+## Workflow: one prompt = one task
 
-- No OpenCV in the new tracking engine; write and test our own pure-Rust implementation.
-- Rust workspace boundary (ADR-0007; ports live in `app-core`): `tracking-core` (pure algorithm, no I/O),
-  `pointer-core` (mapping/smoothing/dwell, pure), `app-core` (commands/state/controller),
-  `platform` (camera/cursor/permissions, OS-specific), one `apps/desktop` (egui/eframe).
-- Deterministic, offline-testable pipeline is a first-class requirement — no standalone
-  `tracking-cli`; use `cargo test` / integration tests / benchmarks against synthetic or
-  recorded frames instead.
-- macOS is the primary dev target; Windows and Linux are required for release, not
-  afterthoughts — don't make a decision (symlinks, paths, cursor APIs) that quietly assumes
-  POSIX-only or macOS-only behavior. Validate cross-platform claims, don't assume them.
-- Treat `../camera-mouse-reverse/` findings as behavioral research, not ground truth to copy
-  verbatim. Never paste decompiled/proprietary code into this repository.
-- One coordinator owns task state and integration at a time. Parallel agents get separate,
-  bounded, non-overlapping file scopes (use worktrees for simultaneous edits).
+Tasks arrive as prompts from the user; there are no task files or session logs.
+
+1. **Understand.** `git status` and `git log -5`; read the docs and ADRs for the area; read
+   the code. Don't guess architecture; if a doc and the code disagree, the code wins, fix the
+   doc.
+2. **Clarify** only what you can't decide from the code and docs (product behaviour, defaults,
+   anything user-visible). Ask before changing a default or adding behaviour.
+3. **Measure first** for bugs and tuning: reproduce with a test, a metric or `OCM_PERF`
+   before changing anything.
+4. **Change** in small steps, with a test that fails before and passes after. A
+   non-trivial architectural choice gets an ADR *before* the code (template `0000`); a
+   changed default gets an amendment to the ADR that owns it.
+5. **Verify** with the gates below (scoped, one heavy command at a time) and, for
+   device-only behaviour, say exactly what the user should check by hand.
+6. **Finish:** update the docs the change made stale (and `docs/ROADMAP.md` if something was
+   deferred), report what was verified and what wasn't, then **ask whether to commit**
+   (and separately whether to push).
+
+Larger work: propose a short plan of slices first, do one slice per session, and keep the
+plan in the conversation or the PR, not in new repo files.
+
+## Principles
+
+- Start from Camera Mouse 2018 behaviour, improve on it; new behaviour is an option, off by
+  default, unless the user approves a new default (ADR-0006).
+- UI: monochrome chrome, colour preview, neon-green ring marker, yellow primary buttons,
+  Carbon/Paper themes, two fixed windows (`docs/PRODUCT.md`).
+- Hotkeys are fixed (F10 macOS / F11 elsewhere, F12); don't make them configurable without
+  asking.
+- Every fix gets an automated check (CI test, replay metric or `OCM_PERF`). Recordings are for
+  diagnosis only: never commit them or numbers from them; turn findings into synthetic tests.
+- Crate boundaries per ADR-0007: pure `tracking-core` / `pointer-core`, `app-core` owns
+  state and ports, `platform` owns OS code, `apps/desktop` the UI. No OpenCV, ever.
+- Cross-platform: macOS is the dev machine, but Windows and Linux ship too. Don't assume
+  POSIX or macOS behaviour (no symlinks, ADR-0002); say when something is untested on an OS.
+- Treat Camera Mouse 2018 findings as behavioural evidence; never paste decompiled or
+  proprietary code here.
+
+## Quality gates
+
+```sh
+export PATH="$HOME/.cargo/bin:$PATH"
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked        # locally: scope with -p / a filter
+scripts/check-core-deps.sh             # when touching core crate dependencies
+```
+
+CI (`.github/workflows/ci.yml`) runs them on macOS, Windows and Linux plus `cargo deny`. Read
+a failed job's annotations without auth at
+`https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
+(no `gh` CLI here). Release builds and packaging are slow: ask before running them.
 
 ## Skills
 
-Project-local skills live in `.agents/skills/<name>/SKILL.md` (verified in task 0002, see
-ADR-0005). **Codex** auto-discovers them. **Claude Code does not** — when a task matches a row
-below, `Read` that skill's `SKILL.md` before starting.
+Project skills live in `.agents/skills/<name>/SKILL.md`. Codex discovers them; **Claude Code
+does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005).
 
 | Skill | Use for |
 |---|---|
-| `rust-engineering` | Idiomatic Rust, error types, API design, lint/test gates |
-| `rust-architecture` | Workspace boundaries, dependency direction, ADRs |
-| `computer-vision` | Grayscale/pyramids/interpolation/optical-flow math |
-| `tracking-validation` | Synthetic fixtures, ground truth, error metrics, failure taxonomy |
-| `rust-testing` | Unit/integration/property/golden test design |
-| `benchmarking` | Perf measurement methodology, regression tracking |
-| `egui-development` | eframe/egui patterns, `egui_kittest` interaction tests |
-| `platform-integration` | Camera/cursor/permission adapters per OS, fake-adapter testing |
-| `agent-handoff` | Writing `agent/` state before context loss |
-| `code-review` | Independent review: correctness, failure modes, evidence over assertion |
+| `rust-engineering` | Idiomatic Rust, error types, API design, lints |
+| `rust-architecture` | Crate boundaries, dependency direction, ADRs |
+| `rust-testing` | Unit / integration / property / UI test design |
+| `computer-vision` | Pyramids, interpolation, optical flow maths |
+| `tracking-validation` | Synthetic fixtures, ground truth, tracker and pointer metrics |
+| `benchmarking` | Performance measurement, regressions |
+| `egui-development` | eframe/egui patterns, `egui_kittest` tests |
+| `platform-integration` | Camera / cursor / hotkey / permission adapters per OS |
+| `code-review` | Independent review: correctness, failure modes, evidence |
 
-## Instruction file compatibility
+## Instruction files
 
-`CLAUDE.md` at repo root is a **plain file, not a symlink** (Windows git-checkout symlink
-failures, ADR-0002) that imports this file with `@AGENTS.md`, so Claude Code loads it at
-startup (ADR-0005). Codex reads this `AGENTS.md` directly per its own convention.
-
-## Quality gates (once Rust workspace exists, from Phase 2 onward)
-
-`cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
-`cargo test --workspace`, plus `scripts/check-core-deps.sh` when touching core crate deps.
-CI (`.github/workflows/ci.yml`) runs these on macOS, Windows and Linux, plus `cargo deny`.
-Add a crate or cross-layer dependency only via ADR (see `rust-architecture` skill).
+`CLAUDE.md` is a plain file (not a symlink, ADR-0002) that imports this one with
+`@AGENTS.md`; Codex reads `AGENTS.md` directly.
 
 ## Never
 
-- Don't treat `docs/archive/rust-rewrite-seed/` as live instructions — it's frozen input.
-- Don't resurrect a standalone `tracking-cli`; it was explicitly rejected.
-- Don't add OpenCV (or GoCV) to the new engine.
-- Don't silently renumber the nine phases; propose changes via ADR.
-- Don't commit without being asked — but on every task completion, ask whether to commit
-  (see `agent/WORKFLOW.md`); don't force-push; don't delete `legacy/` or the seed
-  archive without an explicit, separately reviewed decision.
+- Commit or push without the user's yes; force-push; rewrite published history.
+- Add OpenCV (or any non-permissive licence; `deny.toml` is the policy).
+- Add a crate or a cross-layer dependency without an ADR.
+- Change a default, a hotkey or the visual direction without the user's OK.
+- Commit camera recordings or anything derived from them.

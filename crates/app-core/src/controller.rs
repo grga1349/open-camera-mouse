@@ -1,4 +1,4 @@
-//! The application state machine (BEHAVIOR_SPEC R-A1..R-A6, ADR-0006). Pure: no I/O, no
+//! The application state machine (BEHAVIOR.md R-A1..R-A6, ADR-0006). Pure: no I/O, no
 //! threads, no clock. Every call passes `now_us` (one monotonic clock owned by the runtime),
 //! and every side effect comes back as an [`Effect`] for the runtime to perform.
 //!
@@ -7,7 +7,7 @@
 //! [`AppState`] is R-A1 plus `Error` (a camera backend failure that is none of the named
 //! cases). Who drives the OS cursor is an orthogonal sub-state, [`PointerOwner`]: pointer
 //! permission and mouse handover don't stop tracking, so they aren't top-level states
-//! (decided in task 0008 D0, recorded in BEHAVIOR_SPEC R-A1).
+//! (decided in task 0008 D0, recorded in BEHAVIOR.md R-A1).
 //!
 //! # Control handover (R-A2, 2018 §2.7)
 //!
@@ -299,7 +299,7 @@ pub struct Controller {
 /// Steady zone (test drive #5, #11, #13; ADR-0015/-0017 amendments): head movement smaller than
 /// this, in camera px, doesn't move the cursor. The zone in camera px gives the same result at
 /// every gain. A hold costs precision: the cursor sits up to the radius from where the head
-/// points (`docs/research/ZONE_VARIANTS.md`). 0.2 chosen on the device (user, Phase 6d) from
+/// points. 0.2 chosen on the device (user, Phase 6d) from
 /// the S1 sweep: 0.1 visible (≥ 2 screen px) reversals/s at rest, hold error 0.26 cam px vs
 /// 0.43 at the former 0.5, lag ≈ 30 ms lower.
 pub const STEADY_ZONE_CAM_PX: f32 = 0.2;
@@ -395,7 +395,7 @@ impl Controller {
     }
 
     /// Overrides the steady-zone radius in camera px (≥ 0; 0 = off). Not a user setting
-    /// (test drive #11): for tests and the debug-only `OCM_DEV_STEADY` device trial.
+    /// (test drive #11): for tests.
     pub fn set_steady_zone_cam_px(&mut self, cam_px: f32) {
         self.steady_cam_px = if cam_px.is_finite() {
             cam_px.max(0.0)

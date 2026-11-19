@@ -1,4 +1,4 @@
-//! Phase 3 timing + allocation harness (`benchmarking` skill, BEHAVIOR_SPEC §8).
+//! Tracker timing + allocation harness (`benchmarking` skill, targets in docs/BEHAVIOR.md).
 //! Run: `cargo bench -p tracking-core`. Inputs are `head_sway` fixture frames; 1280×720 is
 //! box-downsampled to 640×360 first (ADR-0008), and that downsample is benched separately.
 

@@ -1,4 +1,4 @@
-//! Screen limits and offset drift (ADR-0006, BEHAVIOR_SPEC §2.6).
+//! Screen limits and offset drift (ADR-0006, BEHAVIOR.md R-P1).
 //!
 //! 2018 keeps the cursor inside W/E/N/S limits and, while it is pinned at one, drifts the
 //! mapping offset by 1 image px per 70 ms tick back toward the centre, so holding the head

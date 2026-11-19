@@ -78,7 +78,7 @@ impl GrayFrame {
 }
 
 /// Converts a camera frame into the one canonical display space used by selection, overlay,
-/// tracking and pointer mapping (BEHAVIOR_SPEC R-C1, ADR-0008: mirror at ingest).
+/// tracking and pointer mapping (BEHAVIOR.md R-C1, ADR-0008: mirror at ingest).
 pub fn ingest(mut frame: GrayFrame, mirror: bool) -> GrayFrame {
     if mirror {
         frame.mirror_horizontal();

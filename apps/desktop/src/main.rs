@@ -56,7 +56,7 @@ fn main() -> eframe::Result {
             let epoch = Instant::now();
             let perf = perf::Perf::from_env();
             let engine = start_engine(settings.clone(), epoch, perf.clone(), &cc.egui_ctx);
-            let mut shell = Shell::new(
+            let shell = Shell::new(
                 settings,
                 notice,
                 lines.to_vec(),
@@ -65,7 +65,6 @@ fn main() -> eframe::Result {
                 Box::new(engine),
                 Clock::System(epoch),
             );
-            dev_open_options(&mut shell);
             Ok(Box::new(DesktopApp {
                 shell,
                 hotkeys,
@@ -97,31 +96,9 @@ fn start_engine(
     EngineThread::spawn(make, move || ctx.request_repaint())
 }
 
-/// Debug builds only, for side-by-side design checks against the lab without clicking
-/// (task 0008 D6b): `OCM_DEV_OPTIONS=pointer|clicking|camera|general` opens Options at that
-/// tab on start.
-fn dev_open_options(shell: &mut Shell) {
-    if !cfg!(debug_assertions) {
-        return;
-    }
-    let tab = match std::env::var("OCM_DEV_OPTIONS").as_deref() {
-        Ok("pointer") => options::Tab::Pointer,
-        Ok("clicking") => options::Tab::Clicking,
-        Ok("camera") => options::Tab::Camera,
-        Ok("general") => options::Tab::General,
-        _ => return,
-    };
-    shell.open_options(Some(tab));
-}
-
 /// Settings from the user config dir. Never fails: problems become defaults plus a notice.
-/// Debug builds: `OCM_DEV_SETTINGS=<file>` uses that file instead, so a design check doesn't
-/// touch the real settings.
 fn load_settings() -> (Settings, Option<String>, Option<platform::SettingsStore>) {
-    let dev = std::env::var_os("OCM_DEV_SETTINGS")
-        .filter(|_| cfg!(debug_assertions))
-        .map(platform::SettingsStore::at);
-    match dev.or_else(platform::SettingsStore::in_user_config_dir) {
+    match platform::SettingsStore::in_user_config_dir() {
         Some(mut store) => {
             let loaded = store.load();
             (

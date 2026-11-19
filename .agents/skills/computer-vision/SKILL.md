@@ -6,20 +6,19 @@ description: Grayscale conversion, image pyramids, interpolation, Lucas-Kanade o
 ## Objective
 
 Get the math right and documented: pyramid construction, image gradients, bilinear sampling,
-the LK normal-equations solve (and its degenerate/singular cases), and NCC scoring — whichever
-of ADR-0004's candidates is being implemented. Document image coordinate conventions (origin,
+the LK normal-equations solve (and its degenerate/singular cases), and NCC scoring — in
+`tracking-core` (`lk.rs`, `ncc.rs`, `image.rs`). Document image coordinate conventions (origin,
 axis direction, pixel-center-vs-corner) explicitly; this is where silent bugs hide.
 
 ## When to use
 
-Designing or reviewing anything in `tracking-core`'s `image/` or `optical_flow/` modules
-(once they exist), or evaluating which parts of `docs/research/RE_EVIDENCE.md`'s reported
-parameters are safe to use as starting presets vs. need independent re-derivation.
+Designing or reviewing anything in `tracking-core`, or deciding whether a parameter taken
+from Camera Mouse 2018 (ADR-0006, ADR-0009) is safe to keep vs. needs re-derivation.
 
 ## When not to use
 
 Don't use this for cursor-space mapping/smoothing — that's `pointer-core`, covered by
-`rust-engineering` + the pointer-mapping sections of `docs/research/RE_EVIDENCE.md`.
+`rust-engineering` + `docs/BEHAVIOR.md` (R-P*).
 
 ## Deliverables and gates
 

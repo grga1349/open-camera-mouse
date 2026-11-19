@@ -1,12 +1,12 @@
 //! Fixed hotkeys, task 0008 D5, ADR-0012 §"Global hotkeys". Not configurable (product
 //! decision). Start / pause is F11 on Windows and Linux (2018 and legacy convention) and F10 on
 //! macOS, where F11 is the system's Show Desktop shortcut and registering it fails (measured on
-//! the dev Mac, PLATFORM_RISKS P13; user decision 2026-11-15). Recenter is F12 everywhere.
+//! the dev Mac, ARCHITECTURE.md P13; user decision 2026-11-15). Recenter is F12 everywhere.
 //!
 //! Two sources feed the same commands:
 //! - [`GlobalHotkeys`]: system-wide keys through `global-hotkey` (macOS Carbon hotkeys,
 //!   Windows `RegisterHotKey`, X11 `XGrabKey`). Registration can fail (another app owns the
-//!   key) or be unavailable (Wayland, PLATFORM_RISKS P12); the result per key is kept in a
+//!   key) or be unavailable (Wayland, ARCHITECTURE.md P12); the result per key is kept in a
 //!   [`Registration`] so the UI can say so (P13).
 //! - The app window's own key events, which the desktop shell forwards. They always work while
 //!   the window has focus, whatever happened to the global registration.

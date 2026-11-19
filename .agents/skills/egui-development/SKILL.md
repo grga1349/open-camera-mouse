@@ -1,6 +1,6 @@
 ---
 name: egui-development
-description: eframe/egui lifecycle, immediate-mode state patterns, AccessKit-based accessibility, egui_kittest interaction tests. Use for apps/desktop UI work (Phase 5-6 onward). Not for the app-core command/state controller it renders (see rust-architecture) or OS-level camera/cursor adapters (see platform-integration).
+description: eframe/egui lifecycle, immediate-mode state patterns, AccessKit-based accessibility, egui_kittest interaction tests. Use for apps/desktop UI work. Not for the app-core command/state controller it renders (see rust-architecture) or OS-level camera/cursor adapters (see platform-integration).
 ---
 
 ## Objective
@@ -13,8 +13,7 @@ screenshot review for anything that can be expressed as a state assertion.
 
 ## When to use
 
-Building settings/preview/status UI, or any interaction test for it. Not useful before Phase
-5/6 — there's no egui app yet.
+Building settings/preview/status UI, or any interaction test for it.
 
 ## When not to use
 
@@ -25,5 +24,6 @@ Don't use this skill for the underlying state machine itself; that's `app-core`
 
 State-driven UI (no hidden widget-local state that `app-core` doesn't know about);
 `egui_kittest` interaction tests for each control; accessible labels on every interactive
-element; optional visual snapshot tests with a pinned renderer version and human review on
+element; the design rules and tokens in `docs/PRODUCT.md` (reference:
+`docs/design-lab.html`); optional visual snapshot tests with a pinned renderer version and human review on
 change, not auto-accept.

@@ -1,4 +1,4 @@
-//! Settings file on disk (BEHAVIOR_SPEC R-A5, ADR-0012). The pure `app_core::Settings`
+//! Settings file on disk (BEHAVIOR.md R-A5, ADR-0012). The pure `app_core::Settings`
 //! defines the fields and validation; this module owns the file: where it lives, the TOML
 //! format, the schema version, atomic writes, and what happens when the file is bad.
 //!

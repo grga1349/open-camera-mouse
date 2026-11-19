@@ -408,18 +408,9 @@ impl<C: CameraLink> Engine<C> {
             height: 1080.0,
         };
         // Loaded settings are already repaired; fall back rather than panic regardless.
-        let mut controller = Controller::new(settings, desktop)
+        let controller = Controller::new(settings, desktop)
             .or_else(|_| Controller::new(Settings::default(), desktop))
             .expect("default settings are valid");
-        // Debug builds: `OCM_DEV_STEADY=<camera px>` tries another steady zone on the device
-        // (test drive #11) without a rebuild; 0 turns it off.
-        if cfg!(debug_assertions)
-            && let Some(v) = std::env::var("OCM_DEV_STEADY")
-                .ok()
-                .and_then(|v| v.parse::<f32>().ok())
-        {
-            controller.set_steady_zone_cam_px(v);
-        }
         let (pointer, pointer_error) = match pointer {
             Ok(p) => (Some(p), None),
             Err(e) => (None, Some(e)),

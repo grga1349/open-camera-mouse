@@ -1,4 +1,4 @@
-//! Dwell clicking (BEHAVIOR_SPEC R-K1/R-K2, ADR-0006 provisional defaults).
+//! Dwell clicking (BEHAVIOR.md R-K1/R-K2, ADR-0006 provisional defaults).
 //!
 //! Hold the pointer inside a radius around where it came to rest for `dwell_us` and one
 //! click fires. It then fires again only after the pointer leaves the radius or the

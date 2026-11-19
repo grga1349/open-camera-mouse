@@ -11,8 +11,7 @@ errors; minimal `unsafe`, and never without a written rationale comment at the u
 
 ## When to use
 
-Any time you're writing or reviewing Rust implementation code, once Phase 2 creates the
-workspace. Not useful before that — there's no Rust to apply this to yet.
+Any time you're writing or reviewing Rust implementation code.
 
 ## When not to use
 

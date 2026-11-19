@@ -1,5 +1,5 @@
 //! Carbon (dark) and Paper (light) from the approved design lab's token table
-//! (`docs/design/EGUI_FEASIBILITY.md` §"Token → egui mapping").
+//! (`docs/PRODUCT.md` §"UI design").
 //!
 //! The UI is monochrome. Exactly two hues exist and each has one helper here, so the rule is
 //! enforced in one place (Phase 6 acceptance criterion 9): [`marker_green`] for the target

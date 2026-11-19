@@ -1,5 +1,5 @@
 //! Synthetic fixture generator and metrics for tracker validation (`tracking-validation`
-//! skill, BEHAVIOR_SPEC §8).
+//! skill, corpus and metrics in docs/BEHAVIOR.md).
 //!
 //! Ground truth comes from the scene transform, never from a tracker. Scenes are defined in
 //! *reference units* (1 unit = 1 px at 640 wide), so one fixture is the same motion, as a
@@ -404,7 +404,7 @@ pub struct Sequence {
 }
 
 // ---------------------------------------------------------------------------------------
-// The corpus (BEHAVIOR_SPEC §8).
+// The corpus (docs/BEHAVIOR.md).
 
 const BG: Surface = Surface::Texture {
     seed: 11,

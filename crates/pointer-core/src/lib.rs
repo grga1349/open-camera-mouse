@@ -18,7 +18,7 @@ pub mod steady;
 use tracking_core::Point2;
 
 /// The full virtual desktop in OS screen coordinates. The origin can be negative when a
-/// monitor sits left of or above the primary one (BEHAVIOR_SPEC R-P5).
+/// monitor sits left of or above the primary one (BEHAVIOR.md R-P5).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DesktopRect {
     pub x: f32,

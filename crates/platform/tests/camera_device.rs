@@ -1,4 +1,4 @@
-//! On-device camera checks (task 0008 D3, PLATFORM_RISKS P1/P4/P5). Ignored by default: CI
+//! On-device camera checks (task 0008 D3, ARCHITECTURE.md P1/P4/P5). Ignored by default: CI
 //! has no webcam. Run on a machine with a camera:
 //!
 //! ```text

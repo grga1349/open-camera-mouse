@@ -7,14 +7,14 @@ description: Independent, adversarial review focused on correctness, failure mod
 
 Review for real failure scenarios (concrete inputs/state that break it), not style
 preferences. Report findings ranked by severity; don't mark something fixed without having
-actually re-verified it. Keep RE-sourced claims (`docs/research/RE_EVIDENCE.md`) and this
-project's own measured claims clearly distinguishable in review comments — don't let a
-VERIFIED/INFERRED label get upgraded casually.
+actually re-verified it. Keep claims taken from Camera Mouse 2018 or other
+sources distinct from this project's own measurements — don't let an inferred claim get
+upgraded to verified casually.
 
 ## When to use
 
-Before merging a non-trivial change into `rewrite/rust`, especially anything touching
-`tracking-core`/`pointer-core` correctness or crossing a crate boundary (ADR-0003).
+Before merging a non-trivial change, especially anything touching
+`tracking-core`/`pointer-core` correctness or crossing a crate boundary (ADR-0007).
 
 ## When not to use
 

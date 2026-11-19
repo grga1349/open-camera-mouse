@@ -3,7 +3,7 @@
 //! One module per OS behind `cfg`, so every target compiles in CI from day one. [`camera`]
 //! (one `nokhwa` adapter for all three OS, D3) and [`settings_store`] are the same on every
 //! OS; [`pointer`] (D4) has one backend per OS; [`hotkeys`] (D5) wraps `global-hotkey`, which
-//! has its own per-OS backends (PLATFORM_RISKS P12/P13).
+//! has its own per-OS backends (ARCHITECTURE.md P12/P13).
 
 pub mod camera;
 pub mod hotkeys;

@@ -37,7 +37,7 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       # Output is teed so a failure can be summarised as an annotation: annotations are
-      # readable through the unauthenticated API, job logs are not (TEST_DRIVE #7).
+      # readable through the unauthenticated API, job logs are not.
       - name: test (no webcam)
         shell: bash
         run: |

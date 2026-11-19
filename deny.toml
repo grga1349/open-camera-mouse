@@ -1,4 +1,4 @@
-# cargo-deny policy (docs/architecture/DEPENDENCIES.md). Run: `cargo deny check`.
+# cargo-deny policy (docs/ARCHITECTURE.md §Dependencies). Run: `cargo deny check`.
 
 [graph]
 all-features = false

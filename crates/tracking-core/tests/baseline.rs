@@ -1,7 +1,7 @@
-//! Phase 3 baseline: B-LK18 vs B-NCC on the full §8 corpus at three resolutions.
+//! Baseline: B-LK18 vs B-NCC on the full fixture corpus (docs/BEHAVIOR.md) at three resolutions.
 //!
 //! Run: `cargo test -p tracking-core --release --test baseline -- --ignored --nocapture`
-//! Prints markdown tables (copied into docs/research/TRACKING_BASELINE.md). Ignored by default
+//! Prints markdown tables. Ignored by default
 //! because the full corpus takes minutes.
 
 mod support;

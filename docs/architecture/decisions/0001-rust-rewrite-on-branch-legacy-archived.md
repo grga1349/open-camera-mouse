@@ -1,6 +1,6 @@
 # ADR-0001: Rust rewrite on `rewrite/rust`, old app archived under `legacy/`
 
-Status: Accepted
+Status: Accepted; the `legacy/` archive and seed-archive parts superseded by ADR-0022 (removed 2026-11-19)
 Date: 2026-11-11
 
 ## Context

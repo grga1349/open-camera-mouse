@@ -12,15 +12,15 @@ app uses, with fake capture/pointer adapters — never move the real OS cursor i
 
 ## When to use
 
-Any time Rust code is added or changed (Phase 2 onward). Define test cases and expected
+Any time Rust code is added or changed. Define test cases and expected
 failure behavior *before* writing the implementation where practical.
 
 ## When not to use
 
-Before Phase 2 — there's no Rust workspace yet to write `cargo test` targets against.
+Tracker fixtures and metrics: `tracking-validation`. Timing: `benchmarking`.
 
 ## Deliverables and gates
 
 A reproducible failing-test repro command and a meaningful assertion (not just "didn't
 panic") for every bug fix; `cargo test --workspace` (or `cargo nextest run` if adopted) green
-before handoff; snapshot changes reviewed explicitly, never auto-accepted.
+before reporting done; waits are counted or driven by an injected clock, never fixed sleeps; snapshot changes reviewed explicitly, never auto-accepted.

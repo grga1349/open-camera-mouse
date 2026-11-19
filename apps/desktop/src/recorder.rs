@@ -1,7 +1,7 @@
 //! Frame recorder for diagnostics and the benchmark recordings (task 0008 D7, task 0009 2b):
 //! writes the raw camera frames, the controller's events, the desktop geometry and the
 //! settings, so tracking and cursor behaviour can be replayed and measured offline
-//! (`docs/qa/RECORDING_PROTOCOL.md`).
+//! (`docs/TESTING.md` §Diagnostics: diagnosis only, never committed).
 //!
 //! Off unless the `OCM_RECORD=<folder>` environment variable is set. The folder gets:
 //! - `frame_000001.pgm`, … — raw luma (binary PGM, native camera orientation, not mirrored);

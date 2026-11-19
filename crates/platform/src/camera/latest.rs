@@ -1,7 +1,7 @@
 //! A one-item mailbox between the capture thread and the app: the newest item replaces an
 //! unread one (latest frame wins), and the reader waits with a timeout. A stalled camera
 //! therefore shows up as a timeout on the reader side, even while the capture thread is
-//! stuck inside a blocking backend call (PLATFORM_RISKS P5).
+//! stuck inside a blocking backend call (ARCHITECTURE.md P5).
 
 use std::sync::{Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};

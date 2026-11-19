@@ -7,7 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
-# Crates per ADR-0012 (docs/architecture/DEPENDENCIES.md). OS crates go per target.
+# Crates per ADR-0012 (docs/ARCHITECTURE.md §Dependencies). OS crates go per target.
 [dependencies]
 app-core.workspace = true
 nokhwa.workspace = true
