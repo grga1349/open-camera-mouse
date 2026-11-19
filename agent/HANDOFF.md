@@ -15,7 +15,7 @@ with FAILED lines / panics / `error: test failed, to rerun pass -p …`. Read it
 `curl -s https://api.github.com/repos/grga1349/open-camera-mouse/actions/runs/<run>/jobs`
 → job id → `.../check-runs/<job id>/annotations`. Script dry-run locally; not yet run in CI.
 
-**Next:** slice 1 is committed and pushed — check the CI run on it first (new step must not break green runs); on the next flake read the annotation and fix the test
+**Next:** slice 1 at `2ae2a5c`: CI 44604964205 green on 3 OS, summary step skipped (doesn't break green runs; not yet seen on a failure). On the next flake read the annotation and fix the test
 deterministically (TEST_DRIVE #7). Then slice 2: packaging ADR (tool, Windows installer
 format, app id, version, licence notices) + icon from
 `~/Downloads/Black Camera Outline with Concentric C and M.png` sized per OS — show the user

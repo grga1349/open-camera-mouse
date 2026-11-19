@@ -6,7 +6,7 @@ Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012 written; slice 1 = CI #7 
 
 Branch: `rewrite/rust`. Last code: `687a9fc`, CI 43797400148 green on 3 OS. Docs-only close
 `461d381` (run 43797804357) failed Windows `test (no webcam)` exit 1 = flake #7 again.
-Task 0012 + CI failure-annotation step (slice 1) committed and pushed 2026-11-19; first CI run with the new step not yet checked.
+Task 0012 + CI failure-annotation step (slice 1) at `2ae2a5c`: CI 44604964205 green on 3 OS, summary step skipped as intended (no flake this run).
 
 ## Milestone
 

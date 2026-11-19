@@ -90,3 +90,5 @@ with Options open.
 
 - 2026-11-19: task written; user decisions recorded above. Slice 1 started: CI test step
   surfaces failures as annotations.
+- 2026-11-19: slice 1 step verified on a green run (`2ae2a5c`, CI 44604964205, 3 OS green,
+  summary step skipped). #7 not reproduced; fix waits for the next failure's annotation.
