@@ -19,11 +19,14 @@ tempfile.workspace = true
 [lints]
 workspace = true
 
-# Packaging (ADR-0021): `cargo packager --release` from this directory. Paths are relative to
-# this file. macOS: `.app` + `.dmg`. No signing identity here: before the dmg step
+# Packaging (ADR-0021): `cargo packager --release` from this directory (needs `cargo-about`
+# 0.9.3 for the licence notices). Paths are relative to this file. Default formats are the
+# macOS ones; the release workflow (.github/workflows/release.yml) passes `-f nsis` on
+# Windows and `-f appimage` on Linux. No signing identity here: before the dmg step
 # `scripts/macos-adhoc-sign.sh` ad-hoc signs the .app with an identifier-only requirement so
-# Camera / Accessibility grants survive updates (ADR-0021 amendment). A Developer ID identity
-# (release workflow, when the secrets exist, slice 4) makes cargo-packager sign instead.
+# Camera / Accessibility grants survive updates (ADR-0021 amendment). With the secrets set, the
+# release workflow adds a Developer ID identity (macOS) or certificate thumbprint (Windows)
+# to this config before packaging, and cargo-packager signs instead.
 [package.metadata.packager]
 product-name = "Open Camera Mouse"
 identifier = "io.github.grga1349.OpenCameraMouse"
@@ -31,22 +34,37 @@ description = "Control the mouse pointer with head movement, using a webcam."
 homepage = "https://github.com/grga1349/open-camera-mouse"
 category = "Utility"
 # Not `license-file`: on macOS it turns into a click-through licence agreement on the dmg.
-resources = [{ src = "../../LICENSE", target = "LICENSE" }]
-before-packaging-command = "cargo build --release --locked -p open-camera-mouse"
+resources = [
+    { src = "../../LICENSE", target = "LICENSE" },
+    { src = "../../target/THIRD_PARTY_LICENSES.html", target = "THIRD_PARTY_LICENSES.html" },
+]
+# Build, then generate the notices (never committed, so they can't go stale). Runs under
+# `sh -c` on macOS/Linux and `cmd /C` on Windows: keep it to `&&` and forward slashes.
+before-packaging-command = "cargo build --release --locked -p open-camera-mouse && cargo about generate --locked --fail -m ../../Cargo.toml -c ../../about.toml -o ../../target/THIRD_PARTY_LICENSES.html packaging/about.hbs"
+# Exits at once unless the format is dmg. On Windows `sh` is Git for Windows' (on the
+# GitHub runner's PATH; the release workflow checks it).
 before-each-package-command = "sh ../../scripts/macos-adhoc-sign.sh"
 binaries-dir = "../../target/release"
 out-dir = "../../target/packager"
 binaries = [{ path = "open-camera-mouse", main = true }]
 formats = ["app", "dmg"]
+# PNGs: the macOS `.icns` and the Linux hicolor icons (AppImage). The `.ico` (NSIS) comes
+# last so the `.icns` builder, which reads every listed image, already has its 256 px slot.
 icons = [
     "../../assets/icon/macos/icon-16.png",
     "../../assets/icon/macos/icon-32.png",
     "../../assets/icon/macos/icon-128.png",
     "../../assets/icon/macos/icon-256.png",
     "../../assets/icon/macos/icon-512.png",
+    "../../assets/icon/windows/icon.ico",
 ]
 
 [package.metadata.packager.macos]
 minimum-system-version = "11.0"
 info-plist-path = "packaging/macos/Info.plist"
 entitlements = "packaging/macos/entitlements.plist"
+
+# Windows: per-user NSIS installer, no admin prompt (ADR-0021; P8: no uiAccess).
+[package.metadata.packager.nsis]
+installer-mode = "currentUser"
+installer-icon = "../../assets/icon/windows/icon.ico"

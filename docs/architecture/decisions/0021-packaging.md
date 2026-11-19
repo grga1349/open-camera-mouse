@@ -152,3 +152,22 @@ new crate).
 Slice 4 note: the hook also runs for the other formats (it exits at once unless
 `CARGO_PACKAGER_FORMAT=dmg`); on the Windows runner it needs `sh` (Git Bash) on `PATH`, or a
 per-platform config.
+
+## Amendment 2026-11-19 — slice 4 findings (release workflow)
+
+- `cargo-about` 0.9.3 installs no binary without `--features cli` (`cargo install` still
+  exits 0) — both workflows pass it.
+- `cargo-packager` 0.11.8 reads the signing identity (macOS) and certificate thumbprint
+  (Windows) from the config only, not the environment: the release workflow inserts them
+  into `apps/desktop/Cargo.toml` when the secrets exist. Notarization credentials
+  (`APPLE_ID`/`APPLE_PASSWORD`/`APPLE_TEAM_ID`) are read from the environment; without them
+  it only warns.
+- No `.ico` is generated from PNGs: NSIS uses the first `.ico` in `icons` →
+  `assets/icon/windows/icon.ico` from `render-icon.py`. The `.icns` builder decodes every
+  listed icon, the `.ico` too, and image-rs rejects RGB PNG frames inside an ICO: the frames
+  are RGBA.
+- The NSIS install-mode key is `installer-mode` (not `install-mode`).
+- Hooks run under `cmd /C` on Windows; `sh` there is Git for Windows' (checked by a workflow
+  step).
+- AppImage: `linuxdeploy` runs with `APPIMAGE_EXTRACT_AND_RUN=1` (no FUSE on the runner);
+  built on ubuntu-22.04 for an older glibc floor.

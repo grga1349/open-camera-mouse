@@ -8,6 +8,7 @@ redrawn as clean geometry so small sizes stay sharp. Line weight is 1.6x the sou
 Writes into assets/icon/:
   png/icon-<N>.png        full-bleed square (Windows .ico, Linux, eframe window icon)
   macos/icon-<N>.png      Apple grid: 824/1024 rounded square, transparent margin (.icns)
+  windows/icon.ico        full-bleed art at 16-256 px, each size drawn, not scaled (NSIS)
 
 Dev tool only (not run in CI or the build): needs Python 3 + Pillow, e.g.
   python3 -m venv /tmp/venv && /tmp/venv/bin/pip install pillow==11.3.0
@@ -25,6 +26,7 @@ ART = (279, 351, 976, 886)  # source art bounding box
 FILL = 0.84  # art width / tile width
 SS = 8  # supersampling factor
 SIZES = [16, 24, 32, 48, 64, 128, 256, 512, 1024]
+ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]  # the .ico format stops at 256
 OUT = Path(__file__).resolve().parent.parent / "assets" / "icon"
 
 
@@ -99,7 +101,11 @@ def main():
     for s in SIZES:
         art(s).save(OUT / "png" / f"icon-{s}.png", optimize=True)
         macos(s).save(OUT / "macos" / f"icon-{s}.png", optimize=True)
-    print(f"wrote {len(SIZES) * 2} PNGs to {OUT}")
+    (OUT / "windows").mkdir(parents=True, exist_ok=True)
+    ico = [art(s).convert("RGBA") for s in ICO_SIZES]  # image-rs (cargo-packager) needs RGBA
+    ico[-1].save(OUT / "windows" / "icon.ico", sizes=[(s, s) for s in ICO_SIZES],
+                 append_images=ico[:-1])
+    print(f"wrote {len(SIZES) * 2} PNGs and icon.ico to {OUT}")
 
 
 if __name__ == "__main__":

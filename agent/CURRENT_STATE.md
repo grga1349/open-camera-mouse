@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012; slices 1–3 done, slice 4 next)
+Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012; slices 1–4 done, cleanup next)
 
 ## Branch / commit
 
@@ -82,7 +82,10 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
   (`[package.metadata.packager]`, `packaging/macos/{Info,entitlements}.plist`,
   `scripts/macos-adhoc-sign.sh` = ad-hoc signature with an identifier-only requirement so
   grants survive updates). App/dock icon set at runtime from the embedded PNG
-  (`app::app_icon`). macOS pointer access = `AXIsProcessTrusted || CGPreflightPostEventAccess`
+  (`app::app_icon`). Release (slice 4): `.github/workflows/release.yml` (tag → draft
+  release + SHA256SUMS; `workflow_dispatch` = dry run), notices by `cargo-about` 0.9.3
+  (`about.toml`, `apps/desktop/packaging/about.hbs`, needs `--features cli`), Windows
+  `assets/icon/windows/icon.ico`. macOS pointer access = `AXIsProcessTrusted || CGPreflightPostEventAccess`
   (preflight is stale within a run, measured).
 - Dev profile: deps opt 2, `app-core`/`pointer-core`/`platform` opt 3, `tracking-core` 3
   (root `Cargo.toml`). Benches: `app-core --bench frame`, `platform --bench decode`.
@@ -93,13 +96,14 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## Immediate next action
 
-(User 2026-11-19: no Win/Linux devices → slices 5–6 deferred, slice 8 dropped; after slice 4
-comes cleanup incl. removing `legacy/`, then the user merges to `main` — see task 0012.)
-Slice 4 of task 0012: release workflow (tag → macOS arm64 dmg, Windows NSIS, Linux tar.gz +
-AppImage → draft GitHub Release with checksums; `cargo-about` notices in every package;
-notarization / Windows signing steps present but skipped without secrets). The
-`before-each-package-command` hook needs `sh` on the Windows runner (ADR-0021 amendment).
-Windows/Linux icons: config currently lists the macOS-grid PNGs only.
+Slice 4 done (release workflow, uncommitted until the user says so; see task 0012 Progress).
+Next: **cleanup** (task 0012 "User decisions … after slice 3"): close Phase 7 (slices 5–8
+deferred/dropped with reasons), Rust README (build/run/package), tasks/ tidy (ask how),
+remove rewrite tooling item by item, remove `legacy/` via ADR + AGENTS.md/CLAUDE.md update.
+Then the user merges `rewrite/rust` → `main` (conflict: `main`'s legacy Go
+`.github/workflows/release.yml` → take the Rust one), tags `v0.4.0` on `main`, and the
+release workflow builds the draft release (user decision: no separate dry run). The
+Windows/Linux packaging steps have never run: watch that first release run.
 Still open from slice 1: on the next `test (no webcam)` failure read
 `https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
 and make the named test deterministic (#7).

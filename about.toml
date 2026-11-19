@@ -1,0 +1,30 @@
+# cargo-about (ADR-0021): third-party licence notices shipped in every package.
+# Generated at packaging time (apps/desktop/Cargo.toml `before-packaging-command`, and the CI
+# `deny` job as a check), never committed. `accepted` mirrors the `deny.toml` allow list —
+# change both together.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "ISC",
+    "0BSD",
+    "Zlib",
+    "Unlicense",
+    "Unicode-3.0",
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+]
+
+# The released targets (ADR-0021): dependencies of other targets aren't shipped.
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+]
+
+# Only what ends up in the binary.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true

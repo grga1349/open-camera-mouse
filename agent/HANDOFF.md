@@ -3,28 +3,21 @@
 Keep this short and current. Overwrite (don't append history) each time you hand off —
 git history is the log if you need the past. See `agent/WORKFLOW.md` for when to update this.
 
-## As of 2026-11-19 (Phase 7 ACTIVE, task 0012, slice 3 done)
+## As of 2026-11-19 (Phase 7 ACTIVE, task 0012, slice 4 done)
 
-**Branch:** `rewrite/rust`. Last code `2688256` (slice 3): CI 44616244159 green on 3 OS.
+**Branch:** `rewrite/rust`. Last pushed code `2688256` (slice 3, CI green on 3 OS).
 
-**This session:** slice 3 — macOS `.app` + dmg (`cd apps/desktop && cargo packager
---release`; `cargo-packager` 0.11.8 installed locally). Version 0.4.0, Info.plist with
-`NSCameraUsageDescription`, camera entitlement (hardened runtime is forced), runtime app/dock
-icon (`app::app_icon`, test), `LICENSE` as resource. On-device bug found + fixed: ad-hoc
-grants were keyed to the build's cdhash (lost every rebuild; System Settings toggle can't
-repair; tccd "Failed to match existing code requirement") → `scripts/macos-adhoc-sign.sh`
-signs with `designated => identifier "io.github.grga1349.OpenCameraMouse"`; and
-`CGPreflightPostEventAccess` is stale within a run → access = `AXIsProcessTrusted || preflight`.
-ADR-0021 amendment; MANUAL_QA rows 19, 20, 22 pass. Diagnose TCC with
-`/usr/bin/log show --predicate 'process == "tccd"'` (zsh `log` is a builtin).
+**This session:** slice 4 — `.github/workflows/release.yml` (tag `v*` → macOS arm64 dmg,
+Windows NSIS, Linux AppImage + tar.gz → draft GitHub Release with `SHA256SUMS`; signing
+hooks behind secrets), `cargo-about` notices shipped in every package (`about.toml`,
+`apps/desktop/packaging/about.hbs`, CI `deny` job checks them), Windows `.ico`, CI also on
+`main`. macOS packaging verified locally (`cargo packager --release`; `cargo-about` 0.9.3
+installed with `--features cli`). Findings in the ADR-0021 slice-4 amendment.
 
-**Next:** slice 4 — release workflow (see CURRENT_STATE "Immediate next action"). Then
-cleanup (close Phase 7 with slices 5–8 deferred/dropped, Rust README + doc tidy, tasks/
-cleanup (ask how: archive/condense), remove the rewrite tooling (candidate list in task 0012
-"User decisions … after slice 3", confirm item by item), remove
-`legacy/` via ADR + AGENTS.md update — user decision 2026-11-19), then the **user** merges to
-`main`. No Windows/Linux machine exists: CI-built packages only. #7: read the annotation on
-the next failure.
+**Next:** cleanup (see CURRENT_STATE "Immediate next action"), then the **user** merges to
+`main`, tags `v0.4.0`; the release run is the first time the Windows/Linux packaging runs
+(user: no separate dry run) — check its jobs via the API and fix what fails. Merge conflict
+expected on `.github/workflows/release.yml` (legacy Go one on `main`): take the Rust one.
 
 **User decisions (Phase 7):** macOS Apple Silicon only, ad-hoc signed dmg, notarization hook
 behind secrets (off); Windows unsigned NSIS per-user installer; Linux tar.gz + AppImage, X11

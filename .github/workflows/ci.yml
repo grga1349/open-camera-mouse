@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [rewrite/rust]
+    branches: [main, rewrite/rust]
   pull_request:
-    branches: [rewrite/rust]
+    branches: [main, rewrite/rust]
   workflow_dispatch:
 
 env:
@@ -68,3 +68,13 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check licenses bans sources
+      # The release packages ship these notices (ADR-0021); a licence cargo-about can't
+      # resolve should fail here, not in the release workflow.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: about
+      - name: third-party notices generate
+        run: |
+          cargo install cargo-about --version 0.9.3 --locked --features cli
+          cargo about generate --locked --fail -c about.toml \
+            -o THIRD_PARTY_LICENSES.html apps/desktop/packaging/about.hbs
