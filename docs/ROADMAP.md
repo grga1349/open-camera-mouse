@@ -21,7 +21,7 @@ the phase.
 | 6b | Test drive (ADR-0013) | DONE | task 0009; `docs/qa/TEST_DRIVE.md` #1–#6; ADR-0014…0018 |
 | 6c | Tuning round (ADR-0019) | DONE | task 0010; `docs/qa/TEST_DRIVE.md` #7–#11; closed into 6d (ADR-0020) |
 | 6d | Calibrated pointer behaviour (ADR-0020) | DONE | task 0011; `docs/qa/TEST_DRIVE.md` #12–#14; `docs/research/ZONE_VARIANTS.md`; ADR-0014/-0015/-0017 amendments; user: ready for Phase 7 (2026-11-16) |
-| 7 | Multiplatform / release | NEXT | carry-over: MANUAL_QA rows 19–20 (`.app` permissions); TEST_DRIVE #7 CI flake; Windows/X11 primary-monitor + pointer on device |
+| 7 | Multiplatform / release | ACTIVE | task 0012; carry-over: MANUAL_QA rows 19–20 (`.app` permissions); TEST_DRIVE #7 CI flake; Windows/X11 primary-monitor + pointer on device |
 | 8 | Hardening / product readiness | — | carry-over: MANUAL_QA row 21 (reduced motion); `OCM_RECORD` threshold re-measurement (re-detection arming, R-P4, dwell radius) |
 
 ## Standing inputs for every phase from 2 on

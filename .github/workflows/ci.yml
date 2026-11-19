@@ -36,8 +36,25 @@ jobs:
         run: cargo fmt --all --check
       - name: clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      # Output is teed so a failure can be summarised as an annotation: annotations are
+      # readable through the unauthenticated API, job logs are not (TEST_DRIVE #7).
       - name: test (no webcam)
-        run: cargo test --workspace --locked
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --locked --no-fail-fast 2>&1 | tee test.log
+      - name: summarise test failures
+        if: failure()
+        shell: bash
+        run: |
+          [ -f test.log ] || exit 0
+          # "error: test failed, to rerun pass `-p …`" names the failing test binary.
+          summary=$(grep -E "\.\.\. FAILED$|^error|panicked at|process didn't exit|STATUS_|signal:" test.log | tail -40)
+          [ -n "$summary" ] || summary=$(tail -40 test.log)
+          summary=${summary//'%'/'%25'}
+          summary=${summary//$'\r'/}
+          summary=${summary//$'\n'/'%0A'}
+          echo "::error title=test (no webcam) failed::$summary"
       - name: core crate boundary
         if: runner.os == 'Linux'
         shell: bash

@@ -9,7 +9,7 @@ not completion evidence, passing verification commands are.
 
 | ID | Title | Status |
 |---|---|---|
-| — | Phase 7 — multiplatform / release | NEXT — task file not written yet; the coordinator writes it from `docs/ROADMAP.md` |
+| 0012 | Phase 7 — multiplatform / release | ACTIVE — task written 2026-11-19 (user decisions: macOS arm64 ad-hoc dmg, Windows unsigned installer, Linux tar.gz + AppImage X11, user's icon); slice 1 (CI #7 annotations) in review |
 
 ## Done
 

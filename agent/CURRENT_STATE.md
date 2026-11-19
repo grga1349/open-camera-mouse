@@ -1,20 +1,20 @@
 # Current state
 
-Last updated: 2026-11-16 (Phase 6d DONE — user: ready for Phase 7; next = start Phase 7, multiplatform / release)
+Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012 written; slice 1 = CI #7 failure annotations)
 
 ## Branch / commit
 
-Branch: `rewrite/rust`. Last code: `687a9fc` (default gain 20, Main monitor = OS primary). CI run
-43797400148 on it was in progress at close — confirm it is green (Linux RandR change is
-unchecked locally). Flaky CI (#7, deferred to Phase 7): macOS `test (no webcam)` exit 101
-(run 43773727473), Windows exit 1 (run 43779616732).
+Branch: `rewrite/rust`. Last code: `687a9fc`, CI 43797400148 green on 3 OS. Docs-only close
+`461d381` (run 43797804357) failed Windows `test (no webcam)` exit 1 = flake #7 again.
+Task 0012 + CI failure-annotation step (slice 1) committed and pushed 2026-11-19; first CI run with the new step not yet checked.
 
 ## Milestone
 
-Phases 0–6, 6b, 6c and **6d DONE** (6d task 0011 closed 2026-11-16, user: ready for Phase 7;
-steps 3–4 of 6d dropped as obsolete). **Phase 7 — multiplatform / release is NEXT**; its task
-file is not written yet (the starting coordinator writes it from `docs/ROADMAP.md`).
-Pointer defaults now: gain 20/20, smoothing 0.20, steady zone automatic 0.2 cam px with the
+Phases 0–6, 6b, 6c, 6d DONE. **Phase 7 ACTIVE: `tasks/active/0012-phase-7-multiplatform-release.md`**
+(8 slices; user decisions 2026-11-19: macOS arm64 only, ad-hoc dmg, notarization hook off;
+Windows unsigned + installer; Linux tar.gz + AppImage, X11; GitHub Releases; app icon = user's
+yellow camera/CM image, sized per OS in slice 2).
+Pointer defaults: gain 20/20, smoothing 0.20, steady zone automatic 0.2 cam px with the
 drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## What exists now
@@ -84,10 +84,9 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## Immediate next action
 
-Start Phase 7 (`docs/ROADMAP.md` §7): write task 0012 from the roadmap's deliverables and gate,
-with carry-overs: MANUAL_QA rows 19–20 (`.app` permissions), TEST_DRIVE #7 CI flake, Windows/X11
-pointer + primary-monitor detection on device, camera on external webcams (P1), Wayland limits.
-Confirm CI on `687a9fc` first.
+Slice 1 of task 0012: after the CI step is pushed, wait for a `test (no webcam)` failure,
+read `https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
+for the failing test, make it deterministic. Otherwise slice 2 (packaging ADR + icon).
 
 ## Open risks
 
