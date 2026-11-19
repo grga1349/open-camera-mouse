@@ -92,3 +92,10 @@ with Options open.
   surfaces failures as annotations.
 - 2026-11-19: slice 1 step verified on a green run (`2ae2a5c`, CI 44604964205, 3 OS green,
   summary step skipped). #7 not reproduced; fix waits for the next failure's annotation.
+- 2026-11-19: slice 2 done — ADR-0021 accepted: `cargo-packager` 0.11.8 (app+dmg, NSIS
+  per-user, AppImage; tar.gz by a workflow step), `cargo-about` 0.9.3 →
+  `THIRD_PARTY_LICENSES.html` in every package, id `io.github.grga1349.OpenCameraMouse`,
+  version 0.4.0 (workspace bump in slice 3). Icon redrawn by `scripts/render-icon.py` at 1.6×
+  line weight (user's pick), PNGs in `assets/icon/{png,macos}/`, original in
+  `assets/icon/source.png`. Next: slice 3 (macOS `.app` + dmg), verifying the INFERRED
+  `cargo-packager` facts (icns conversion, ad-hoc `-` signing).

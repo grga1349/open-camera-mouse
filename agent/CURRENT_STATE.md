@@ -1,6 +1,6 @@
 # Current state
 
-Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012 written; slice 1 = CI #7 failure annotations)
+Last updated: 2026-11-19 (Phase 7 ACTIVE — task 0012; slices 1–2 done, slice 3 next)
 
 ## Branch / commit
 
@@ -75,6 +75,9 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
   for tests and the debug-only `OCM_DEV_STEADY=<cam px>` (engine.rs). Options tabs: Pointer ·
   Clicking · Camera · Screen · General. Rest test `the_cursor_does_not_move_at_rest_*` covers
   gains 1–60 in four parallel parts (synthetic, *not yet calibrated*).
+- Packaging (ADR-0021, slice 2): icon redrawn by `scripts/render-icon.py` (Python + Pillow,
+  dev only) → `assets/icon/png/` (full-bleed) and `assets/icon/macos/` (Apple grid);
+  original `assets/icon/source.png`. Nothing wired into the build yet.
 - Dev profile: deps opt 2, `app-core`/`pointer-core`/`platform` opt 3, `tracking-core` 3
   (root `Cargo.toml`). Benches: `app-core --bench frame`, `platform --bench decode`.
 
@@ -84,9 +87,13 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## Immediate next action
 
-Slice 1 of task 0012: after the CI step is pushed, wait for a `test (no webcam)` failure,
-read `https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
-for the failing test, make it deterministic. Otherwise slice 2 (packaging ADR + icon).
+Slice 3 of task 0012: macOS `.app` + dmg per ADR-0021 (`cargo-packager` 0.11.8, id
+`io.github.grga1349.OpenCameraMouse`, workspace version → 0.4.0, icon PNGs in
+`assets/icon/macos/`, `NSCameraUsageDescription`, ad-hoc signing), verify the INFERRED tool
+facts, MANUAL_QA rows 19–20 on the bundle. Release build: ask the user first.
+Still open from slice 1: on the next `test (no webcam)` failure read
+`https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
+and make the named test deterministic (#7).
 
 ## Open risks
 
