@@ -96,7 +96,7 @@ drift capped at the limits, Main monitor = OS primary (`MainMonitor::Primary`).
 
 ## Immediate next action
 
-Slice 4 done (release workflow, uncommitted until the user says so; see task 0012 Progress).
+Slice 4 done (`79fe7ad`, release workflow; see task 0012 Progress). Cleanup checklist: agent/HANDOFF.md.
 Next: **cleanup** (task 0012 "User decisions … after slice 3"): close Phase 7 (slices 5–8
 deferred/dropped with reasons), Rust README (build/run/package), tasks/ tidy (ask how),
 remove rewrite tooling item by item, remove `legacy/` via ADR + AGENTS.md/CLAUDE.md update.
