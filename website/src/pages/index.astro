@@ -5,10 +5,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Hero from "../components/Hero.astro";
 import Section from "../components/Section.astro";
 import ShowcasePlaceholder from "../components/ShowcasePlaceholder.astro";
+import DownloadEnhancer from "../components/DownloadEnhancer.astro";
 import { REPO_URL } from "../lib/url";
 import { PLATFORMS } from "../lib/platforms";
+import { latestRelease } from "../lib/latest-release";
 
 const RELEASES_URL = `${REPO_URL}/releases/latest`;
+// Read at build time; null when the API wasn't reachable (cards then link the Releases page).
+const release = await latestRelease();
 
 const steps = [
   {
@@ -55,37 +59,76 @@ const steps = [
   <Section
     id="download"
     title="Download"
-    lead="Pick the file for your system from the latest release. Installation steps and permissions are in the README until the manual is online."
+    lead={release
+      ? `Version ${release.version}. Pick the file for your system. Installation steps and permissions are in the README until the manual is online.`
+      : "Pick the file for your system from the latest release. Installation steps and permissions are in the README until the manual is online."}
   >
+    <p data-detect="unsupported" hidden class="mb-8 max-w-prose border-l-4 border-text pl-4">
+      Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device. Download
+      it on the computer you want to use it with.
+    </p>
     <ul class="grid gap-6 md:grid-cols-3">
       {
-        PLATFORMS.map((p) => (
-          <li class="flex flex-col rounded-frame border border-line bg-surface p-6">
-            <h3 class="text-xl font-semibold">{p.name}</h3>
-            <p class="mt-1 text-muted">{p.requirement}</p>
-            <p class="mt-4 text-sm">{p.assets.map((a) => a.label).join(" or ")}</p>
-            <ul class="mt-2 list-disc pl-5 text-sm text-muted">
-              {p.notes.map((n) => (
-                <li>{n}</li>
-              ))}
-            </ul>
-            <p class="mt-auto pt-6">
-              <a href={`${REPO_URL}#${p.readmeAnchor}`} class="inline-flex min-h-11 items-center">
-                {p.name} install steps
-              </a>
-            </p>
-          </li>
-        ))
+        PLATFORMS.map((p) => {
+          const files = release?.downloads[p.id] ?? [];
+          return (
+            <li class="flex flex-col rounded-frame border border-line bg-surface p-6">
+              <p data-detect={p.id} hidden class="mb-2 text-sm tracking-wide uppercase">
+                Your system
+              </p>
+              <h3 class="text-xl font-semibold">{p.name}</h3>
+              <p class="mt-1 text-muted">{p.requirement}</p>
+              {files.length === 0 && (
+                <p class="mt-4 text-sm">{p.assets.map((a) => a.label).join(" or ")}</p>
+              )}
+              <ul class="mt-4 list-disc pl-5 text-sm text-muted">
+                {p.notes.map((n) => (
+                  <li>{n}</li>
+                ))}
+              </ul>
+              {files.length > 0 && (
+                <ul class="mt-6 flex flex-col gap-3">
+                  {files.map((f) => (
+                    <li>
+                      <a
+                        href={f.url}
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-widget border-2 border-text px-4 text-center font-semibold no-underline"
+                      >
+                        <span class="sr-only">Download {p.name} </span>
+                        {f.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p class="mt-auto pt-6">
+                <a href={`${REPO_URL}#${p.readmeAnchor}`} class="inline-flex min-h-11 items-center">
+                  {p.name} install steps
+                </a>
+              </p>
+            </li>
+          );
+        })
       }
     </ul>
-    <p class="mt-8">
-      <a
-        href={RELEASES_URL}
-        class="inline-flex min-h-12 items-center rounded-widget bg-yellow px-6 text-lg font-semibold text-on-yellow no-underline"
-      >
-        Go to the latest release
-      </a>
-    </p>
+    {
+      release ? (
+        <p class="mt-8">
+          <a href={release.pageUrl} class="inline-flex min-h-11 items-center">
+            Release notes, all files and checksums for version {release.version}
+          </a>
+        </p>
+      ) : (
+        <p class="mt-8">
+          <a
+            href={RELEASES_URL}
+            class="inline-flex min-h-12 items-center rounded-widget bg-yellow px-6 text-lg font-semibold text-on-yellow no-underline"
+          >
+            Go to the latest release
+          </a>
+        </p>
+      )
+    }
   </Section>
 
   <Section id="open-source" title="Open source">
@@ -100,4 +143,6 @@ const steps = [
       </li>
     </ul>
   </Section>
+
+  <DownloadEnhancer />
 </BaseLayout>

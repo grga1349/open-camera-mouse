@@ -122,6 +122,18 @@ out), one sentence on what it does and that it runs locally, then the primary ac
 button, yellow text) and a secondary outlined one. Inside the yellow, text and the focus
 outline are black. Copy is a draft until the user approves it.
 
+## Downloads
+
+Each platform card (`#download`) shows its requirement, its notes, and one outlined button
+per file (`border-2 border-text`, the file type as the label, "Download <OS>" for screen
+readers), then the install-steps link; under the cards, a text link to the release's notes,
+files and checksums. The hero's black button is the one primary download. With JavaScript,
+the visitor's card gets a "Your system" label (text, not colour) and the hero button reads
+"Download for <OS>" with the version and requirement under it plus an "Other systems" link;
+on a phone, tablet or ChromeOS both say Open Camera Mouse runs on macOS, Windows and Linux
+computers. The CPU isn't guessed, so the requirement (e.g. Apple Silicon) is always shown
+next to a direct download.
+
 ## Angular language
 
 Sharp, not rounded, and calm: straight edges and shallow, symmetric angles (the hero's V)
@@ -147,7 +159,8 @@ Homepage sections and their purpose: `WEBSITE.md` "Homepage"; status in
 
 - No claims the docs don't support: no invented features, compatibility, release dates,
   download numbers, testimonials, or medical/certification claims (a PRODUCT non-goal).
-  Link to `releases/latest`, never to a hard-coded version.
+  Versions and file links come from the latest release at build time, never typed by hand;
+  without release data, link to `releases/latest`.
 - The showcase is a real recording of the app; never a mock-up or simulated tracking, and
   never a browser-based webcam tracker.
 - No web fonts, icon fonts or icon libraries (inline SVG if an icon is needed), no

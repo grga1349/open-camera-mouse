@@ -1,8 +1,21 @@
 ---
 // Yellow angular hero (WEBSITE_DESIGN.md "Header and hero"), continuing the yellow header. Copy is a
-// first draft, not approved. The primary action goes to the on-page download section until
-// the OS-aware download (WEBSITE_ROADMAP.md Phase 4) exists; it works without JavaScript.
+// first draft, not approved. The primary action goes to the on-page download section; with
+// JavaScript, DownloadEnhancer.astro points it at the visitor's file instead and swaps the
+// note under it (WEBSITE_DESIGN.md "Downloads").
 import { url } from "../lib/url";
+import { PLATFORMS } from "../lib/platforms";
+import { latestRelease } from "../lib/latest-release";
+
+const release = await latestRelease();
+// Platforms the hero can download directly: the preferred (first) file of each.
+const direct = release
+  ? PLATFORMS.flatMap((p) => {
+      const file = release.downloads[p.id][0];
+      return file ? [{ platform: p, url: file.url }] : [];
+    })
+  : [];
+const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url, name: d.platform.name }]));
 ---
 
 <section aria-labelledby="hero-title" class="on-brand angular-bottom relative overflow-hidden">
@@ -25,7 +38,9 @@ import { url } from "../lib/url";
     <ul class="animate-rise-in mt-8 flex flex-wrap gap-4 [animation-delay:240ms]">
       <li>
         <a
+          id="hero-download"
           href={url("#download")}
+          data-downloads={JSON.stringify(links)}
           class="inline-flex min-h-12 items-center rounded-widget bg-on-brand px-6 text-lg font-semibold text-brand no-underline transition-transform hover:-translate-y-0.5"
         >
           Download
@@ -40,5 +55,18 @@ import { url } from "../lib/url";
         </a>
       </li>
     </ul>
+    <div class="animate-rise-in mt-4 text-sm [animation-delay:240ms]">
+      {release && <p data-detect-default>Version {release.version} for macOS, Windows and Linux.</p>}
+      {
+        direct.map(({ platform }) => (
+          <p data-detect={platform.id} hidden>
+            Version {release!.version}, for {platform.requirement}. <a href={url("#download")}>Other systems</a>
+          </p>
+        ))
+      }
+      <p data-detect="unsupported" hidden>
+        Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device.
+      </p>
+    </div>
   </div>
 </section>

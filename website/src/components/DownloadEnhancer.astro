@@ -1,0 +1,47 @@
+---
+// Progressive enhancement for the downloads (WEBSITE_DESIGN.md "Downloads"). Everything it
+// changes already works without it: the hero button goes to #download, every card links
+// its files. With JavaScript it guesses the visitor's operating system (never the CPU) and
+// then
+// - points the hero button at that system's file (`#hero-download`, `data-downloads`),
+// - shows the elements marked `data-detect="<macos|windows|linux|unsupported>"` for the
+//   result and hides a `data-detect-default` sibling when one of them replaced it.
+// No request leaves the browser. Include once per page.
+---
+
+<script>
+  import { detectPlatform } from "../lib/detect-platform";
+
+  type Links = Record<string, { url: string; name: string } | undefined>;
+
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const detected = detectPlatform({
+    userAgent: nav.userAgent,
+    uaPlatform: nav.userAgentData?.platform,
+    maxTouchPoints: nav.maxTouchPoints,
+  });
+
+  const hero = document.getElementById("hero-download");
+  let key: string = detected.kind;
+  if (detected.kind === "supported") {
+    key = detected.id;
+    let links: Links = {};
+    try {
+      links = JSON.parse(hero?.dataset.downloads ?? "{}") as Links;
+    } catch {
+      // Malformed data: leave the button pointing at #download.
+    }
+    const link = links[detected.id];
+    if (hero instanceof HTMLAnchorElement && link) {
+      hero.href = link.url;
+      hero.textContent = `Download for ${link.name}`;
+    }
+  }
+
+  for (const el of document.querySelectorAll<HTMLElement>("[data-detect]")) {
+    el.hidden = el.dataset.detect !== key;
+  }
+  for (const el of document.querySelectorAll<HTMLElement>("[data-detect-default]")) {
+    el.hidden = el.parentElement?.querySelector(`:scope > [data-detect="${key}"]`) != null;
+  }
+</script>

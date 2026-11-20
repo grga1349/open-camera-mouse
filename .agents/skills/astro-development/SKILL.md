@@ -47,6 +47,9 @@ Brand, layout and token choices → `website-design`. Rust/egui UI → `egui-dev
   `bg-yellow text-on-yellow`, `rounded-frame`/`rounded-widget`). New tokens go in
   `@theme` and in `docs/WEBSITE_DESIGN.md` together. Prefer utilities; use `@layer base`
   for element defaults, not ad-hoc `<style>` per page.
+- **Build-time data:** external data (the latest release) is read in the frontmatter at
+  build time through `src/lib/` and baked into HTML; the visitor's browser makes no
+  third-party request (ADR-0023 amendment 2). Secrets/tokens stay in CI steps, not the build.
 - **JavaScript:** ship none for static UI. Use native elements first (`<details>`, `<dialog>`,
   anchors, `:target`, CSS). When behaviour really needs JS, use a plain `<script>` in the
   component (Astro bundles it as a module), progressive enhancement only: the content and
@@ -62,6 +65,7 @@ From `website/` (Bun ≥ 1.3, version pinned by `packageManager` in `package.jso
 ```sh
 bun install --frozen-lockfile   # lockfile must not change unless deps changed on purpose
 bun run check                   # astro check: types + .astro diagnostics, 0 errors/warnings
+bun run test                    # bun test for src/lib/*.test.ts (excluded from astro check)
 bun run build                   # astro build + scripts/check-paths.mjs (base path, dead links)
 bun run preview                 # optional: http://localhost:4321/open-camera-mouse/
 ```

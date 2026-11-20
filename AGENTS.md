@@ -92,6 +92,7 @@ new packages need an ADR-0023 amendment, and site copy may only state what `READ
 ```sh
 bun install --frozen-lockfile
 bun run check                          # astro check, 0 errors/warnings
+bun run test                           # bun test (src/lib/*.test.ts)
 bun run build                          # astro build + base-path/dead-link check of dist/
 ```
 

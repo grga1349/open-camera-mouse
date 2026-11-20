@@ -73,4 +73,25 @@ At the user's request (website foundation brief):
 - **Tests** for website logic use `bun test` (part of Bun), so no package is added.
 - **Open:** the download button would make the first third-party request
   (`api.github.com`, from the visitor's browser). Decide and record it here before Phase 4
-  ships.
+  ships. → Decided in amendment 2.
+
+## Amendment 2 (2026-11-20): release data at build time
+
+The user chose the build-time option over a request from the visitor's browser to
+`api.github.com` (and over no release data at all).
+
+- **No third-party request from visitors.** The site still makes none. The latest release
+  (version, `browser_download_url` per platform) is read once per build and written into the
+  static HTML. OS detection runs in the browser on `navigator` only and sends nothing.
+- **Fetch in CI, outside the build.** A `website.yml` step runs
+  `gh api repos/<repo>/releases/latest` with the workflow's read-only `GITHUB_TOKEN` and
+  writes `website/src/data/latest-release.json` (gitignored); `src/lib/latest-release.ts`
+  reads it via `import.meta.glob`. So the token never reaches the build's npm dependencies.
+  Without the file (local builds, or the step failed) it fetches anonymously; any failure
+  leaves the page linking to the Releases page, as before.
+- **Staleness.** Publishing a release (`release: published`) re-runs the workflow: a job
+  with `actions: write` dispatches it on `main`, because a release event's ref is the tag,
+  which the `github-pages` environment rule (`main` only) won't deploy. Until Pages is
+  enabled this job is skipped (`WEBSITE_DEPLOY`).
+- Pure logic (`release.ts`, `detect-platform.ts`) is tested with `bun test`; test files are
+  excluded from `astro check` because typing `bun:test` would need `@types/bun`, a new package.

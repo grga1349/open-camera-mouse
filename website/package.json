@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "check": "astro check",
+    "test": "bun test src",
     "build": "astro build && bun scripts/check-paths.mjs",
     "preview": "astro preview"
   },

@@ -2,6 +2,8 @@
 # deploys to GitHub Pages only from main (push or manual run), and only once the repository variable
 # WEBSITE_DEPLOY is set to "true" (after Pages is enabled with source "GitHub Actions").
 # No secrets: the deploy job uses the built-in OIDC token. The Rust CI ignores these paths.
+# The download links are baked in at build time from the latest release (ADR-0023
+# amendment 2), so publishing a release re-runs this workflow on main.
 name: Website
 
 on:
@@ -15,6 +17,10 @@ on:
       - 'website/**'
       - '.github/workflows/website.yml'
   workflow_dispatch:
+  # A release event runs on the tag ref, which the github-pages environment won't deploy
+  # from; the `rebuild` job re-dispatches this workflow on main instead.
+  release:
+    types: [published]
 
 # Least privilege by default; only the deploy job gets more.
 permissions:
@@ -28,8 +34,21 @@ env:
   ASTRO_TELEMETRY_DISABLED: '1'
 
 jobs:
+  rebuild:
+    name: rebuild for the new release
+    if: github.event_name == 'release' && vars.WEBSITE_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      # workflow_dispatch is one of the events GITHUB_TOKEN may trigger.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run website.yml --repo "$GITHUB_REPOSITORY" --ref main
+
   build:
     name: check and build
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,6 +65,20 @@ jobs:
         run: bun install --frozen-lockfile
       - name: astro check
         run: bun run check
+      - name: unit tests
+        run: bun run test
+      # The build reads this file (src/lib/latest-release.ts). Fetched here, not in the
+      # build, so the token never reaches the site's dependencies. On failure the site
+      # falls back to an anonymous fetch, then to links to the Releases page.
+      - name: latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p src/data
+          if ! gh api "repos/$GITHUB_REPOSITORY/releases/latest" > src/data/latest-release.json; then
+            rm -f src/data/latest-release.json
+            echo "::warning::Couldn't read the latest release; the build tries without a token."
+          fi
       # Includes scripts/check-paths.mjs: every internal URL stays under /open-camera-mouse/.
       - name: build
         run: bun run build

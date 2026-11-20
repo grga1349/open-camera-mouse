@@ -4,8 +4,10 @@
  * the OS-aware download (WEBSITE_ROADMAP.md Phase 4) will match against. Requirements and
  * caveats come from README.md ("Install", "Known limitations"); keep them in sync.
  */
+export type PlatformId = "macos" | "windows" | "linux";
+
 export interface Platform {
-  id: "macos" | "windows" | "linux";
+  id: PlatformId;
   name: string;
   /** Who the build is for, in one line. */
   requirement: string;

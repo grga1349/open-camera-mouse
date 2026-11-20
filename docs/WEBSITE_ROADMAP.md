@@ -51,14 +51,15 @@ open source. Open:
 - [ ] Engineering: independent Rust implementation, tracking and stability, privacy, testing
 - [ ] Open source: contributing, documentation links
 
-## Phase 4 — Downloads  (next)
+## Phase 4 — Downloads  (mostly done)
 
-- [~] Platform data (`src/lib/platforms.ts`: asset suffixes from `release.yml`, notes from README)
-- [ ] Pure TS module: OS detection (no CPU-architecture guessing), asset matching by suffix, unit tests with `bun test` (built in, no new package)
-- [ ] Client script: fetch `releases/latest` from the GitHub API, show version, use `browser_download_url`; fallback to the Releases page on network error or rate limit (403/429); works without JS
-- [ ] Shared by hero and download section; manual platform choice; unsupported-platform message (Intel Mac, Wayland, ARM Windows/Linux)
-- [ ] Decide and document the request to `api.github.com` (first third-party request; ADR-0023 amendment, privacy note)
-- [ ] Download page (`/download/`) with install steps per OS
+- [x] Platform data (`src/lib/platforms.ts`: asset suffixes from `release.yml`, notes from README)
+- [x] Pure TS modules: `release.ts` (asset matching by suffix, version from the tag) and `detect-platform.ts` (OS only, no CPU guessing), `bun test` in CI
+- [x] Release data at **build time**, not in the visitor's browser (user's call, ADR-0023 amendment 2): CI fetches `releases/latest`, the HTML carries the version and `browser_download_url`s; publishing a release rebuilds the site; fallback to the Releases page if the API fails
+- [x] Shared by hero and download section: direct file buttons per card (work without JS), JS points the hero button at the visitor's file and marks "Your system"; unsupported-device message (phones, tablets, ChromeOS). Intel Mac, Wayland and ARM can't be detected reliably: the cards' requirements and notes say it
+- [x] Decide and document the release-data request (no third-party request from visitors, so no privacy note needed)
+- [ ] Download page (`/download/`) with install steps per OS (moved: fits Phase 5, the manual owns install steps)
+- [ ] Release-triggered rebuild verified on GitHub (needs Pages enabled and a published release on `main`)
 
 ## Phase 5 — User manual
 

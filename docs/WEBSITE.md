@@ -12,11 +12,11 @@ hosts the **user manual**, which becomes the canonical end-user documentation (i
 permissions, use, settings, troubleshooting). Developer documentation (`docs/`, ADRs) stays
 in the repository. Product behaviour and defaults remain defined by `docs/PRODUCT.md` and the
 code; the manual describes them and must not contradict them. No accounts, forms, backend,
-analytics or tracking; the only planned third-party request is the GitHub releases API for
-the download button (Phase 4, decision pending).
+analytics or tracking, and no third-party requests from the visitor's browser: the latest
+release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
-Status: first homepage pass (yellow hero, showcase placeholder, how it works, download
-cards, open source); see the roadmap.
+Status: first homepage pass (yellow hero, showcase placeholder, how it works, OS-aware
+download cards, open source); see the roadmap.
 
 ## Homepage
 
@@ -30,7 +30,7 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 | 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
 | 6 | Engineering | Independent Rust implementation, tracking and stability, privacy (on-device), testing | Phase 3 |
-| 7 | Download (`#download`) | Supported platforms, caveats, install guidance | built (static); OS-aware in Phase 4 |
+| 7 | Download (`#download`) | Supported platforms, caveats, direct files, install guidance | built, OS-aware |
 | 8 | Open source (`#open-source`) | Repository, issues, contributing, documentation | built (minimal) |
 
 ### Origin story
@@ -74,11 +74,16 @@ website/
     components/Hero.astro      yellow angular hero
     components/Section.astro   homepage section: column, anchor id, h2
     components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)
+    components/DownloadEnhancer.astro      client script: OS detection → hero button, "Your system"
     pages/index.astro, 404.astro   routes (file = URL)
     styles/global.css          Tailwind import, tokens, base styles, brand surface, angular
                                edge, entrance animations, reduced motion
     lib/url.ts                 url() base-path helper, REPO_URL
     lib/platforms.ts           release platforms and asset suffixes (from release.yml)
+    lib/release.ts             API response → version + per-platform files (pure, tested)
+    lib/detect-platform.ts     user agent → macos / windows / linux / unsupported (pure, tested)
+    lib/latest-release.ts      build-time loader: CI file, else anonymous fetch, else null
+    data/latest-release.json   written by CI only (gitignored)
 ```
 
 ## Local development
@@ -90,6 +95,7 @@ cd website
 bun install                  # first time, or after a dependency change
 bun run dev                  # http://localhost:4321/open-camera-mouse/
 bun run check                # astro check (types, .astro diagnostics)
+bun run test                 # bun test: src/lib/*.test.ts
 bun run build                # dist/ + path check
 bun run preview              # serve dist/ at http://localhost:4321/open-camera-mouse/
 ```
@@ -115,17 +121,30 @@ of the built site.
 - Agent skills: `astro-development`, `website-design`, `web-accessibility`
   (`.agents/skills/`).
 
+## Downloads
+
+The version and file links are baked in at build time (ADR-0023 amendment 2):
+`latest-release.ts` reads `src/data/latest-release.json` (written by CI with `gh api`) or,
+locally, fetches `releases/latest` anonymously; `release.ts` keeps only assets named
+`open-camera-mouse-<version>-<suffix>` (suffixes from `platforms.ts`) whose URL is this
+repository's release download. If nothing usable comes back, the build logs `[release]` and
+the page falls back to "Go to the latest release". Without JavaScript the hero button goes
+to `#download` and every card links its files; with it, `DownloadEnhancer.astro` points the
+hero button at the visitor's file and shows the matching `data-detect` notes. Only the OS is
+detected, never the CPU.
+
 ## CI and deployment
 
 `.github/workflows/website.yml`:
 
 | Event | What runs |
 |---|---|
-| Pull request touching `website/**` or the workflow | `bun install --frozen-lockfile`, `bun run check`, `bun run build` |
+| Pull request touching `website/**` or the workflow | `bun install --frozen-lockfile`, `bun run check`, `bun run test`, latest release via `gh api`, `bun run build` |
 | Push to `feature/website` (same paths) | same |
 | Push to `main` (same paths), or a manual run on `main` | same, then uploads `website/dist` and deploys, **only if** the repository variable `WEBSITE_DEPLOY` is `true` |
+| A release is published | if `WEBSITE_DEPLOY` is `true`: dispatches a manual run on `main` (so the new version goes live) |
 
-The build job only has `contents: read`; the deploy job alone has `pages: write` and
+The build job only has `contents: read`; the `rebuild` job only `actions: write`; the deploy job alone has `pages: write` and
 `id-token: write`, and never runs for pull requests. The Rust CI (`ci.yml`) ignores
 `website/**`, `docs/WEBSITE*.md` and `website.yml`, so website-only changes don't compile
 Rust.
