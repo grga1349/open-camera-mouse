@@ -7,23 +7,8 @@ slice of one) per session; tick items when they land and note what was deferred.
 
 Legend: `[x]` done · `[~]` started · `[ ]` open
 
-## Next session (handoff)
-
-Replace this section at the end of every website session.
-
-- **State:** Phases 1–2 first pass on `feature/website`, pushed, not merged; Pages not enabled.
-  The homepage builds (`bun run build`) and previews at
-  `http://localhost:4321/open-camera-mouse/` (`bun run preview`; `bunx astro preview stop`
-  ends a server left running).
-- **Next task:** Phase 4, OS-aware downloads. Start with the pure module in `src/lib/` and
-  its `bun test` tests, reusing `src/lib/platforms.ts`; then the client script for hero and
-  download section.
-- **Decide first (ask the user):** the visitor's browser calling `api.github.com` (first
-  third-party request): record it in ADR-0023 and the privacy wording before shipping.
-- **Waiting on the user:** hero copy ("Your head. Your mouse." is a draft), display
-  typeface yes/no, demo recording and screenshots.
-- **Not yet checked by hand:** 768px, 200% zoom, keyboard walk-through, VoiceOver,
-  reduced motion.
+Current session state and next steps: `docs/WEBSITE_HANDOFF.md` (temporary, deleted
+before the merge to `main`).
 
 ## Phase 1 — Foundation  ✅
 
@@ -84,4 +69,5 @@ install/use summary and links to it).
 - [ ] Application screenshots, regenerated per UI change
 - [ ] Mobile pass; accessibility audit (keyboard, VoiceOver/NVDA, axe/Lighthouse, 200% zoom, reduced motion)
 - [ ] Performance check (page weight, Lighthouse)
+- [ ] Before merging: delete `docs/WEBSITE_HANDOFF.md` and the references to it (this file, `AGENTS.md`)
 - [ ] Merge to `main`, enable Pages, first deployment; ADR-0023 → Accepted

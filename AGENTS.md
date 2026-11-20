@@ -23,6 +23,7 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 | `docs/WEBSITE.md` | Website: scope, stack, structure, commands, CI and Pages deployment |
 | `docs/WEBSITE_DESIGN.md` | Website: brand, tokens, contrast, layout, content constraints |
 | `docs/WEBSITE_ROADMAP.md` | Website: phases, status, next tasks |
+| `docs/WEBSITE_HANDOFF.md` | Website: temporary session handoff on `feature/website`; read first, rewrite at the end, delete before merge |
 
 ## Workflow: one prompt = one task
 
