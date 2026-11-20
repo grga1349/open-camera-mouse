@@ -41,7 +41,7 @@ describe("squirrelTransform", () => {
 
   test("SVG transforms with no -0", () => {
     expect(squirrelTransform(squirrelPose(0, 0))).toEqual({
-      head: "translate(0 0) rotate(0 200 232)",
+      head: "translate(0 0) rotate(0 200 236)",
       face: "translate(0 0)",
       pupilBig: "translate(0 0)",
       pupilSmall: "translate(0 0)",

@@ -1,6 +1,7 @@
 ---
-// Decorative hero figure (WEBSITE_DESIGN.md "Header and hero"): a silly squirrel seen from
-// the front, in simple black lines on the brand yellow, with one big and one small eye. It
+// Decorative hero figure (WEBSITE_DESIGN.md "Header and hero"): a cute squirrel seen from
+// the front, in faceted black lines (straight edges, obtuse angles, round joins) on the brand
+// yellow: big head, chubby body, one big and one small eye with a shine. It
 // watches the pointer: the head tilts toward it, the face slides that way, both pupils look
 // at it, the tail sways. No line crosses another: parts in front cover what's behind them
 // (yellow fill), and the face details stay inside the head. aria-hidden, nothing to click. Rendered looking ahead at build
@@ -30,40 +31,47 @@ const line = {
 >
   <path d="M100 352L300 352" {...line}></path>
 
-  <!-- Tail, behind the body: one big curl up the right side. -->
+  <!-- Tail, behind the body: a faceted curl up the right side, curling back in at the top. -->
   <g data-part="tail" transform={t.tail}>
     <path
-      d="M236 340C300 336 332 282 314 222C300 176 320 140 352 146C342 96 268 100 262 166C258 210 284 250 246 290"
-      class="fill-brand"
-      {...{ ...line, fill: undefined }}></path>
+      d="M240 344L302 334L336 286L334 222L314 184L318 154L338 138L360 152L362 110L332 86L288 90L262 124L254 172L266 222L260 258L246 290"
+      class="fill-brand" {...{ ...line, fill: undefined }}></path>
+    <!-- Black facets: the curl's tip and one band lower down. -->
+    <path d="M288 90L332 86L362 110L360 152L338 138Z" {...{ ...line, fill: "currentColor" }}></path>
+    <path d="M314 184L334 222L266 222L254 172Z" {...{ ...line, fill: "currentColor" }}></path>
   </g>
 
-  <!-- Feet, then the body over them, then the acorn and paws inside the body. -->
-  <ellipse cx="172" cy="348" rx="18" ry="8" class="fill-brand" {...{ ...line, fill: undefined }}></ellipse>
-  <ellipse cx="228" cy="348" rx="18" ry="8" class="fill-brand" {...{ ...line, fill: undefined }}></ellipse>
-  <path d="M150 346C130 290 150 232 200 226C250 232 270 290 250 346Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
-  <ellipse cx="200" cy="290" rx="13" ry="16" {...line}></ellipse>
-  <path d="M186 276C192 270 208 270 214 276" {...line}></path>
-  <path d="M172 270C180 280 180 292 176 302M228 270C220 280 220 292 224 302" {...line}></path>
+  <!-- The chubby body, the feet in front of it, then the acorn and paws inside the body. -->
+  <path d="M154 346L146 296L166 250L200 238L234 250L254 296L246 346Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+  <path d="M142 352L150 336L180 336L184 352Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+  <path d="M258 352L250 336L220 336L216 352Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+  <path d="M188 280L186 272L214 272L212 280Z" {...line}></path>
+  <path d="M200 272L204 262" {...line}></path>
+  <path d="M188 284L212 284L210 300L200 310L190 300Z" {...line}></path>
+  <path d="M168 264L178 280L178 298M232 264L222 280L222 298" {...line}></path>
 
-  <!-- Head: ears behind, then the head, then the face inside it. -->
+  <!-- Head: black ears behind, then the faceted head, then the face inside it. -->
   <g data-part="head" transform={t.head}>
-    <path d="M150 146C138 112 148 92 158 86C172 102 180 122 178 138" class="fill-brand" {...{ ...line, fill: undefined }}></path>
-    <path d="M250 146C262 112 252 92 242 86C228 102 220 122 222 138" class="fill-brand" {...{ ...line, fill: undefined }}></path>
-    <ellipse cx="200" cy="178" rx="72" ry="60" class="fill-brand" {...{ ...line, fill: undefined }}></ellipse>
+    <path d="M134 142L146 76L192 122Z" {...{ ...line, fill: "currentColor" }}></path>
+    <path d="M266 142L254 76L208 122Z" {...{ ...line, fill: "currentColor" }}></path>
+    <path d="M152 118L248 118L278 150L280 206L252 240L148 240L120 206L122 150Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
     <g data-part="face" transform={t.face}>
-      <circle cx="170" cy="166" r="18" {...line}></circle>
+      <circle cx="166" cy="170" r="22" {...line}></circle>
       <g data-part="pupilBig" transform={t.pupilBig}>
-        <circle cx="170" cy="166" r="8" fill="currentColor"></circle>
+        <circle cx="166" cy="170" r="11" fill="currentColor"></circle>
+        <circle cx="170" cy="166" r="3.5" class="fill-brand"></circle>
       </g>
-      <circle cx="232" cy="170" r="10" {...line}></circle>
+      <circle cx="236" cy="174" r="15" {...line}></circle>
       <g data-part="pupilSmall" transform={t.pupilSmall}>
-        <circle cx="232" cy="170" r="4" fill="currentColor"></circle>
+        <circle cx="236" cy="174" r="7" fill="currentColor"></circle>
+        <circle cx="238.5" cy="171.5" r="2" class="fill-brand"></circle>
       </g>
-      <path d="M192 188L208 188L200 197Z" {...line} fill="currentColor"></path>
-      <!-- Mouth and teeth meet at the corners only. -->
-      <path d="M182 204C186 210 190 208 194 206L206 206C210 208 214 210 218 204" {...line} stroke-width="3"></path>
-      <path d="M194 206L194 220L206 220L206 206M200 206L200 220" {...line} stroke-width="3"></path>
+      <!-- Blush: two short slashes on each cheek. -->
+      <path d="M134 206L140 197M144 208L150 199M250 208L256 199M260 206L266 197" {...line} stroke-width="3"></path>
+      <path d="M192 196L208 196L200 205Z" {...{ ...line, fill: "currentColor" }}></path>
+      <!-- A small "w" mouth; the teeth meet it at points only. -->
+      <path d="M184 212L192 218L200 212L208 218L216 212" {...line} stroke-width="3"></path>
+      <path d="M194 216.5L194 226L206 226L206 216.5M200 212L200 226" {...line} stroke-width="3"></path>
     </g>
   </g>
 </svg>

@@ -1,6 +1,5 @@
 /**
- * The hero figure (`HeroSquirrel.astro`): a silly squirrel seen from the front, in simple
- * lines, that watches the pointer, a nod to what the app does (it follows your head). Pure
+ * The hero figure (`HeroSquirrel.astro`): a cute, faceted squirrel seen from the front, that watches the pointer, a nod to what the app does (it follows your head). Pure
  * pose maths in a 400×400 viewBox, shared by the build-time render (looking ahead) and the
  * client script.
  *
@@ -14,14 +13,14 @@
 export const VIEW = 400;
 /** Head tilt at full offset, degrees; and the point it tilts around (the neck). */
 export const HEAD_TILT = 12;
-export const NECK = { x: 200, y: 232 };
+export const NECK = { x: 200, y: 236 };
 /** Head shift toward the pointer at full offset, viewBox units. */
 export const HEAD_SHIFT = 6;
 /** Extra shift of the face inside the head at full offset, viewBox units. */
 export const FACE_SHIFT = 8;
 /** How far each pupil may move from its eye's centre, viewBox units. */
 export const BIG_REACH = 8;
-export const SMALL_REACH = 4;
+export const SMALL_REACH = 5;
 /** Tail sway at full offset, degrees; and the tail's base. */
 export const TAIL_SWAY = 8;
 export const TAIL_BASE = { x: 240, y: 340 };

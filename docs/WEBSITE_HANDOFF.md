@@ -4,16 +4,30 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, ninth): footer
+## Latest session (2026-11-21, ninth): footer, squirrel redraw
 
 - **Footer** (`SiteFooter.astro`, `.angular-top` in `global.css`): the yellow brand surface
   again with a shallow Λ top edge mirroring the hero's V, so every page starts and ends
   yellow. Logo + wordmark, the hero's one-liner, a "Footer" nav with Manual (getting started,
   installation, troubleshooting, questions) and Project (download, all releases, source
   code, report a problem) lists, a 2px black rule, licence line, "No cookies, no analytics."
-  No script. **Built without asking first; awaiting the user's OK on the direction.**
-- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); headless screenshots at
-  1280 (both themes, home and 404) and 320.
+  No script. The user committed it without comment on the direction or the "No cookies"
+  line; treat both as accepted unless they say otherwise.
+- **Squirrel redrawn "more cute and angular"** (user's request), then "ears all black and
+  some black in the tail": faceted outlines (straight edges, obtuse angles, round joins), big
+  octagonal head, chubby body, solid black triangle ears, eyes with a shine, blush slashes,
+  "w" mouth, hexagonal acorn, trapezoid feet in front, bushy faceted tail with a black tip and
+  a black band. Pose maths unchanged except `SMALL_REACH` 5 and `NECK` y 236. Open: it can
+  read a little cat-like (octagon head + pointed ears); offered shorter tufted ears and
+  puffier cheeks if the user agrees.
+- **Gotcha:** in Astro, `{...line} fill="currentColor"` renders two `fill` attributes and the
+  HTML parser keeps the first (`none`); merge into the spread instead
+  (`{...{ ...line, fill: "currentColor" }}`). The nose had this bug unnoticed.
+- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); footer headless screenshots
+  at 1280 (both themes, home and 404) and 320; squirrel as zoomed stills only.
+- **Preview servers:** don't run `bunx astro preview stop` or kill by port: it stopped the
+  user's preview this session. Start your own (`bunx astro preview --port 4321` in the
+  background), note its pid, and stop only that pid.
 
 ## Earlier sessions
 
@@ -29,7 +43,7 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 - Phase 1 done, 2 mostly, 3 partly, 4 mostly, 5 slices 1–3 of 4, README part of 3 waits for deployment (see roadmap). Pages not enabled.
 - `bun run build` then `bun run preview` → `http://localhost:4321/open-camera-mouse/` (a
-  preview from an older session may already run on `:4321`; `bunx astro preview stop`).
+  preview may already run; leave it alone and use another port if `:4321` is taken).
 - Headless check: Chrome `--headless=new --force-prefers-reduced-motion
   --window-size=W,H --blink-settings=preferredColorScheme=0|1 --screenshot=…`; `#anchor`
   screenshots come out blank, take a tall window and crop; under ~500px use a 320px `<iframe>`.
@@ -50,6 +64,7 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
+Squirrel redraw with a real pointer (tilt/pupils/tail with the new shapes).
 Footer: keyboard walk-through, VoiceOver (footer nav and list labels), 200% zoom, 768px.
 Hero squirrel in a real browser with a real mouse and head pointer (feel of the motion, CPU
 while moving); the reload fix in Safari/Firefox.

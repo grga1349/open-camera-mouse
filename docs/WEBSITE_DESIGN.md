@@ -124,12 +124,16 @@ wedge was rejected as ugly (2026-11-20).
 No tracking ring or crosshair in the hero (removed at the user's request).
 
 From `lg` up the hero is two columns: the text, and on the right (`HeroSquirrel.astro`, at
-most 20rem) a silly squirrel seen from the front, in simple round black lines on the yellow
-(user's call, 2026-11-21, after a stepped pyramid and a cubist head were tried the same day
-and found too spiky; first drawn side-on, then from the front): sitting on a ground line,
-holding an acorn, a big curled tail on its right, one big and one small eye, a small nose and
-two buck teeth. **No line crosses another**: parts in front cover what's behind them with a
-yellow fill, and the face details stay inside the head (mouth and teeth meet at the corners).
+most 20rem) a cute squirrel seen from the front, in black lines on the yellow (user's call,
+2026-11-21, after a stepped pyramid and a cubist head were tried the same day and found too
+spiky; first drawn side-on with curves, then from the front, then redrawn "more cute and
+angular"): **faceted but not spiky**, so straight edges, obtuse angles and round joins; only
+the eyes stay round. A big octagonal head on a chubby body, solid black triangle ears,
+one big and one small eye (each with a shine), angular blush slashes, a small nose, a "w"
+mouth with two buck teeth, a hexagonal acorn in angled paws, trapezoid feet, a bushy faceted
+tail curling up its right with two solid black facets (the curl's tip and a band), sitting on a ground line. **No line crosses another**: parts in
+front cover what's behind them with a yellow fill, and the face details stay inside the head
+(the teeth meet the mouth at points only).
 It watches the pointer, a nod to what the app does: the head tilts up to 12° toward the
 pointer's side and shifts up to 6 units toward it, the face slides up to 8 more inside the
 head, both pupils look toward it (each inside its own eye), and the tail sways up to 8° the
