@@ -68,16 +68,18 @@ install/use summary and links to it).
 
 Slices: (1) infrastructure + getting started, requirements, installation ✅; (2) using it:
 permissions, pointer, tracking point, recentering, clicking/dwell, handover ✅; (3) settings,
-accessibility options, troubleshooting, FAQ, README shortened to link here, defaults check;
-(4) annotated screenshots (needs the user's screenshots).
+accessibility options, troubleshooting, FAQ, README shortened to link here, defaults check ✅;
+(4) annotated screenshots (needs the user's screenshots). Slice 3 is done except the README,
+which waits for the deployment.
 
 - [x] Content collection (`src/content/manual/*.md`, Astro built-in, no doc framework), `/manual/` and `/manual/<slug>/` routes, sidebar (`<details>` on small screens), "On this page", prev/next, heading ids
 - [x] Build check resolves relative links and `#anchors` (`check-paths.mjs`)
 - [x] Pages: getting started, system requirements, installation per OS
 - [x] Pages: first-time setup and permissions, selecting a tracking point, using the pointer, recentering, clicking and dwell clicking, mouse handover (from `status.rs`, `options.rs`, `controller.rs`, `pointer-core`)
-- [ ] Pages: settings, accessibility options, troubleshooting, FAQ — each only from real app behaviour (`PRODUCT.md`, `BEHAVIOR.md`, the code)
+- [x] Pages: settings (every Options tab, Restore defaults, file location, settings notices), accessibility options, troubleshooting, FAQ — from `options.rs`, `settings.rs`, `settings_store.rs`, `theme.rs`, `status.rs`, README
+- [x] A check that the manual's defaults match the app's: `manual-defaults.test.ts` compares every "Setting | Range | Default" table row with `crates/app-core/src/settings.rs` (the website workflow also runs when that file changes)
 - [ ] README: keep a short install/use summary and link to the manual (after the site is deployed)
-- [ ] Annotated screenshots; a check that manual defaults match the app's
+- [ ] Annotated screenshots
 
 ## Phase 6 — Showcase and launch
 

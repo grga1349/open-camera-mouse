@@ -16,8 +16,9 @@ analytics or tracking, and no third-party requests from the visitor's browser: t
 release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
 Status: first homepage pass (yellow hero, showcase placeholder, how it works, OS-aware
-download cards, open source) and the manual's getting-started, installation and everyday-use pages (setup and
-permissions, tracking point, pointer, recentering, clicking, mouse handover); see the roadmap.
+download cards, open source) and the manual's thirteen pages (getting started, requirements,
+installation, everyday use, settings, accessibility options, troubleshooting, FAQ); see the
+roadmap.
 
 ## Homepage
 
@@ -57,6 +58,12 @@ more, and previous/next links. Astro gives every heading an id, so sections are 
 Writing a page: only real app behaviour (`README.md`, `PRODUCT.md`, `BEHAVIOR.md`, the
 code); link other manual pages relatively (`../installation/#windows-x64`), the build
 checks them. Version numbers stay out of the copy (`<version>` in file names).
+
+Settings tables use the header `| Setting | Range | Default |` and the app's label in the
+first cell. `src/lib/manual-defaults.test.ts` checks every such row on every page against
+`crates/app-core/src/settings.rs` (ranges and `Default` impls) and that the Settings page
+lists every setting; a new setting needs a row in `expectedRows` (`manual-defaults.ts`).
+The website workflow also runs when `settings.rs` changes.
 
 ## Technology
 
@@ -103,6 +110,8 @@ website/
     lib/detect-platform.ts     user agent → macos / windows / linux / unsupported (pure, tested)
     lib/latest-release.ts      build-time loader: CI file, else anonymous fetch, else null
     lib/manual-order.ts        manual page order and previous/next (pure, tested)
+    lib/manual-defaults.ts     app settings source → expected manual table rows (pure, tested
+                               against settings.rs and content/manual/*.md)
     data/latest-release.json   written by CI only (gitignored)
 ```
 
@@ -160,7 +169,7 @@ detected, never the CPU.
 
 | Event | What runs |
 |---|---|
-| Pull request touching `website/**` or the workflow | `bun install --frozen-lockfile`, `bun run check`, `bun run test`, latest release via `gh api`, `bun run build` |
+| Pull request touching `website/**`, the workflow or `crates/app-core/src/settings.rs` | `bun install --frozen-lockfile`, `bun run check`, `bun run test`, latest release via `gh api`, `bun run build` |
 | Push to `feature/website` (same paths) | same |
 | Push to `main` (same paths), or a manual run on `main` | same, then uploads `website/dist` and deploys, **only if** the repository variable `WEBSITE_DEPLOY` is `true` |
 | A release is published | if `WEBSITE_DEPLOY` is `true`: dispatches a manual run on `main` (so the new version goes live) |

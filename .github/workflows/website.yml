@@ -11,11 +11,15 @@ on:
     paths:
       - 'website/**'
       - '.github/workflows/website.yml'
+      # The manual's defaults test (src/lib/manual-defaults.test.ts) reads this file.
+      - 'crates/app-core/src/settings.rs'
   push:
     branches: [main, feature/website]
     paths:
       - 'website/**'
       - '.github/workflows/website.yml'
+      # The manual's defaults test (src/lib/manual-defaults.test.ts) reads this file.
+      - 'crates/app-core/src/settings.rs'
   workflow_dispatch:
   # A release event runs on the tag ref, which the github-pages environment won't deploy
   # from; the `rebuild` job re-dispatches this workflow on main instead.

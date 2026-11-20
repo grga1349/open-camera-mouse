@@ -4,50 +4,47 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-20, sixth): Phase 5 slice 2, using the app
+## Latest session (2026-11-21, seventh): Phase 5 slice 3, reference pages
 
-- Six manual pages, `order` 4–9: `first-time-setup` (first launch, camera and pointer
-  permission states, camera error cards, key check), `tracking-point` (picking, good spots,
-  marker/status table, lost and "Find the target again"), `using-the-pointer` (mapping,
-  pause, speed/smoothing/limits/main monitor with ranges and defaults), `recentering`,
-  `clicking` (dwell, when it doesn't click, settings table), `mouse-handover`.
-- Every statement checked against the code: wording from `apps/desktop/src/status.rs`,
-  `options.rs`, `preview.rs`; behaviour from `crates/app-core/src/controller.rs` (pause →
-  pointer home, resume → recenter, `take_over` moves the pointer to the main monitor's
-  centre, re-acquire jump bound) and `pointer-core` (`dwell.rs`, `handover.rs`: 5 px, 4 s,
-  timer restarts on movement). Ranges from `app-core` `settings::ranges`.
-- Getting started links the new pages. Hero h1 lost its full stop (user's request).
-- Header: a nav row + hamburger overlay was tried and dropped (user, 2026-11-21); header
-  is back to the committed one (Manual link, GitHub, theme switch). The manual is linked
-  from "How it works" ("Read the manual →") and "Open source". Below `sm` the header is one
-  row: "OCM" wordmark and a book icon for Manual (full names kept for screen readers). Skip link removed (user's
-  decision; docs and the `web-accessibility` skill updated).
-- Verified: check 0/0/0, 17 tests, build + path check (325 URLs and anchors); headless
-  Chrome: `tracking-point` at 320px (Carbon), home hero at 1280px (Paper).
+- Four manual pages, `order` 10–13: `settings` (every Options tab as a Setting/Range/Default
+  table, Capture format / Keyboard / Mouse takeover as read-only, Restore defaults keeps
+  camera + appearance + larger controls, file location per OS, every settings notice with
+  its exact wording), `accessibility` (Larger controls sizes from `theme.rs`, themes,
+  status without colour, fixed keys, known gaps: reduce-motion animation, screen readers
+  untested), `troubleshooting` (won't open, camera, pointer by "Pointer:" owner, shaky /
+  slow, lost target, dwell, keys, settings notice), `faq`.
+- Sources: `options.rs`, `settings.rs`, `settings_store.rs` (notices), `app.rs` (save /
+  apply notices, hotkey lines), `status.rs`, `theme.rs`, README "Known limitations".
+- Defaults check: `src/lib/manual-defaults.ts` + `.test.ts` parse `settings.rs` (`ranges`,
+  `impl Default`) and compare every `| Setting | Range | Default |` row on every manual
+  page; the Settings page must list every setting. Shown to fail on a changed default.
+  `website.yml` now also triggers on `crates/app-core/src/settings.rs`.
+- FAQ has one origin line ("independent … inspired by the classic Camera Mouse … not
+  affiliated or endorsed"), no historical claims; approved by the user (2026-11-21).
+- Verified: check 0/0/0, 22 tests, build + path check (587 URLs and anchors); headless
+  Chrome: `settings` at 320px (Carbon); the notices became a list (a table was cramped).
 
-## Earlier sessions (2026-11-20)
+## Earlier sessions
 
-Fifth: manual infrastructure (collection, sidebar, "On this page", prev/next, anchor
-checks), getting started, requirements, installation. Fourth: header GitHub mark +
-night/day switch, user's hero copy. Third: OS-aware downloads with release data at build
-time (ADR-0023 amendment 2).
+Sixth (2026-11-20): everyday-use manual pages (setup, tracking point, pointer, recentering,
+clicking, handover); header back to one row, skip link removed. Fifth: manual
+infrastructure, getting started, requirements, installation. Fourth: header GitHub mark +
+night/day switch, hero copy. Third: OS-aware downloads with release data at build time.
 
 ## State
 
-- Phase 1 done, 2 mostly, 3 partly, 4 mostly, 5 slices 1–2 of 4 (see roadmap). Pages not enabled.
+- Phase 1 done, 2 mostly, 3 partly, 4 mostly, 5 slices 1–3 of 4, README part of 3 waits for deployment (see roadmap). Pages not enabled.
 - `bun run build` then `bun run preview` → `http://localhost:4321/open-camera-mouse/` (a
-  preview from an older session may already run on `:4399`; `bunx astro preview stop`).
+  preview from an older session may already run on `:4321`; `bunx astro preview stop`).
 - Headless check: Chrome `--headless=new --force-prefers-reduced-motion
   --window-size=W,H --blink-settings=preferredColorScheme=0|1 --screenshot=…`; `#anchor`
   screenshots come out blank, take a tall window and crop; under ~500px use a 320px `<iframe>`.
 
 ## Next
 
-**Phase 5 slice 3**: settings reference (all Options tabs incl. Camera "Capture format",
-General "Show diagnostics", "Restore defaults" keeps camera and appearance, where settings
-are saved and the bad-value/corrupt-file notices), accessibility options (Larger controls,
-themes), troubleshooting, FAQ, a check that manual defaults match the app's
-(`Settings::default()`); README shortened to link the manual only after deployment.
+Phase 5 slice 4 needs the user's screenshots; until then pick from the roadmap: Phase 2
+footer design, or Phase 3 features / engineering sections (screenshots again) or the
+origin story (research with sources first). README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
@@ -57,7 +54,7 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
-Manual (all nine pages): keyboard walk-through (sidebar, `<details>` at small widths, "On this page",
+Manual (all thirteen pages): keyboard walk-through (sidebar, `<details>` at small widths, "On this page",
 prev/next), VoiceOver read of the tables and `kbd`, 200% zoom.
 200% zoom, keyboard walk-through (night/day switch click + Space/Enter, new file buttons, "Other platforms"),
 VoiceOver (file buttons read "Download macOS Disk image (.dmg)"), real reduced-motion
