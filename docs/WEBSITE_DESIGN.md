@@ -94,17 +94,11 @@ no border or rule; `theme-color` is `#ffd60a`. On the home page the hero
 (`src/components/Hero.astro`) continues the same surface directly under it, so header and
 hero read as one yellow block. The first section under the hero has no top rule either.
 
-Hero shape, all decorative (`aria-hidden`) and built from `--cut` and percentages so it
-scales from 320px up:
-
-1. **Diagonal edge** (`.angular-bottom`): the band's bottom rises from left to right by
-   `--cut` (`clamp(2rem, 6vw, 5rem)`); content is padded below it.
-2. **Blade** (`.hero-blade`, every width): a tapered yellow sliver parallel to the edge, a
-   small gap below it, from the right edge to 35% of the width.
-3. **Wedge** (`.hero-wedge`, `lg` and up): a black triangle on the right whose lower edge
-   runs parallel to the diagonal, a yellow strip above it so it never merges with the black
-   Carbon page. Its tip stays at 70% width and the hero paragraph is capped at 36rem, so it
-   never covers text (checked at 1024px).
+Hero shape: the bottom edge is a **shallow symmetric V** (`.angular-bottom`): both sides
+sit `--cut` (`clamp(1.5rem, 5vw, 4rem)`) above the point in the middle. Built from `--cut`
+and percentages, so it keeps its proportions from 320px up; content is padded by at least
+`--cut` below. No other shapes in the hero: an earlier one-way diagonal with a blade and a
+wedge was rejected as ugly (2026-11-20).
 
 No tracking ring or crosshair in the hero (removed at the user's request).
 
@@ -116,9 +110,11 @@ outline are black. Copy is a draft until the user approves it.
 
 ## Angular language
 
-Sharp, not rounded: diagonal edges, triangles and wedges as section accents, solid fills,
-no gradients or shadows. Geometry is decorative (`aria-hidden`) and never carries
-information. Controls keep the normal radius and rectangular hit areas.
+Sharp, not rounded, and calm: straight edges and shallow, symmetric angles (the hero's V)
+in solid fills, no gradients or shadows. Fewer shapes beat more: the user rejected a
+layered diagonal/blade/wedge hero as ugly.
+Geometry is decorative (`aria-hidden`) and never carries information. Controls keep the
+normal radius and rectangular hit areas.
 
 ## Motion
 

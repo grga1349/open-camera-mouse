@@ -13,8 +13,9 @@ Visual pass on the header and hero, from the user's feedback:
   `favicon.png` is still the app icon.
 - Page starts yellow: header on `.on-brand`, no borders; uppercase wordmark; mono uppercase
   nav and hero label.
-- Hero: crosshair removed; layered shape (diagonal edge, blade, gapped wedge from `lg`),
-  rules in `WEBSITE_DESIGN.md` "Header and hero".
+- Hero: crosshair removed; bottom edge is now a shallow symmetric V. A layered
+  diagonal + blade + wedge version was built first and rejected by the user as ugly.
+  Rules in `WEBSITE_DESIGN.md` "Header and hero".
 - Reduced motion now also zeroes animation delays (staggered items were briefly invisible).
 
 ## State
@@ -28,11 +29,18 @@ Visual pass on the header and hero, from the user's feedback:
 
 ## Next
 
-1. **User review of the new header/hero** in the browser; adjust before moving on.
-2. **Phase 4, OS-aware downloads:** pure module in `src/lib/` with `bun test` tests, reusing
-   `src/lib/platforms.ts`; then the client script for the hero and download section.
-   **Ask first:** the visitor's browser calling `api.github.com` (first third-party request):
-   record it in ADR-0023 and the privacy wording before shipping.
+**Phase 4, OS-aware downloads** (roadmap). The header/hero pass is done and reviewed by the
+user (yellow header, SVG logo, shallow V edge); only small polish if asked.
+
+1. **Ask first:** the visitor's browser calling `api.github.com` (first third-party
+   request). If yes, record it in ADR-0023 (amendment) and add privacy wording on the page.
+2. Pure TypeScript module in `src/lib/` (OS detection without guessing CPU architecture,
+   asset match by suffix from `src/lib/platforms.ts`, version from the tag) with `bun test`
+   tests; add a `test` script and run it in `website.yml`.
+3. Small client `<script>` wiring it to the hero "Download" button and the download
+   section: latest-release lookup, `browser_download_url`, version shown, manual platform
+   choice, unsupported-platform message, fallback to the Releases page on network error or
+   rate limit. Everything must still work with JavaScript off (current static links).
 
 ## Waiting on the user
 

@@ -25,12 +25,12 @@ before the merge to `main`).
 
 - [x] Brand surface token (`brand` `#ffd60a` / `on-brand` `#000`), yellow angular hero with diagonal edge
 - [x] Pages start yellow: header on the brand surface, no header borders or rules
-- [x] Layered hero shape: diagonal edge, blade under it, gapped black wedge (`lg`+); crosshair removed
+- [x] Hero bottom edge: shallow symmetric V (layered diagonal/blade/wedge tried and rejected); crosshair removed
 - [x] Logo as a one-colour SVG mark (`src/assets/logo.svg`), uppercase wordmark
 - [x] Typewriter-style mono accents (nav, labels) on the system monospace stack
 - [x] Hero entrance and hover lift (CSS only; reduced motion collapses them, delays included)
 - [x] Reusable `Hero`, `Section`, `ShowcasePlaceholder` components
-- [~] Responsive layout: checked at 320, 820, 1024 and 1280px (headless screenshots); 200% zoom not checked
+- [~] Responsive layout: checked at 320 and 1280px for the V edge (headless screenshots); 200% zoom not checked
 - [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
 - [ ] Header on other pages: yellow with a flat bottom today (only 404 exists); decide whether it gets its own angular edge once the manual/download pages exist
 - [ ] Footer design (still the plain scaffold footer)

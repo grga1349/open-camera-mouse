@@ -7,8 +7,8 @@
  */
 :root {
   color-scheme: dark light;
-  /* Height of the hero's diagonal; also used by the blade under it. */
-  --cut: clamp(2rem, 6vw, 5rem);
+  /* Depth of the hero's V-shaped bottom edge. */
+  --cut: clamp(1.5rem, 5vw, 4rem);
   --ocm-bg: #000000;
   --ocm-surface: #0a0a0a;
   --ocm-surface-2: #151515;
@@ -109,51 +109,18 @@
 }
 
 /*
- * Angular edge: the hero's diagonal bottom, rising from left to right by --cut. Content
- * keeps at least that much bottom padding so nothing (focus outlines included) is clipped.
+ * Angular edge: the hero's bottom is a shallow symmetric V, both sides --cut above the
+ * point in the middle. Content keeps at least --cut of bottom padding so nothing (focus
+ * outlines included) is clipped.
  */
 .angular-bottom {
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), 0 100%);
-}
-
-/*
- * Wedge: a black triangle on the right of the hero whose lower edge runs parallel to the
- * diagonal, --wedge-gap above it, so a yellow strip always separates it from the page
- * (otherwise it merges with the black Carbon background). The edge is at
- * y = 100% - --cut * x/100%.
- */
-.hero-wedge {
-  --wedge-gap: 1.5rem;
-  position: absolute;
-  inset: 0;
-  background-color: var(--color-on-brand);
   clip-path: polygon(
-    100% 8%,
-    100% calc(100% - var(--cut) - var(--wedge-gap)),
-    70% calc(100% - var(--cut) * 0.7 - var(--wedge-gap))
+    0 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    50% 100%,
+    0 calc(100% - var(--cut))
   );
-  pointer-events: none;
-}
-
-/*
- * Blade: a tapered yellow sliver parallel to the diagonal, a small gap below it, running
- * from the right edge to 35% of the width. All in % and --cut, so it scales with the edge.
- * Its box starts where the slant starts; the edge runs from (0, --cut) to (100%, 0) in it.
- */
-.hero-blade {
-  --gap: 0.5rem;
-  --thick: clamp(0.5rem, 1.6vw, 1.1rem);
-  position: absolute;
-  inset-inline: 0;
-  top: calc(100% - var(--cut));
-  height: calc(var(--cut) + var(--gap) + var(--thick));
-  background-color: var(--color-brand);
-  clip-path: polygon(
-    100% var(--gap),
-    100% calc(var(--gap) + var(--thick)),
-    35% calc(var(--cut) * 0.65 + var(--gap))
-  );
-  pointer-events: none;
 }
 
 /* Hero entrance: a short rise and fade, once. Reduced motion collapses it (rule above). */
@@ -163,15 +130,6 @@
     transform: translateY(0.75rem);
   }
 }
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(2rem);
-  }
-}
 .animate-rise-in {
   animation: rise-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-.animate-slide-in-right {
-  animation: slide-in-right 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }

@@ -26,8 +26,8 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
   view (with `text-on-yellow`), and the fixed `brand` yellow as the hero surface
   (`.on-brand`, black content, black focus outline). No other hues, gradients or tinted
   greys.
-- **Shape and motion:** angular accents (diagonals, wedges; `.angular-bottom`), decorative
-  only. Motion per `WEBSITE_DESIGN.md` "Motion": one-time CSS entrances and small hover
+- **Shape and motion:** calm, symmetric angles (the hero's shallow V, `.angular-bottom`),
+  decorative only; no stacked slivers or wedges. Motion per `WEBSITE_DESIGN.md` "Motion": one-time CSS entrances and small hover
   lifts, nothing looping, nothing that moves a control under the pointer. Colour photos/screenshots of the app are fine (the app's preview is in
   colour); chrome stays monochrome.
 - **Themes:** Carbon (dark) and Paper (light) values from `docs/PRODUCT.md`, selected by
