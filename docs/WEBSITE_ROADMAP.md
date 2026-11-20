@@ -34,7 +34,7 @@ before the merge to `main`).
 - [ ] Header on other pages: yellow with a flat bottom today (only 404 exists); decide whether it gets its own angular edge once the manual/download pages exist
 - [ ] Footer design (still the plain scaffold footer)
 - [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
-- [ ] Navigation for more pages (manual, download) incl. mobile
+- [~] Navigation for more pages: "Manual" link in the header (wraps at 320px); revisit when there are more pages
 - [ ] Hero geometry refinement, section transitions, tracking-inspired accents beyond the hero
 - [ ] Hero copy approved by the user ("Your head. Your mouse." is a draft)
 
@@ -58,7 +58,7 @@ open source. Open:
 - [x] Release data at **build time**, not in the visitor's browser (user's call, ADR-0023 amendment 2): CI fetches `releases/latest`, the HTML carries the version and `browser_download_url`s; publishing a release rebuilds the site; fallback to the Releases page if the API fails
 - [x] Shared by hero and download section: direct file buttons per card (work without JS), JS points the hero button at the visitor's file and marks "Your system"; unsupported-device message (phones, tablets, ChromeOS). Intel Mac, Wayland and ARM can't be detected reliably: the cards' requirements and notes say it
 - [x] Decide and document the release-data request (no third-party request from visitors, so no privacy note needed)
-- [ ] Download page (`/download/`) with install steps per OS (moved: fits Phase 5, the manual owns install steps)
+- [x] Install steps per OS: the manual's Installation page (Phase 5); the download cards link its sections. No separate `/download/` page
 - [ ] Release-triggered rebuild verified on GitHub (needs Pages enabled and a published release on `main`)
 
 ## Phase 5 — User manual
@@ -66,8 +66,16 @@ open source. Open:
 The website manual becomes the canonical end-user documentation (README keeps a short
 install/use summary and links to it).
 
-- [ ] Content collection (`src/content/manual/*.md`, Astro built-in, no doc framework), `/manual/<slug>/` routes, sidebar/prev-next, linkable headings
-- [ ] Pages: getting started, system requirements, installation per OS, first-time setup and permissions, using the pointer, selecting a tracking point, recentering, clicking and dwell clicking, mouse handover, settings, accessibility options, troubleshooting, FAQ — each only from real app behaviour (`PRODUCT.md`, `BEHAVIOR.md`, the code)
+Slices: (1) infrastructure + getting started, requirements, installation ✅; (2) using it:
+permissions, pointer, tracking point, recentering, clicking/dwell, handover; (3) settings,
+accessibility options, troubleshooting, FAQ, README shortened to link here, defaults check;
+(4) annotated screenshots (needs the user's screenshots).
+
+- [x] Content collection (`src/content/manual/*.md`, Astro built-in, no doc framework), `/manual/` and `/manual/<slug>/` routes, sidebar (`<details>` on small screens), "On this page", prev/next, heading ids
+- [x] Build check resolves relative links and `#anchors` (`check-paths.mjs`)
+- [x] Pages: getting started, system requirements, installation per OS
+- [ ] Pages: first-time setup and permissions, using the pointer, selecting a tracking point, recentering, clicking and dwell clicking, mouse handover, settings, accessibility options, troubleshooting, FAQ — each only from real app behaviour (`PRODUCT.md`, `BEHAVIOR.md`, the code)
+- [ ] README: keep a short install/use summary and link to the manual (after the site is deployed)
 - [ ] Annotated screenshots; a check that manual defaults match the app's
 
 ## Phase 6 — Showcase and launch

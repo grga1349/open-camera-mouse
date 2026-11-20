@@ -147,3 +147,91 @@
 .animate-rise-in {
   animation: rise-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
+
+/*
+ * Manual pages: Markdown rendered by Astro (no typography plugin). Monochrome, token
+ * colours only; long file names in `code` may break anywhere so 320px never scrolls.
+ */
+@layer components {
+  .manual-prose > * + * {
+    margin-top: 1rem;
+  }
+  .manual-prose h2 {
+    margin-top: 3rem;
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+    font-weight: 600;
+    scroll-margin-top: 1rem;
+  }
+  .manual-prose h3 {
+    margin-top: 2rem;
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+    font-weight: 600;
+    scroll-margin-top: 1rem;
+  }
+  .manual-prose ul,
+  .manual-prose ol {
+    padding-left: 1.5rem;
+  }
+  .manual-prose ul {
+    list-style-type: disc;
+  }
+  .manual-prose ol {
+    list-style-type: decimal;
+  }
+  .manual-prose li + li,
+  .manual-prose li > * + * {
+    margin-top: 0.5rem;
+  }
+  .manual-prose hr {
+    margin-top: 3rem;
+    border-color: var(--color-line);
+  }
+  .manual-prose strong {
+    font-weight: 700;
+  }
+  .manual-prose code,
+  .manual-prose kbd {
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    background-color: var(--color-surface-2);
+    padding: 0 0.3em;
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
+  .manual-prose kbd {
+    border-color: var(--color-text);
+    font-weight: 600;
+  }
+  /* Wrap instead of scrolling sideways: a scroll box would need to be focusable (2.1.1). */
+  .manual-prose pre {
+    white-space: pre-wrap;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-frame);
+    background-color: var(--color-surface);
+    padding: 1rem;
+  }
+  .manual-prose pre code {
+    border: 0;
+    background: none;
+    padding: 0;
+  }
+  .manual-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+  .manual-prose th,
+  .manual-prose td {
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .manual-prose th {
+    border-bottom-color: var(--color-text);
+    font-weight: 600;
+  }
+}

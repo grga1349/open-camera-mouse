@@ -15,8 +15,8 @@ export interface Platform {
   short: string;
   /** Release asset suffixes, preferred first. */
   assets: { suffix: string; label: string }[];
-  /** README.md install section for this platform. */
-  readmeAnchor: string;
+  /** Heading id of this platform's section in the manual's Installation page (build checks it). */
+  installAnchor: string;
   /** Known limitations worth knowing before downloading (README "Known limitations"). */
   notes: string[];
 }
@@ -28,7 +28,7 @@ export const PLATFORMS: Platform[] = [
     requirement: "Apple Silicon (M-series) Macs",
     short: "Apple Silicon",
     assets: [{ suffix: "macos-arm64.dmg", label: "Disk image (.dmg)" }],
-    readmeAnchor: "macos-apple-silicon",
+    installAnchor: "macos-apple-silicon",
     notes: ["Intel Macs aren't supported.", "Not notarized yet: macOS blocks the first launch."],
   },
   {
@@ -37,7 +37,7 @@ export const PLATFORMS: Platform[] = [
     requirement: "64-bit Windows on x64",
     short: "x64",
     assets: [{ suffix: "windows-x64-setup.exe", label: "Installer (.exe)" }],
-    readmeAnchor: "windows-x64",
+    installAnchor: "windows-x64",
     notes: [
       "Unsigned: SmartScreen shows a warning.",
       "Not yet tested on a real Windows device.",
@@ -52,7 +52,7 @@ export const PLATFORMS: Platform[] = [
       { suffix: "linux-x86_64.AppImage", label: "AppImage" },
       { suffix: "linux-x86_64.tar.gz", label: "Archive (.tar.gz)" },
     ],
-    readmeAnchor: "linux-x86_64-x11",
+    installAnchor: "linux-x86_64-x11",
     notes: ["Wayland isn't supported.", "Not yet tested on a real Linux device."],
   },
 ];

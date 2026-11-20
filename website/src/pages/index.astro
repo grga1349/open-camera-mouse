@@ -6,7 +6,7 @@ import Hero from "../components/Hero.astro";
 import Section from "../components/Section.astro";
 import ShowcasePlaceholder from "../components/ShowcasePlaceholder.astro";
 import DownloadEnhancer from "../components/DownloadEnhancer.astro";
-import { REPO_URL } from "../lib/url";
+import { REPO_URL, url } from "../lib/url";
 import { PLATFORMS } from "../lib/platforms";
 import { latestRelease } from "../lib/latest-release";
 
@@ -60,8 +60,8 @@ const steps = [
     id="download"
     title="Download"
     lead={release
-      ? `Version ${release.version}. Pick the file for your system. Installation steps and permissions are in the README until the manual is online.`
-      : "Pick the file for your system from the latest release. Installation steps and permissions are in the README until the manual is online."}
+      ? `Version ${release.version}. Pick the file for your system. Installation steps and permissions are in the manual.`
+      : "Pick the file for your system from the latest release. Installation steps and permissions are in the manual."}
   >
     <p data-detect="unsupported" hidden class="mb-8 max-w-prose border-l-4 border-text pl-4">
       Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device. Download
@@ -102,7 +102,7 @@ const steps = [
                 </ul>
               )}
               <p class="mt-auto pt-6">
-                <a href={`${REPO_URL}#${p.readmeAnchor}`} class="inline-flex min-h-11 items-center">
+                <a href={url(`manual/installation/#${p.installAnchor}`)} class="inline-flex min-h-11 items-center">
                   {p.name} install steps
                 </a>
               </p>

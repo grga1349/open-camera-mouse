@@ -10,5 +10,7 @@ export default defineConfig({
   trailingSlash: "always",
   output: "static",
   build: { format: "directory" },
+  // Manual code blocks stay monochrome: no Shiki colour theme (WEBSITE_DESIGN.md "Brand").
+  markdown: { syntaxHighlight: false },
   vite: { plugins: [tailwindcss()] },
 });

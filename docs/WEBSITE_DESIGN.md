@@ -120,9 +120,10 @@ wedge was rejected as ugly (2026-11-20).
 
 No tracking ring or crosshair in the hero (removed at the user's request).
 
-Header contents: logo and wordmark (home link), then only the GitHub mark (inline Octicons
-SVG, link named "Source code on GitHub") and the theme switch; no "Download" link (the hero
-has it). At 320px the header wraps to two rows.
+Header contents: logo and wordmark (home link), then a "Manual" text link (uppercase,
+underlined while on a manual page, `aria-current="page"` on `/manual/`), the GitHub mark
+(inline Octicons SVG, link named "Source code on GitHub") and the theme switch; no
+"Download" link (the hero has it). At 320px the header wraps to two rows.
 
 Hero contents (copy from the user, 2026-11-20): the h1 "Computing without barriers." in
 heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell
@@ -144,6 +145,18 @@ Windows, Linux`);
 on a phone, tablet or ChromeOS both say Open Camera Mouse runs on macOS, Windows and Linux
 computers. The CPU isn't guessed, so the requirement (e.g. Apple Silicon) is always shown
 next to a direct download.
+
+## Manual pages
+
+Normal padded column under the flat yellow header. From `md` up: a 13rem sidebar (small
+uppercase "Manual" label, then the pages; the current one bold with a 4px `text` bar on the
+left and `aria-current`, so not by colour) beside the article. Below `md` the same list sits
+in a collapsed `<details>` ("Manual contents") above the page. Article: h1, the page's
+description as a muted lead, an "On this page" list (4px `line` bar), the Markdown in
+`.manual-prose` (`global.css`: `max-w-prose`, `h2` `text-2xl`, `h3` `text-xl`, `code` and
+`kbd` boxed on `surface-2`, `kbd` with a `text` border, code blocks on `surface` that wrap,
+tables with 1px `line` rows and a `text` rule under the header), then previous/next.
+Tables stay narrow enough to fit 320px (no sideways scrolling).
 
 ## Angular language
 

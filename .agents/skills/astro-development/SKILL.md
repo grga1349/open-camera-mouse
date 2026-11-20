@@ -29,7 +29,7 @@ Brand, layout and token choices → `website-design`. Rust/egui UI → `egui-dev
   `src/lib/*.ts` (e.g. `platforms.ts`), not in inline `<script>`s.
 - **Markdown content** (the manual, Phase 5): Astro's built-in content collections
   (`src/content.config.ts`, `glob` loader over `src/content/<name>/*.md`, a zod schema),
-  rendered by a `[...slug].astro` page with `getStaticPaths`. No docs framework.
+  rendered by `src/pages/manual/[slug].astro` with `getStaticPaths`. No docs framework.
 - **Tests** for pure logic in `src/lib/`: `bun test` (built in; `*.test.ts` next to the
   module), no test-framework package. Keep DOM wiring thin and separate from the logic.
 - **URLs:** never write a root-relative `"/…"` string. Internal pages and `public/` files go

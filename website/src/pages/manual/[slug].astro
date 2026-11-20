@@ -1,0 +1,76 @@
+---
+// One manual page from src/content/manual/<slug>.md: sidebar, the page with an "On this
+// page" list of its sections (every heading has an id, so each section is linkable), and
+// previous/next links.
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ManualNav from "../../components/ManualNav.astro";
+import { url } from "../../lib/url";
+import { neighbours, sortPages } from "../../lib/manual-order";
+
+export async function getStaticPaths() {
+  const pages = sortPages(await getCollection("manual"));
+  return pages.map((page) => ({ params: { slug: page.id }, props: { page, pages } }));
+}
+
+const { page, pages } = Astro.props;
+const { Content, headings } = await render(page);
+const sections = headings.filter((h) => h.depth === 2);
+const { prev, next } = neighbours(pages, page.id);
+---
+
+<BaseLayout title={`${page.data.title} · Manual`} description={page.data.description}>
+  <div class="md:grid md:grid-cols-[13rem_minmax(0,1fr)] md:gap-12">
+    <ManualNav pages={pages} current={page.id} />
+    <article class="min-w-0">
+      <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{page.data.title}</h1>
+      <p class="mt-4 max-w-prose text-lg text-muted">{page.data.description}</p>
+
+      {
+        sections.length > 1 && (
+          <nav aria-labelledby="on-this-page" class="mt-8 max-w-prose border-l-4 border-line pl-4">
+            <p id="on-this-page" class="text-sm tracking-wide text-muted uppercase">
+              On this page
+            </p>
+            <ul class="mt-1">
+              {sections.map((h) => (
+                <li>
+                  <a href={`#${h.slug}`} class="inline-flex min-h-11 items-center">
+                    {h.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+
+      <div class="manual-prose mt-10 max-w-prose">
+        <Content />
+      </div>
+
+      <nav aria-label="Previous and next page" class="mt-16 grid max-w-prose gap-4 border-t border-line pt-6 sm:grid-cols-2">
+        {
+          prev && (
+            <a href={url(`manual/${prev.id}/`)} rel="prev" class="flex min-h-11 flex-col justify-center no-underline">
+              <span class="text-sm text-muted">Previous</span>
+              <span class="font-semibold underline underline-offset-[0.2em]">{prev.data.title}</span>
+            </a>
+          )
+        }
+        {
+          next && (
+            <a
+              href={url(`manual/${next.id}/`)}
+              rel="next"
+              class="flex min-h-11 flex-col justify-center no-underline sm:col-start-2 sm:text-right"
+            >
+              <span class="text-sm text-muted">Next</span>
+              <span class="font-semibold underline underline-offset-[0.2em]">{next.data.title}</span>
+            </a>
+          )
+        }
+      </nav>
+    </article>
+  </div>
+</BaseLayout>

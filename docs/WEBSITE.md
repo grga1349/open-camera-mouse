@@ -16,7 +16,8 @@ analytics or tracking, and no third-party requests from the visitor's browser: t
 release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
 Status: first homepage pass (yellow hero, showcase placeholder, how it works, OS-aware
-download cards, open source); see the roadmap.
+download cards, open source) and the first manual pages (getting started, system
+requirements, installation); see the roadmap.
 
 ## Homepage
 
@@ -43,6 +44,20 @@ plainly that the project is not affiliated with or endorsed by the original auth
 respectful, no marketing superlatives. Never use decompiled or proprietary material
 (`AGENTS.md`).
 
+## Manual
+
+`/manual/` lists the pages; `/manual/<slug>/` renders `src/content/manual/<slug>.md`
+(content collection in `src/content.config.ts`, frontmatter `title`, `description`,
+`order`). Each page has the sidebar (`ManualNav.astro`: a collapsed `<details>` under `md`,
+a sidebar from `md` up), an "On this page" list of its `##` sections when there are two or
+more, and previous/next links. Astro gives every heading an id, so sections are linkable;
+`order` must be unique (`src/lib/manual-order.ts`, tested). Code blocks aren't highlighted
+(`markdown.syntaxHighlight: false`, monochrome) and wrap instead of scrolling.
+
+Writing a page: only real app behaviour (`README.md`, `PRODUCT.md`, `BEHAVIOR.md`, the
+code); link other manual pages relatively (`../installation/#windows-x64`), the build
+checks them. Version numbers stay out of the copy (`<version>` in file names).
+
 ## Technology
 
 | Piece | Choice | Why |
@@ -65,7 +80,7 @@ website/
   package.json, bun.lock  scripts and pinned dependencies
   tsconfig.json           extends astro/tsconfigs/strict
   public/                 copied verbatim: favicon.png (copy of assets/icon/png/)
-  scripts/check-paths.mjs post-build check of internal URLs in dist/
+  scripts/check-paths.mjs post-build check of internal URLs and #anchors in dist/
   src/
     layouts/BaseLayout.astro   <html>, <head>, skip link, header, <main id="main">, footer;
                                `fullBleed` lets a page lay out its own full-width sections
@@ -75,7 +90,11 @@ website/
     components/Section.astro   homepage section: column, anchor id, h2
     components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)
     components/DownloadEnhancer.astro      client script: OS detection → hero button, "Your system"
+    components/ManualNav.astro   manual contents: <details> on small screens, sidebar from md
     pages/index.astro, 404.astro   routes (file = URL)
+    pages/manual/index.astro, [slug].astro   manual contents and one manual page
+    content.config.ts          the `manual` content collection (glob over content/manual/*.md)
+    content/manual/*.md        manual pages (frontmatter: title, description, order)
     styles/global.css          Tailwind import, tokens, base styles, brand surface, angular
                                edge, entrance animations, reduced motion
     lib/url.ts                 url() base-path helper, REPO_URL
@@ -83,6 +102,7 @@ website/
     lib/release.ts             API response → version + per-platform files (pure, tested)
     lib/detect-platform.ts     user agent → macos / windows / linux / unsupported (pure, tested)
     lib/latest-release.ts      build-time loader: CI file, else anonymous fetch, else null
+    lib/manual-order.ts        manual page order and previous/next (pure, tested)
     data/latest-release.json   written by CI only (gitignored)
 ```
 
@@ -109,8 +129,9 @@ of the built site.
 
 - **Base path.** Every internal page or `public/` URL goes through `url()` from
   `src/lib/url.ts`; page paths end in `/`. `bun run build` runs `scripts/check-paths.mjs`,
-  which fails on any root-relative `href`/`src`/`srcset`/CSS `url()` in `dist/` that is
-  outside `/open-camera-mouse/` or points at a missing file.
+  which resolves every internal `href`/`src`/`srcset`/CSS `url()` in `dist/` (root-relative,
+  relative or `#fragment`) and fails if it leaves `/open-camera-mouse/`, points at a missing
+  file, or names an `#id` that the target page doesn't have.
 - **No JavaScript by default.** Static UI uses HTML and CSS; an interaction that needs JS
   is a component `<script>` written as progressive enhancement.
 - **One layout.** Pages use `BaseLayout` with a `description` (and `title` except on the

@@ -8,6 +8,10 @@
 // choice is applied before first paint by the inline script in BaseLayout.
 import { url, REPO_URL } from "../lib/url";
 import Logo from "../assets/logo.svg";
+
+const manualPath = url("manual/");
+const inManual = Astro.url.pathname.startsWith(manualPath);
+const isManualHome = Astro.url.pathname === manualPath;
 ---
 
 <header class="on-brand">
@@ -23,7 +27,19 @@ import Logo from "../assets/logo.svg";
     </a>
     <div class="flex items-center gap-x-4">
       <nav aria-label="Main">
-        <ul class="flex items-center">
+        <ul class="flex items-center gap-x-2">
+          <li>
+            <a
+              href={url("manual/")}
+              aria-current={isManualHome ? "page" : undefined}
+              class:list={[
+                "inline-flex min-h-11 items-center px-2 font-semibold tracking-wide uppercase",
+                inManual ? "underline decoration-2" : "no-underline hover:underline",
+              ]}
+            >
+              Manual
+            </a>
+          </li>
           <li>
             <a
               href={REPO_URL}

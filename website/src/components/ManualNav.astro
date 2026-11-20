@@ -1,0 +1,54 @@
+---
+// The manual's contents as navigation. Two copies of the same list, never both visible:
+// a collapsed <details> above the page on small screens, a plain sidebar from md up. No JS.
+import { url } from "../lib/url";
+
+interface Props {
+  pages: { id: string; data: { title: string } }[];
+  /** id of the page being shown; marked with aria-current and a bar, not colour alone. */
+  current?: string;
+}
+
+const { pages, current } = Astro.props;
+const href = (id: string) => url(`manual/${id}/`);
+const linkClass = (id: string) => [
+  "flex min-h-11 items-center border-l-4 pl-3 no-underline",
+  id === current ? "border-text font-semibold" : "border-transparent hover:underline",
+];
+---
+
+<nav aria-label="Manual" class="mb-10 md:hidden">
+  <details class="rounded-frame border border-line bg-surface">
+    <summary class="flex min-h-11 cursor-pointer items-center px-4 font-semibold tracking-wide uppercase">
+      Manual contents
+    </summary>
+    <ol class="px-4 pb-3">
+      {
+        pages.map((p) => (
+          <li>
+            <a href={href(p.id)} class:list={linkClass(p.id)} aria-current={p.id === current ? "page" : undefined}>
+              {p.data.title}
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </details>
+</nav>
+
+<nav aria-label="Manual" class="hidden md:block">
+  <p class="mb-2 text-sm tracking-wide text-muted uppercase">
+    <a href={url("manual/")} class="inline-flex min-h-11 items-center">Manual</a>
+  </p>
+  <ol>
+    {
+      pages.map((p) => (
+        <li>
+          <a href={href(p.id)} class:list={linkClass(p.id)} aria-current={p.id === current ? "page" : undefined}>
+            {p.data.title}
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</nav>
