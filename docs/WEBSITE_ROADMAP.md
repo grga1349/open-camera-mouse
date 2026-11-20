@@ -35,6 +35,8 @@ before the merge to `main`).
 - [ ] Footer design (still the plain scaffold footer)
 - [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
 - [~] Navigation for more pages: "Manual" link in the header (wraps at 320px); revisit when there are more pages
+- [x] Hero entrance only on the first page of a visit (reload no longer blanks the hero)
+- [x] Hero pyramid: decorative stepped pyramid beside the hero text (lg+) whose top leans toward the pointer
 - [ ] Hero geometry refinement, section transitions, tracking-inspired accents beyond the hero
 - [ ] Hero copy approved by the user ("Your head. Your mouse." is a draft)
 
@@ -49,6 +51,7 @@ open source. Open:
       endorsement (rules in `WEBSITE.md` "Origin story")
 - [ ] Features with real screenshots (tracking window, Options)
 - [ ] Engineering: independent Rust implementation, tracking and stability, privacy, testing
+- [x] Questions (`#faq`): six FAQ answers from the manual's `faq.md`, one source
 - [ ] Open source: contributing, documentation links
 
 ## Phase 4 — Downloads  (mostly done)

@@ -4,28 +4,29 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, seventh): Phase 5 slice 3, reference pages
+## Latest session (2026-11-21, eighth): home page fixes and hero pyramid
 
-- Four manual pages, `order` 10–13: `settings` (every Options tab as a Setting/Range/Default
-  table, Capture format / Keyboard / Mouse takeover as read-only, Restore defaults keeps
-  camera + appearance + larger controls, file location per OS, every settings notice with
-  its exact wording), `accessibility` (Larger controls sizes from `theme.rs`, themes,
-  status without colour, fixed keys, known gaps: reduce-motion animation, screen readers
-  untested), `troubleshooting` (won't open, camera, pointer by "Pointer:" owner, shaky /
-  slow, lost target, dwell, keys, settings notice), `faq`.
-- Sources: `options.rs`, `settings.rs`, `settings_store.rs` (notices), `app.rs` (save /
-  apply notices, hotkey lines), `status.rs`, `theme.rs`, README "Known limitations".
-- Defaults check: `src/lib/manual-defaults.ts` + `.test.ts` parse `settings.rs` (`ranges`,
-  `impl Default`) and compare every `| Setting | Range | Default |` row on every manual
-  page; the Settings page must list every setting. Shown to fail on a changed default.
-  `website.yml` now also triggers on `crates/app-core/src/settings.rs`.
-- FAQ has one origin line ("independent … inspired by the classic Camera Mouse … not
-  affiliated or endorsed"), no historical claims; approved by the user (2026-11-21).
-- Verified: check 0/0/0, 22 tests, build + path check (587 URLs and anchors); headless
-  Chrome: `settings` at 320px (Carbon); the notices became a list (a table was cramped).
+- **Hero flicker on reload:** measured with CDP screencast frames (headless Chrome): the
+  first paint after a reload showed an empty yellow hero, then the text faded in (the
+  entrance replayed every load). Now the entrance plays on the first page of a visit only:
+  BaseLayout's inline head script sets `data-entered` (sessionStorage `ocm-entered`) before
+  paint, `global.css` turns the animation off. After the fix the reload's first frame is the
+  finished hero.
+- **Questions on the home page** (`#faq`, after Download): six answers picked by heading id
+  (`src/lib/home-faq.ts`) from the rendered `manual/faq.md`, links rebased
+  (`src/lib/faq-excerpt.ts` + test; the test also checks every picked id exists in faq.md).
+  Static two-column list, no disclosure (nothing to click open for dwell users).
+- **Hero pyramid** (`HeroPyramid.astro`, `src/lib/pyramid.ts` + test): stepped pyramid seen
+  from above, right of the hero text from `lg`; its top leans toward the pointer, rAF only
+  while settling, static with reduced motion / touch / no JS. Motion rule amended in
+  `WEBSITE_DESIGN.md`, both website skills.
+- Verified: check 0/0/0, 32 tests, build + path check; screenshots at 1280 (both themes),
+  1024, 320; pointer lean via CDP mouse events.
 
 ## Earlier sessions
 
+Seventh (2026-11-21): manual reference pages (settings, accessibility, troubleshooting, FAQ)
+and the defaults check (`manual-defaults.test.ts`).
 Sixth (2026-11-20): everyday-use manual pages (setup, tracking point, pointer, recentering,
 clicking, handover); header back to one row, skip link removed. Fifth: manual
 infrastructure, getting started, requirements, installation. Fourth: header GitHub mark +
@@ -54,6 +55,8 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
+Hero pyramid in a real browser with a real mouse and head pointer (feel of the lean, CPU
+while moving); the reload fix in Safari/Firefox.
 Manual (all thirteen pages): keyboard walk-through (sidebar, `<details>` at small widths, "On this page",
 prev/next), VoiceOver read of the tables and `kbd`, 200% zoom.
 200% zoom, keyboard walk-through (night/day switch click + Space/Enter, new file buttons, "Other platforms"),

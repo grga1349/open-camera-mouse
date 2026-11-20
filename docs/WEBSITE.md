@@ -33,6 +33,7 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
 | 6 | Engineering | Independent Rust implementation, tracking and stability, privacy (on-device), testing | Phase 3 |
 | 7 | Download (`#download`) | Supported platforms, caveats, direct files, install guidance | built, OS-aware |
+| 7b | Questions (`#faq`) | Six questions from the manual's FAQ (`HOME_FAQ` in `src/lib/home-faq.ts`), taken from the rendered `faq.md` so the answers have one source; links rebased to `/manual/…`; "All questions →" | built |
 | 8 | Open source (`#open-source`) | Repository, issues, contributing, documentation | built (minimal) |
 
 ### Origin story
@@ -94,6 +95,7 @@ website/
     assets/logo.svg            one-colour logo mark (currentColor), imported as a component
     components/SiteHeader.astro, SiteFooter.astro   header on the yellow brand surface
     components/Hero.astro      yellow angular hero
+    components/HeroPyramid.astro   decorative pointer-following figure beside the hero text (lg+)
     components/Section.astro   homepage section: column, anchor id, h2
     components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)
     components/DownloadEnhancer.astro      client script: OS detection → hero button, "Your system"
@@ -110,6 +112,8 @@ website/
     lib/detect-platform.ts     user agent → macos / windows / linux / unsupported (pure, tested)
     lib/latest-release.ts      build-time loader: CI file, else anonymous fetch, else null
     lib/manual-order.ts        manual page order and previous/next (pure, tested)
+    lib/faq-excerpt.ts, home-faq.ts   home page FAQ: questions picked from manual/faq.md (tested)
+    lib/pyramid.ts             hero pyramid geometry (pure, tested)
     lib/manual-defaults.ts     app settings source → expected manual table rows (pure, tested
                                against settings.rs and content/manual/*.md)
     data/latest-release.json   written by CI only (gitignored)

@@ -9,10 +9,21 @@ import DownloadEnhancer from "../components/DownloadEnhancer.astro";
 import { REPO_URL, url } from "../lib/url";
 import { PLATFORMS } from "../lib/platforms";
 import { latestRelease } from "../lib/latest-release";
+import { getEntry } from "astro:content";
+import { pickFaq, rebaseLinks, splitFaq } from "../lib/faq-excerpt";
+import { HOME_FAQ } from "../lib/home-faq";
 
 const RELEASES_URL = `${REPO_URL}/releases/latest`;
 // Read at build time; null when the API wasn't reachable (cards then link the Releases page).
 const release = await latestRelease();
+
+// A few FAQ answers, taken from the manual's FAQ page so they have one source.
+const faqPage = await getEntry("manual", "faq");
+if (!faqPage?.rendered) throw new Error("manual/faq.md is missing or not rendered");
+const faq = pickFaq(splitFaq(faqPage.rendered.html), HOME_FAQ).map((item) => ({
+  ...item,
+  answer: rebaseLinks(item.answer, url("manual/faq/")),
+}));
 
 const steps = [
   {
@@ -134,6 +145,24 @@ const steps = [
         </p>
       )
     }
+  </Section>
+
+  <Section id="faq" title="Questions">
+    <ul class="grid gap-x-12 gap-y-10 md:grid-cols-2">
+      {
+        faq.map((item) => (
+          <li class="border-t border-line pt-6">
+            <h3 class="text-xl font-semibold" set:html={item.question} />
+            <div class="manual-prose mt-3" set:html={item.answer} />
+          </li>
+        ))
+      }
+    </ul>
+    <p class="mt-10">
+      <a href={url("manual/faq/")} class="inline-flex min-h-11 items-center font-semibold">
+        All questions<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    </p>
   </Section>
 
   <Section id="open-source" title="Open source">

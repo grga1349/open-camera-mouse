@@ -5,6 +5,7 @@
 import { url } from "../lib/url";
 import { PLATFORMS } from "../lib/platforms";
 import { latestRelease } from "../lib/latest-release";
+import HeroPyramid from "./HeroPyramid.astro";
 
 const release = await latestRelease();
 // Platforms the hero can download directly: the preferred (first) file of each.
@@ -23,49 +24,52 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
 -->
 <section aria-labelledby="hero-title" class="on-brand angular-bottom relative -mt-px overflow-hidden">
   <div
-    class="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-[calc(var(--cut)+3rem)] sm:px-6 md:pt-16"
+    class="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-[calc(var(--cut)+3rem)] sm:px-6 md:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-center lg:gap-12"
   >
-    <h1
-      id="hero-title"
-      class="animate-rise-in max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl"
-    >
-      Computing without barriers
-    </h1>
-    <p class="animate-rise-in mt-6 max-w-[36rem] text-lg [animation-delay:160ms] sm:text-xl">
-      Control your computer using head movements and an ordinary webcam. Free and open source.
-    </p>
-    <ul class="animate-rise-in mt-8 flex flex-wrap gap-4 [animation-delay:240ms]">
-      <li>
-        <a
-          id="hero-download"
-          href={url("#download")}
-          data-downloads={JSON.stringify(links)}
-          class="inline-flex min-h-12 items-center rounded-widget bg-on-brand px-6 text-lg font-semibold text-brand no-underline transition-transform hover:-translate-y-0.5"
-        >
-          Download
-        </a>
-      </li>
-      <li>
-        <a
-          href={url("#showcase")}
-          class="inline-flex min-h-12 items-center rounded-widget border-2 border-on-brand px-6 text-lg font-semibold no-underline transition-transform hover:-translate-y-0.5"
-        >
-          See it working
-        </a>
-      </li>
-    </ul>
-    <div class="animate-rise-in mt-4 text-sm [animation-delay:240ms]">
-      {release && <p data-detect-default>v{release.version} · macOS, Windows, Linux</p>}
-      {
-        direct.map(({ platform }) => (
-          <p data-detect={platform.id} hidden>
-            v{release!.version} · {platform.short} · <a href={url("#download")}>Other platforms</a>
-          </p>
-        ))
-      }
-      <p data-detect="unsupported" hidden>
-        Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device.
+    <div>
+      <h1
+        id="hero-title"
+        class="animate-rise-in max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl"
+      >
+        Computing without barriers
+      </h1>
+      <p class="animate-rise-in mt-6 max-w-[36rem] text-lg [animation-delay:160ms] sm:text-xl">
+        Control your computer using head movements and an ordinary webcam. Free and open source.
       </p>
+      <ul class="animate-rise-in mt-8 flex flex-wrap gap-4 [animation-delay:240ms]">
+        <li>
+          <a
+            id="hero-download"
+            href={url("#download")}
+            data-downloads={JSON.stringify(links)}
+            class="inline-flex min-h-12 items-center rounded-widget bg-on-brand px-6 text-lg font-semibold text-brand no-underline transition-transform hover:-translate-y-0.5"
+          >
+            Download
+          </a>
+        </li>
+        <li>
+          <a
+            href={url("#showcase")}
+            class="inline-flex min-h-12 items-center rounded-widget border-2 border-on-brand px-6 text-lg font-semibold no-underline transition-transform hover:-translate-y-0.5"
+          >
+            See it working
+          </a>
+        </li>
+      </ul>
+      <div class="animate-rise-in mt-4 text-sm [animation-delay:240ms]">
+        {release && <p data-detect-default>v{release.version} · macOS, Windows, Linux</p>}
+        {
+          direct.map(({ platform }) => (
+            <p data-detect={platform.id} hidden>
+              v{release!.version} · {platform.short} · <a href={url("#download")}>Other platforms</a>
+            </p>
+          ))
+        }
+        <p data-detect="unsupported" hidden>
+          Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device.
+        </p>
+      </div>
     </div>
+    <HeroPyramid />
   </div>
 </section>

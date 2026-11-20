@@ -1,0 +1,88 @@
+---
+// Decorative hero figure (WEBSITE_DESIGN.md "Header and hero"): a stepped pyramid seen from
+// above whose top leans toward the pointer. Black lines on the brand yellow, aria-hidden,
+// nothing to click. Rendered centred at build time; the script only adds the lean. It moves
+// only while the pointer moves (no loop), and not at all with reduced motion, on touch-only
+// screens or with JavaScript off. Shown from lg up, beside the hero text.
+import { VIEW, pyramidPaths } from "../lib/pyramid";
+
+const { lines, top } = pyramidPaths();
+---
+
+<svg
+  id="hero-pyramid"
+  aria-hidden="true"
+  focusable="false"
+  viewBox={`0 0 ${VIEW} ${VIEW}`}
+  width={VIEW}
+  height={VIEW}
+  class="animate-rise-in hidden h-auto w-full max-w-80 justify-self-end [animation-delay:320ms] lg:block"
+>
+  <path d={lines} fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter" vector-effect="non-scaling-stroke"></path>
+  <path d={top} fill="currentColor"></path>
+</svg>
+
+<script>
+  import { leanFor, pyramidPaths } from "../lib/pyramid";
+
+  const svg = document.getElementById("hero-pyramid");
+  const [linesEl, topEl] = svg ? Array.from(svg.querySelectorAll("path")) : [];
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  // Follows a mouse, pen or head pointer; a touch-only screen has nothing to follow.
+  const fine = matchMedia("(any-hover: hover)");
+
+  let cur = { dx: 0, dy: 0 };
+  let goal = { dx: 0, dy: 0 };
+  let frame = 0;
+
+  const draw = () => {
+    const { lines, top } = pyramidPaths(cur.dx, cur.dy);
+    linesEl.setAttribute("d", lines);
+    topEl.setAttribute("d", top);
+  };
+
+  // Ease toward the goal; stop once there, so nothing runs while the pointer rests.
+  const step = () => {
+    cur = { dx: cur.dx + (goal.dx - cur.dx) * 0.12, dy: cur.dy + (goal.dy - cur.dy) * 0.12 };
+    if (Math.abs(goal.dx - cur.dx) < 0.05 && Math.abs(goal.dy - cur.dy) < 0.05) cur = goal;
+    draw();
+    frame = cur === goal ? 0 : requestAnimationFrame(step);
+  };
+
+  const aim = (next: { dx: number; dy: number }) => {
+    goal = next;
+    if (!frame) frame = requestAnimationFrame(step);
+  };
+
+  const onMove = (e: PointerEvent) => {
+    if (e.pointerType === "touch" || !svg) return;
+    const r = svg.getBoundingClientRect();
+    if (r.width === 0) return; // hidden below lg
+    const nx = (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2);
+    const ny = (e.clientY - (r.top + r.height / 2)) / (innerHeight / 2);
+    aim(leanFor(nx, ny));
+  };
+  const onLeave = (e: PointerEvent) => {
+    if (!e.relatedTarget) aim({ dx: 0, dy: 0 });
+  };
+
+  const sync = () => {
+    removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerout", onLeave);
+    if (still.matches || !fine.matches) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      cur = goal = { dx: 0, dy: 0 };
+      draw();
+      return;
+    }
+    addEventListener("pointermove", onMove, { passive: true });
+    document.addEventListener("pointerout", onLeave);
+  };
+
+  if (svg && linesEl && topEl) {
+    sync();
+    still.addEventListener("change", sync);
+    fine.addEventListener("change", sync);
+  }
+</script>
