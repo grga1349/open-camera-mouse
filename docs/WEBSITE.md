@@ -93,7 +93,7 @@ website/
     layouts/BaseLayout.astro   <html>, <head>, header, <main id="main">, footer;
                                `fullBleed` lets a page lay out its own full-width sections
     assets/logo.svg            one-colour logo mark (currentColor), imported as a component
-    components/SiteHeader.astro, SiteFooter.astro   header on the yellow brand surface
+    components/SiteHeader.astro, SiteFooter.astro   header and footer on the yellow brand surface
     components/Hero.astro      yellow angular hero
     components/HeroSquirrel.astro   decorative squirrel that watches the pointer beside the hero text (lg+)
     components/Section.astro   homepage section: column, anchor id, h2

@@ -242,3 +242,11 @@
     font-weight: 600;
   }
 }
+
+/*
+ * Footer edge: a shallow Λ that mirrors the hero's V, the point --cut above both sides, so
+ * every page starts and ends on yellow. Content keeps at least --cut of top padding.
+ */
+.angular-top {
+  clip-path: polygon(0 var(--cut), 50% 0, 100% var(--cut), 100% 100%, 0 100%);
+}

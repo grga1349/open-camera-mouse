@@ -40,7 +40,7 @@ picks one with the header switch (see "Theme switch").
 | `text-text` / `text-muted` | text / muted | `#fafafa` / `#8f8f8f` | `#111111` / `#5a5a5a` | body / help text |
 | `*-marker` | marker | `#00ff00` | `#00ff00` | target-ring motif only |
 | `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action |
-| `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | hero band only; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
+| `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | header, hero band and footer; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
 | `rounded-frame` / `rounded-widget` | radius | 8px / 6px | same | panels, images / buttons, inputs |
 | `font-mono` (page default) / `font-sans` | font | system monospace stack / system UI stack | same | no web fonts; mono is the typewriter face for all text |
 
@@ -154,6 +154,18 @@ source."; the primary action (black button, yellow text) and a secondary outline
 one short download line, `v0.4.0 · Apple Silicon · Other platforms` (see "Downloads"). No
 eyebrow line above the headline. Inside the yellow, text and the focus outline are black.
 
+## Footer
+
+Every page **ends yellow** too (2026-11-21, pending the user's approval): `SiteFooter.astro` is
+on the brand surface with a shallow **Λ top edge** (`.angular-top`, the point `--cut` above
+both sides), mirroring the hero's V, so header/hero and footer bookend the page. Contents:
+logo and wordmark (not a link: the header has the home link), the hero's one-line description,
+a `nav` named "Footer" with two labelled lists ("Manual": getting started, installation,
+troubleshooting, questions; "Project": download, all releases, source code, report a problem),
+then a 2px black rule and the licence line ("Free software under the MIT licence") and "No
+cookies, no analytics." Links are underlined, black, `min-h-11`. Columns: one below `sm`, the
+two lists side by side from `sm`, the description beside them from `md`. No script.
+
 ## Downloads
 
 Each platform card (`#download`) shows its requirement, its notes, and one outlined button
@@ -183,7 +195,7 @@ Tables stay narrow enough to fit 320px (no sideways scrolling).
 ## Angular language
 
 Sharp, not rounded, and calm: straight edges and shallow, symmetric angles (the hero's V)
-in solid fills, no gradients or shadows. Fewer shapes beat more: the user rejected a
+in solid fills, no gradients or shadows. The footer's Λ is the hero's V mirrored, not a new shape. Fewer shapes beat more: the user rejected a
 layered diagonal/blade/wedge hero as ugly.
 Geometry is decorative (`aria-hidden`) and never carries information. Controls keep the
 normal radius and rectangular hit areas.

@@ -1,14 +1,74 @@
 ---
-import { REPO_URL } from "../lib/url";
+// Site footer: the yellow bookend of every page (WEBSITE_DESIGN.md "Footer"). The brand
+// surface again, with a shallow Λ top edge that mirrors the hero's V. Links only, no script.
+import { url, REPO_URL } from "../lib/url";
+import Logo from "../assets/logo.svg";
+
+const groups = [
+  {
+    id: "footer-manual",
+    label: "Manual",
+    links: [
+      { href: url("manual/getting-started/"), text: "Getting started" },
+      { href: url("manual/installation/"), text: "Installation" },
+      { href: url("manual/troubleshooting/"), text: "Troubleshooting" },
+      { href: url("manual/faq/"), text: "Questions" },
+    ],
+  },
+  {
+    id: "footer-project",
+    label: "Project",
+    links: [
+      { href: `${url("/")}#download`, text: "Download" },
+      { href: `${REPO_URL}/releases`, text: "All releases" },
+      { href: REPO_URL, text: "Source code" },
+      { href: `${REPO_URL}/issues`, text: "Report a problem" },
+    ],
+  },
+];
 ---
 
-<footer class="border-t border-line text-sm text-muted">
-  <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-    <p>
-      Open Camera Mouse is free software under the <a
-        href={`${REPO_URL}/blob/main/LICENSE`}
-        class="text-text">MIT licence</a
-      >.
-    </p>
+<footer class="on-brand angular-top mt-auto">
+  <div class="mx-auto max-w-5xl px-4 pt-[calc(var(--cut)+2.5rem)] pb-8 sm:px-6">
+    <div class="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)] md:gap-12">
+      <div>
+        <p class="flex items-center gap-3 text-base font-black tracking-wide uppercase">
+          <Logo aria-hidden="true" width="34" height="28" class="shrink-0" />
+          Open Camera Mouse
+        </p>
+        <p class="mt-4 max-w-[28rem]">
+          Control your computer using head movements and an ordinary webcam. Free and open
+          source.
+        </p>
+      </div>
+      <nav aria-label="Footer" class="grid gap-8 sm:grid-cols-2 sm:gap-12">
+        {
+          groups.map((g) => (
+            <div>
+              <p id={g.id} class="text-sm font-semibold tracking-wide uppercase">
+                {g.label}
+              </p>
+              <ul aria-labelledby={g.id} class="mt-2">
+                {g.links.map((l) => (
+                  <li>
+                    <a href={l.href} class="inline-flex min-h-11 items-center">
+                      {l.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </nav>
+    </div>
+    <div
+      class="mt-10 flex flex-col gap-2 border-t-2 border-on-brand pt-4 text-sm sm:flex-row sm:justify-between sm:gap-6"
+    >
+      <p>
+        Free software under the <a href={`${REPO_URL}/blob/main/LICENSE`}>MIT licence</a>.
+      </p>
+      <p>No cookies, no analytics.</p>
+    </div>
   </div>
 </footer>

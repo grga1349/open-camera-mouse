@@ -4,29 +4,20 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, eighth): home page fixes and hero squirrel
+## Latest session (2026-11-21, ninth): footer
 
-- **Hero flicker on reload:** measured with CDP screencast frames (headless Chrome): the
-  first paint after a reload showed an empty yellow hero, then the text faded in (the
-  entrance replayed every load). Now the entrance plays on the first page of a visit only:
-  BaseLayout's inline head script sets `data-entered` (sessionStorage `ocm-entered`) before
-  paint, `global.css` turns the animation off. After the fix the reload's first frame is the
-  finished hero.
-- **Questions on the home page** (`#faq`, after Download): six answers picked by heading id
-  (`src/lib/home-faq.ts`) from the rendered `manual/faq.md`, links rebased
-  (`src/lib/faq-excerpt.ts` + test; the test also checks every picked id exists in faq.md).
-  Static two-column list, no disclosure (nothing to click open for dwell users).
-- **Hero squirrel** (`HeroSquirrel.astro`, `src/lib/squirrel.ts` + test): line-drawn squirrel
-  seen from the front (mismatched eyes, no crossing lines) right of the hero text from `lg`;
-  head tilts, face slides and pupils look toward the pointer, tail sways; rAF only while
-  settling, static with reduced motion / touch / no JS. Tried first the same session and
-  dropped by the user: a stepped pyramid, then a cubist "Picasso-like"
-  head (too spiky). Motion rule amended in `WEBSITE_DESIGN.md`, both website skills.
-- Verified: check 0/0/0, 34 tests, build + path check; screenshots at 1280 (both themes),
-  1024, 320; pointer poses via CDP mouse events.
+- **Footer** (`SiteFooter.astro`, `.angular-top` in `global.css`): the yellow brand surface
+  again with a shallow Λ top edge mirroring the hero's V, so every page starts and ends
+  yellow. Logo + wordmark, the hero's one-liner, a "Footer" nav with Manual (getting started,
+  installation, troubleshooting, questions) and Project (download, all releases, source
+  code, report a problem) lists, a 2px black rule, licence line, "No cookies, no analytics."
+  No script. **Built without asking first; awaiting the user's OK on the direction.**
+- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); headless screenshots at
+  1280 (both themes, home and 404) and 320.
 
 ## Earlier sessions
 
+Eighth (2026-11-21): hero reload flicker fix, home page FAQ (`#faq`), hero squirrel.
 Seventh (2026-11-21): manual reference pages (settings, accessibility, troubleshooting, FAQ)
 and the defaults check (`manual-defaults.test.ts`).
 Sixth (2026-11-20): everyday-use manual pages (setup, tracking point, pointer, recentering,
@@ -48,8 +39,7 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 ## Next
 
-Phase 5 slice 4 needs the user's screenshots; until then pick from the roadmap: Phase 2
-footer design, or Phase 3 features / engineering sections (screenshots again) or the
+Phase 5 slice 4 needs the user's screenshots; until then pick from the roadmap: Phase 3 features / engineering sections (screenshots again) or the
 origin story (research with sources first). README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
@@ -60,6 +50,7 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
+Footer: keyboard walk-through, VoiceOver (footer nav and list labels), 200% zoom, 768px.
 Hero squirrel in a real browser with a real mouse and head pointer (feel of the motion, CPU
 while moving); the reload fix in Safari/Firefox.
 Manual (all thirteen pages): keyboard walk-through (sidebar, `<details>` at small widths, "On this page",

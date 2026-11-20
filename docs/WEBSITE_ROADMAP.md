@@ -32,7 +32,7 @@ before the merge to `main`).
 - [~] Responsive layout: checked at 320 and 1280px for the V edge (headless screenshots); 200% zoom not checked
 - [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
 - [ ] Header on other pages: yellow with a flat bottom today (only 404 exists); decide whether it gets its own angular edge once the manual/download pages exist
-- [ ] Footer design (still the plain scaffold footer)
+- [x] Footer: yellow bookend with a Λ top edge mirroring the hero, manual and project links, licence (awaiting the user's OK)
 - [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
 - [~] Navigation for more pages: "Manual" link in the header (wraps at 320px); revisit when there are more pages
 - [x] Hero entrance only on the first page of a visit (reload no longer blanks the hero)
