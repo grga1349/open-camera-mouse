@@ -1,0 +1,18 @@
+---
+// Placeholder proving the build, layout and base path work. The landing page is a separate
+// task: docs/WEBSITE_DESIGN.md ("Initial page structure").
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { REPO_URL } from "../lib/url";
+---
+
+<BaseLayout description="Control the mouse pointer with your head, using an ordinary webcam.">
+  <h1 class="text-3xl font-semibold sm:text-4xl">Open Camera Mouse</h1>
+  <p class="mt-4 max-w-prose text-lg">
+    Control the mouse pointer with your head, using an ordinary webcam.
+  </p>
+  <p class="mt-4 max-w-prose text-muted">
+    This website is being built. Until then, the <a href={REPO_URL} class="text-text"
+      >project on GitHub</a
+    > has installation and usage instructions.
+  </p>
+</BaseLayout>

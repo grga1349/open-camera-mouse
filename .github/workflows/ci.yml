@@ -1,10 +1,19 @@
 name: CI
 
+# Website-only changes don't compile Rust; they have their own workflow (website.yml, ADR-0023).
 on:
   push:
     branches: [main, rewrite/rust]
+    paths-ignore:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+      - 'docs/WEBSITE*.md'
   pull_request:
     branches: [main, rewrite/rust]
+    paths-ignore:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+      - 'docs/WEBSITE*.md'
   workflow_dispatch:
 
 env:

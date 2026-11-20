@@ -13,6 +13,9 @@
 Dependencies point down only; `scripts/check-core-deps.sh` enforces the core crates'
 allowlists (CI). A new crate or cross-layer dependency needs an ADR.
 
+`website/` (the project website, ADR-0023) is a separate Bun/Astro package, not a Cargo
+member; nothing in the workspace depends on it. See `docs/WEBSITE.md`.
+
 ## Runtime (ADR-0016)
 
 ```

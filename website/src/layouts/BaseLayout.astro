@@ -1,0 +1,44 @@
+---
+import "../styles/global.css";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { url } from "../lib/url";
+
+interface Props {
+  /** Page-specific title; the site name is appended. */
+  title?: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const siteName = "Open Camera Mouse";
+const fullTitle = title ? `${title} · ${siteName}` : siteName;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/png" href={url("favicon.png")} />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ececec" media="(prefers-color-scheme: light)" />
+  </head>
+  <body class="flex min-h-dvh flex-col bg-bg text-text">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-10 focus:rounded-widget focus:bg-yellow focus:px-4 focus:py-2 focus:text-on-yellow"
+    >
+      Skip to content
+    </a>
+    <SiteHeader />
+    <main id="main" tabindex="-1" class="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6">
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

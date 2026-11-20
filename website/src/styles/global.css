@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens: the desktop app's Carbon (dark) and Paper (light) themes, from
+ * docs/PRODUCT.md ("Design tokens"); keep the values identical. Theme follows the OS
+ * (prefers-color-scheme), Carbon when there's no preference. docs/WEBSITE_DESIGN.md.
+ */
+:root {
+  color-scheme: dark light;
+  --ocm-bg: #000000;
+  --ocm-surface: #0a0a0a;
+  --ocm-surface-2: #151515;
+  --ocm-line: #262626;
+  --ocm-line-strong: #3f3f3f;
+  --ocm-text: #fafafa;
+  --ocm-muted: #8f8f8f;
+  --ocm-yellow: #ffd60a;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --ocm-bg: #ececec;
+    --ocm-surface: #f8f8f8;
+    --ocm-surface-2: #ffffff;
+    --ocm-line: #d6d6d6;
+    --ocm-line-strong: #a8a8a8;
+    --ocm-text: #111111;
+    --ocm-muted: #5a5a5a;
+    --ocm-yellow: #f5c518;
+  }
+}
+
+/*
+ * Tailwind theme. `--color-*: initial` drops Tailwind's default palette so only the brand
+ * colours exist as utilities (bg-bg, bg-surface, text-text, text-muted, border-line, …).
+ * Exactly two accents, as in the app: marker (target ring only) and yellow (primary fill only).
+ */
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--ocm-bg);
+  --color-surface: var(--ocm-surface);
+  --color-surface-2: var(--ocm-surface-2);
+  --color-line: var(--ocm-line);
+  --color-line-strong: var(--ocm-line-strong);
+  --color-text: var(--ocm-text);
+  --color-muted: var(--ocm-muted);
+  --color-marker: #00ff00;
+  --color-yellow: var(--ocm-yellow);
+  --color-on-yellow: #111111;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Ubuntu, sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  --radius-frame: 8px;
+  --radius-widget: 6px;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Visible focus for keyboard users (WCAG 2.4.7 / 2.4.11); 2px like the app's normal size. */
+  :focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  a {
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

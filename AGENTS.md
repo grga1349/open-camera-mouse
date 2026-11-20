@@ -7,7 +7,8 @@ repository. Keep this file short; link to the docs instead of duplicating them.
 
 A hands-free pointer: a webcam tracks a point on the user's face and drives the OS cursor.
 Rust workspace, egui desktop app, macOS / Windows / Linux (X11). v0.4.0 is the first Rust
-release (the earlier Go app is in git history, tag `v0.3.0`).
+release (the earlier Go app is in git history, tag `v0.3.0`). The project website is a
+separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 
 | Read | For |
 |---|---|
@@ -19,6 +20,8 @@ release (the earlier Go app is in git history, tag `v0.3.0`).
 | `docs/ROADMAP.md` | Open items and what was deferred |
 | `docs/architecture/decisions/` | ADRs: why things are the way they are |
 | `docs/design-lab.html` | Approved visual reference (open in a browser) |
+| `docs/WEBSITE.md` | Website: scope, stack, structure, commands, CI and Pages deployment |
+| `docs/WEBSITE_DESIGN.md` | Website: brand, tokens, contrast, layout, content constraints |
 
 ## Workflow: one prompt = one task
 
@@ -75,6 +78,25 @@ a failed job's annotations without auth at
 `https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`
 (no `gh` CLI here). Release builds and packaging are slow: ask before running them.
 
+## Website tasks
+
+Any change under `website/` or to `.github/workflows/website.yml`: first read
+`docs/WEBSITE.md` and `docs/WEBSITE_DESIGN.md`, and the `astro-development` and
+`web-accessibility` skills (plus `website-design` for anything visual or textual). The
+workflow above applies unchanged (understand, clarify, change, verify, ask before commit);
+new packages need an ADR-0023 amendment, and site copy may only state what `README.md` and
+`docs/PRODUCT.md` support. Gates, from `website/` (Bun, no Node needed):
+
+```sh
+bun install --frozen-lockfile
+bun run check                          # astro check, 0 errors/warnings
+bun run build                          # astro build + base-path/dead-link check of dist/
+```
+
+Website-only changes don't need the Rust gates (and don't trigger the Rust CI); a change
+touching both runs both. Report by-hand checks (keyboard, both themes, 320px, screen reader)
+as done or not done.
+
 ## Skills
 
 Project skills live in `.agents/skills/<name>/SKILL.md`. Codex discovers them; **Claude Code
@@ -91,6 +113,9 @@ does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005).
 | `egui-development` | eframe/egui patterns, `egui_kittest` tests |
 | `platform-integration` | Camera / cursor / hotkey / permission adapters per OS |
 | `code-review` | Independent review: correctness, failure modes, evidence |
+| `astro-development` | Website: Astro components, Tailwind v4, base-path URLs, zero-JS, build gates |
+| `website-design` | Website: brand, tokens, typography, responsive layout, content rules |
+| `web-accessibility` | Website: WCAG 2.2 AA, keyboard, focus, screen readers, contrast, motion |
 
 ## Instruction files
 
@@ -101,6 +126,6 @@ does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005).
 
 - Commit or push without the user's yes; force-push; rewrite published history.
 - Add OpenCV (or any non-permissive licence; `deny.toml` is the policy).
-- Add a crate or a cross-layer dependency without an ADR.
+- Add a crate, a cross-layer dependency or a website package without an ADR.
 - Change a default, a hotkey or the visual direction without the user's OK.
 - Commit camera recordings or anything derived from them.

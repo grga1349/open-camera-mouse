@@ -47,4 +47,13 @@ Open items, roughly by priority:
 11. **Multi-monitor:** with uneven monitors the cursor sticks to edges where the desktop's
     bounding box has dead zones (snap). Fine for v1.
 
+## Website
+
+Scaffold on `feature/website` (ADR-0023, `docs/WEBSITE.md`). Open:
+
+1. **Landing page design and content** (`docs/WEBSITE_DESIGN.md`, "Initial page structure").
+2. **Enable GitHub Pages** (source GitHub Actions, variable `WEBSITE_DEPLOY=true`); the
+   first deployment has not run.
+3. **Theme switch** (Carbon/Paper follow the OS for now; a switch needs JS and storage).
+
 New work arrives as prompts (see `AGENTS.md`); add an item here only when it is deferred.

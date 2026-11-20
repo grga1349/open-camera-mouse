@@ -1,0 +1,76 @@
+# Website (ADR-0023, docs/WEBSITE.md). Builds website/ on PRs and pushes that touch it;
+# deploys to GitHub Pages only from main (push or manual run), and only once the repository variable
+# WEBSITE_DEPLOY is set to "true" (after Pages is enabled with source "GitHub Actions").
+# No secrets: the deploy job uses the built-in OIDC token. The Rust CI ignores these paths.
+name: Website
+
+on:
+  pull_request:
+    paths:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+  push:
+    branches: [main, feature/website]
+    paths:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+# Least privilege by default; only the deploy job gets more.
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ASTRO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  build:
+    name: check and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Version from "packageManager" in website/package.json.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: website/package.json
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: astro check
+        run: bun run check
+      # Includes scripts/check-paths.mjs: every internal URL stays under /open-camera-mouse/.
+      - name: build
+        run: bun run build
+      - name: upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/dist
+
+  deploy:
+    name: deploy to GitHub Pages
+    needs: build
+    # push or manual run on main only; never for pull_request, so PR code never reaches
+    # this job or its token.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.WEBSITE_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
