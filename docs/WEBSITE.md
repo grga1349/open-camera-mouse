@@ -3,16 +3,45 @@
 The project website, `website/`, published at
 `https://grga1349.github.io/open-camera-mouse/` (GitHub Pages project site). Decision and
 trade-offs: ADR-0023. Look and content rules: [`WEBSITE_DESIGN.md`](WEBSITE_DESIGN.md).
+Phases and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
 ## Purpose and scope
 
-A small static site that introduces the app and points people to the download and the
-documentation. It doesn't duplicate them: install steps, permissions and known limitations
-live in `README.md`, product behaviour and defaults in `docs/PRODUCT.md`; the site links
-there. No accounts, forms, backend, analytics, tracking or third-party requests.
+A small static site that introduces the app, offers the right download and, from Phase 5,
+hosts the **user manual**, which becomes the canonical end-user documentation (installation,
+permissions, use, settings, troubleshooting). Developer documentation (`docs/`, ADRs) stays
+in the repository. Product behaviour and defaults remain defined by `docs/PRODUCT.md` and the
+code; the manual describes them and must not contradict them. No accounts, forms, backend,
+analytics or tracking; the only planned third-party request is the GitHub releases API for
+the download button (Phase 4, decision pending).
 
-Status: scaffold only (layout, header, footer, placeholder home page, 404). The landing
-page is a separate task.
+Status: first homepage pass (yellow hero, showcase placeholder, how it works, download
+cards, open source); see the roadmap.
+
+## Homepage
+
+Planned sections, in order. Built ones are marked; the rest wait for their roadmap phase.
+
+| # | Section | Purpose | Status |
+|---|---|---|---|
+| 1 | Hero | What it is, that it uses an ordinary webcam, free and open source; primary download, link to the showcase | built (draft copy) |
+| 2 | Showcase (`#showcase`) | A real recording of the app in use | placeholder |
+| 3 | Why it exists | The classic Camera Mouse's legacy and why a maintained open-source successor is useful | Phase 3 |
+| 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
+| 5 | Features | Real features, each with a real screenshot | Phase 3 |
+| 6 | Engineering | Independent Rust implementation, tracking and stability, privacy (on-device), testing | Phase 3 |
+| 7 | Download (`#download`) | Supported platforms, caveats, install guidance | built (static); OS-aware in Phase 4 |
+| 8 | Open source (`#open-source`) | Repository, issues, contributing, documentation | built (minimal) |
+
+### Origin story
+
+The classic Camera Mouse was influential accessibility software; Open Camera Mouse is an
+independent project that continues the idea with a modern open-source implementation. When
+writing this section: verify every historical claim against a source and cite it; separate
+the discontinued classic distribution from any later research or implementations; say
+plainly that the project is not affiliated with or endorsed by the original authors; be
+respectful, no marketing superlatives. Never use decompiled or proprietary material
+(`AGENTS.md`).
 
 ## Technology
 
@@ -38,11 +67,17 @@ website/
   public/                 copied verbatim: favicon.png, icon-128.png (copies of assets/icon/png/)
   scripts/check-paths.mjs post-build check of internal URLs in dist/
   src/
-    layouts/BaseLayout.astro   <html>, <head>, skip link, header, <main id="main">, footer
+    layouts/BaseLayout.astro   <html>, <head>, skip link, header, <main id="main">, footer;
+                               `fullBleed` lets a page lay out its own full-width sections
     components/SiteHeader.astro, SiteFooter.astro
+    components/Hero.astro      yellow angular hero
+    components/Section.astro   homepage section: column, anchor id, h2
+    components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)
     pages/index.astro, 404.astro   routes (file = URL)
-    styles/global.css          Tailwind import, Carbon/Paper tokens, base styles, reduced motion
+    styles/global.css          Tailwind import, tokens, base styles, brand surface, angular
+                               edge, entrance animations, reduced motion
     lib/url.ts                 url() base-path helper, REPO_URL
+    lib/platforms.ts           release platforms and asset suffixes (from release.yml)
 ```
 
 ## Local development
@@ -72,7 +107,8 @@ of the built site.
 - **No JavaScript by default.** Static UI uses HTML and CSS; an interaction that needs JS
   is a component `<script>` written as progressive enhancement.
 - **One layout.** Pages use `BaseLayout` with a `description` (and `title` except on the
-  home page); header and footer are only in the layout.
+  home page); header and footer are only in the layout. Full-width pages pass `fullBleed`
+  and put content in `Section` (or their own `max-w-5xl` column).
 - **Tokens, not colours.** Tailwind's default palette is removed; use the token utilities
   listed in `WEBSITE_DESIGN.md`.
 - Agent skills: `astro-development`, `website-design`, `web-accessibility`

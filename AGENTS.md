@@ -22,6 +22,7 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 | `docs/design-lab.html` | Approved visual reference (open in a browser) |
 | `docs/WEBSITE.md` | Website: scope, stack, structure, commands, CI and Pages deployment |
 | `docs/WEBSITE_DESIGN.md` | Website: brand, tokens, contrast, layout, content constraints |
+| `docs/WEBSITE_ROADMAP.md` | Website: phases, status, next tasks |
 
 ## Workflow: one prompt = one task
 
@@ -81,8 +82,8 @@ a failed job's annotations without auth at
 ## Website tasks
 
 Any change under `website/` or to `.github/workflows/website.yml`: first read
-`docs/WEBSITE.md` and `docs/WEBSITE_DESIGN.md`, and the `astro-development` and
-`web-accessibility` skills (plus `website-design` for anything visual or textual). The
+`docs/WEBSITE.md`, `docs/WEBSITE_DESIGN.md` and `docs/WEBSITE_ROADMAP.md`, and the
+`astro-development` and `web-accessibility` skills (plus `website-design` for anything visual or textual). The
 workflow above applies unchanged (understand, clarify, change, verify, ask before commit);
 new packages need an ADR-0023 amendment, and site copy may only state what `README.md` and
 `docs/PRODUCT.md` support. Gates, from `website/` (Bun, no Node needed):

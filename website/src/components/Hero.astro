@@ -1,0 +1,59 @@
+---
+// Yellow angular hero (WEBSITE_DESIGN.md "Hero"). Copy is a first draft, not approved.
+// The primary action goes to the on-page download section until the OS-aware download
+// (WEBSITE_ROADMAP.md Phase 4) exists; it must keep working without JavaScript.
+import { url } from "../lib/url";
+---
+
+<section aria-labelledby="hero-title" class="on-brand angular-bottom relative overflow-hidden">
+  <div
+    class="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-[calc(var(--cut)+3rem)] sm:px-6 md:pt-20"
+  >
+    <p class="animate-rise-in text-sm font-semibold tracking-wide uppercase">
+      Free and open source · MIT licence
+    </p>
+    <h1
+      id="hero-title"
+      class="animate-rise-in mt-4 max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl"
+    >
+      Your head. Your mouse.
+    </h1>
+    <p class="animate-rise-in mt-6 max-w-prose text-lg [animation-delay:160ms] sm:text-xl">
+      Open Camera Mouse moves the pointer as you move your head, using an ordinary webcam.
+      Everything runs on your computer; no camera image leaves it.
+    </p>
+    <ul class="animate-rise-in mt-8 flex flex-wrap gap-4 [animation-delay:240ms]">
+      <li>
+        <a
+          href={url("#download")}
+          class="inline-flex min-h-12 items-center rounded-widget bg-on-brand px-6 text-lg font-semibold text-brand no-underline transition-transform hover:-translate-y-0.5"
+        >
+          Download
+        </a>
+      </li>
+      <li>
+        <a
+          href={url("#showcase")}
+          class="inline-flex min-h-12 items-center rounded-widget border-2 border-on-brand px-6 text-lg font-semibold no-underline transition-transform hover:-translate-y-0.5"
+        >
+          See it working
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Decorative geometry: a black wedge and a tracking ring on it. Hidden from AT. -->
+  <svg
+    aria-hidden="true"
+    focusable="false"
+    class="animate-slide-in-right pointer-events-none absolute inset-y-0 right-0 hidden h-full w-1/2 [animation-delay:120ms] md:block"
+    viewBox="0 0 400 400"
+    preserveAspectRatio="xMaxYMid slice"
+  >
+    <polygon points="400,0 400,400 120,400" fill="currentColor"></polygon>
+    <g fill="none" stroke="var(--color-brand)" stroke-width="3">
+      <circle cx="300" cy="200" r="34"></circle>
+      <path d="M300 150v20M300 230v20M250 200h20M330 200h20"></path>
+    </g>
+  </svg>
+</section>

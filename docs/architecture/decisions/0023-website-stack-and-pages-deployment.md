@@ -59,3 +59,18 @@ Option 3.
 - The visual design follows `docs/PRODUCT.md` tokens (Carbon/Paper, two accents); the actual
   landing-page design is a separate task (`docs/WEBSITE_DESIGN.md`).
 - Status becomes Accepted when the user approves the merge to `main`.
+
+## Amendment 1 (2026-11-20): scope and visual direction
+
+At the user's request (website foundation brief):
+
+- **Scope.** The site will host the user manual as the canonical end-user documentation
+  (Markdown content collection, Phase 5) and an OS-aware download button (Phase 4); the
+  README keeps a short summary that links to it. Plan and status: `docs/WEBSITE_ROADMAP.md`.
+- **Visual direction.** Yellow `#ffd60a` is also the website's hero surface (brand
+  token), with angular geometry and CSS entrance animations (`docs/WEBSITE_DESIGN.md`).
+  The desktop app's direction is unchanged.
+- **Tests** for website logic use `bun test` (part of Bun), so no package is added.
+- **Open:** the download button would make the first third-party request
+  (`api.github.com`, from the visitor's browser). Decide and record it here before Phase 4
+  ships.

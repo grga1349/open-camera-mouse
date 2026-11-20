@@ -8,9 +8,11 @@ interface Props {
   /** Page-specific title; the site name is appended. */
   title?: string;
   description: string;
+  /** The page lays out its own full-width sections and column; default is one padded column. */
+  fullBleed?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, fullBleed = false } = Astro.props;
 const siteName = "Open Camera Mouse";
 const fullTitle = title ? `${title} · ${siteName}` : siteName;
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -36,7 +38,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       Skip to content
     </a>
     <SiteHeader />
-    <main id="main" tabindex="-1" class="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6">
+    <main
+      id="main"
+      tabindex="-1"
+      class={fullBleed ? "w-full flex-1" : "mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6"}
+    >
       <slot />
     </main>
     <SiteFooter />

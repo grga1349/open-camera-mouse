@@ -24,8 +24,14 @@ Brand, layout and token choices → `website-design`. Rust/egui UI → `egui-dev
   web fonts, analytics. A new package needs an ADR-0023 amendment.
 - **Components:** `src/components/PascalCase.astro`, one per file, typed `interface Props`
   in the frontmatter, `<slot />` for content. Pages in `src/pages/` are routes; shared page
-  chrome lives only in `src/layouts/BaseLayout.astro` (it takes `title?` and a required
-  `description`). Keep data in the frontmatter, not in inline `<script>`s.
+  chrome lives only in `src/layouts/BaseLayout.astro` (it takes `title?`, a required
+  `description`, and `fullBleed` for pages built from full-width sections). Shared data in
+  `src/lib/*.ts` (e.g. `platforms.ts`), not in inline `<script>`s.
+- **Markdown content** (the manual, Phase 5): Astro's built-in content collections
+  (`src/content.config.ts`, `glob` loader over `src/content/<name>/*.md`, a zod schema),
+  rendered by a `[...slug].astro` page with `getStaticPaths`. No docs framework.
+- **Tests** for pure logic in `src/lib/`: `bun test` (built in; `*.test.ts` next to the
+  module), no test-framework package. Keep DOM wiring thin and separate from the logic.
 - **URLs:** never write a root-relative `"/…"` string. Internal pages and `public/` files go
   through `url()` from `src/lib/url.ts` (`url("/")`, `url("docs/")`, `url("favicon.png")`);
   page paths end in `/` (`trailingSlash: "always"`). Images processed by Astro

@@ -1,18 +1,103 @@
 ---
-// Placeholder proving the build, layout and base path work. The landing page is a separate
-// task: docs/WEBSITE_DESIGN.md ("Initial page structure").
+// Home page, first structure (docs/WEBSITE.md "Homepage"). Only sections with content the
+// README and PRODUCT.md support are built; the rest are listed in docs/WEBSITE_ROADMAP.md.
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/Hero.astro";
+import Section from "../components/Section.astro";
+import ShowcasePlaceholder from "../components/ShowcasePlaceholder.astro";
 import { REPO_URL } from "../lib/url";
+import { PLATFORMS } from "../lib/platforms";
+
+const RELEASES_URL = `${REPO_URL}/releases/latest`;
+
+const steps = [
+  {
+    title: "Pick a spot",
+    body: "Press Start and click a spot on your face in the camera preview. The tip of the nose works well.",
+  },
+  {
+    title: "Move your head",
+    body: "The pointer follows. Moving the physical mouse takes over at once; keep it still for 4 seconds and the camera has the pointer again.",
+  },
+  {
+    title: "Click by holding still",
+    body: "Turn on dwell click in Options, and holding the pointer still over something clicks it.",
+  },
+];
 ---
 
-<BaseLayout description="Control the mouse pointer with your head, using an ordinary webcam.">
-  <h1 class="text-3xl font-semibold sm:text-4xl">Open Camera Mouse</h1>
-  <p class="mt-4 max-w-prose text-lg">
-    Control the mouse pointer with your head, using an ordinary webcam.
-  </p>
-  <p class="mt-4 max-w-prose text-muted">
-    This website is being built. Until then, the <a href={REPO_URL} class="text-text"
-      >project on GitHub</a
-    > has installation and usage instructions.
-  </p>
+<BaseLayout
+  fullBleed
+  description="Control the mouse pointer with your head, using an ordinary webcam. Free and open source for macOS, Windows and Linux."
+>
+  <Hero />
+
+  <Section id="showcase" title="See it working">
+    <ShowcasePlaceholder />
+  </Section>
+
+  <Section id="how-it-works" title="How it works">
+    <ol class="grid gap-8 md:grid-cols-3">
+      {
+        steps.map((step, i) => (
+          <li class="border-t-4 border-text pt-4">
+            <p class="font-mono text-sm text-muted" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
+            </p>
+            <h3 class="mt-2 text-xl font-semibold">{step.title}</h3>
+            <p class="mt-2">{step.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </Section>
+
+  <Section
+    id="download"
+    title="Download"
+    lead="Pick the file for your system from the latest release. Installation steps and permissions are in the README until the manual is online."
+  >
+    <ul class="grid gap-6 md:grid-cols-3">
+      {
+        PLATFORMS.map((p) => (
+          <li class="flex flex-col rounded-frame border border-line bg-surface p-6">
+            <h3 class="text-xl font-semibold">{p.name}</h3>
+            <p class="mt-1 text-muted">{p.requirement}</p>
+            <p class="mt-4 text-sm">{p.assets.map((a) => a.label).join(" or ")}</p>
+            <ul class="mt-2 list-disc pl-5 text-sm text-muted">
+              {p.notes.map((n) => (
+                <li>{n}</li>
+              ))}
+            </ul>
+            <p class="mt-auto pt-6">
+              <a href={`${REPO_URL}#${p.readmeAnchor}`} class="inline-flex min-h-11 items-center">
+                {p.name} install steps
+              </a>
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="mt-8">
+      <a
+        href={RELEASES_URL}
+        class="inline-flex min-h-12 items-center rounded-widget bg-yellow px-6 text-lg font-semibold text-on-yellow no-underline"
+      >
+        Go to the latest release
+      </a>
+    </p>
+  </Section>
+
+  <Section id="open-source" title="Open source">
+    <p class="max-w-prose">
+      Open Camera Mouse is free software under the MIT licence, written in Rust. The source
+      code, documentation and issue tracker are on GitHub.
+    </p>
+    <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+      <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
+      <li>
+        <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report a problem</a>
+      </li>
+    </ul>
+  </Section>
 </BaseLayout>

@@ -14,9 +14,10 @@ visual direction needs the user's OK, as for the app.
   (`favicon.png` = 32px, `icon-128.png` shown at 32px for high-DPI screens). Use the icon
   unchanged, at square sizes, with no recolouring, outline or crop. Next to the wordmark it
   is decorative (`alt=""`).
-- **Accents:** exactly the app's two. Neon green `#00ff00` only for the thin target-ring
-  motif; yellow only as the fill of the primary call to action, with `#111111` text.
-  Everything else is the grey scale below.
+- **Accents:** the app's two. Neon green `#00ff00` only for the thin target-ring motif.
+  Yellow as the fill of the primary call to action (`#111111` text) and, on the website
+  only, as the **brand surface** of the hero band (`#ffd60a` with black, both themes;
+  approved 2026-11-20). Everything else is the grey scale below.
 
 ## Design tokens
 
@@ -32,7 +33,8 @@ switch yet (it would need JavaScript and storage; decide in the design task).
 | `border-line` / `border-line-strong` | line / line-strong | `#262626` / `#3f3f3f` | `#d6d6d6` / `#a8a8a8` | separators / decorative outlines |
 | `text-text` / `text-muted` | text / muted | `#fafafa` / `#8f8f8f` | `#111111` / `#5a5a5a` | body / help text |
 | `*-marker` | marker | `#00ff00` | `#00ff00` | target-ring motif only |
-| `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action only |
+| `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action |
+| `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | hero band only; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
 | `rounded-frame` / `rounded-widget` | radius | 8px / 6px | same | panels, images / buttons, inputs |
 | `font-sans` / `font-mono` | font | system UI stack / `ui-monospace` stack | same | no web fonts |
 
@@ -47,6 +49,7 @@ uses Tailwind's 4px scale.
 | muted on bg | 6.5:1 | 5.8:1 | AA text |
 | muted on surface-2 | 5.6:1 | 6.9:1 | AA text |
 | on-yellow on yellow | 13.4:1 | 11.6:1 | AA text |
+| on-brand on brand (and inverse) | 14.9:1 | 14.9:1 | AAA text, focus outline |
 | line-strong on bg | 2.0:1 | 2.0:1 | **below 3:1**: decorative only |
 | yellow on bg | 14.9:1 | 1.4:1 | Paper: **below 3:1** |
 | marker on bg | 15.3:1 | 1.2:1 | Paper: **below 3:1**, decorative only |
@@ -77,26 +80,43 @@ In short: semantic landmarks with a skip link (in the layout), visible 2px focus
 underlined links in text, status never by colour alone, alt text, reduced motion respected
 (global rule in `global.css`), no autoplaying motion without a pause control.
 
-## Initial page structure
+## Hero
 
-Built now: one layout (`BaseLayout`) with skip link, header (icon + name linking home,
-"Source code" link), `<main>`, footer (licence link); a placeholder home page and a 404.
+`src/components/Hero.astro`. A full-width yellow band (`.on-brand`) under the header, with a
+diagonal bottom edge (`.angular-bottom`, slant height `--cut`, content padded below it) and,
+from `md` up, a black wedge with a yellow tracking ring on the right (decorative SVG,
+`aria-hidden`). Contents: a small uppercase line (free, open source, licence), the h1
+headline in heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers
+don't spell it out), one sentence on what it does and that it runs locally, then the primary
+action (black button, yellow text) and a secondary outlined one. Inside the band the focus
+outline is black. Copy is a draft until the user approves it.
 
-Proposed for the design task (needs the user's OK; content only from `README.md` and
-`PRODUCT.md`):
+## Angular language
 
-1. Hero: name, the one-sentence description, one primary action (yellow).
-2. How it works: the click-a-spot / track / move / dwell-click steps from the README "Use".
-3. Privacy: everything runs on the device, no camera image leaves it.
-4. Download per OS: links to the GitHub release; requirements and caveats linked from the
-   README, not restated.
-5. Footer: licence, source, issues.
+Sharp, not rounded: diagonal edges, triangles and wedges as section accents, solid fills,
+no gradients or shadows. Geometry is decorative (`aria-hidden`) and never carries
+information. Controls keep the normal radius and rectangular hit areas.
+
+## Motion
+
+CSS only. Allowed: a one-time entrance (rise/fade ≤ 500 ms, slide ≤ 700 ms, staggered by
+≤ 250 ms), a small hover lift on buttons, short transitions. Not allowed: looping
+animation, parallax, scroll-jacking, anything that moves a control while it can be pointed
+at or dwelled on (a hover lift is ≤ 2px and the hit area stays put). The global
+`prefers-reduced-motion` rule in `global.css` collapses all of it.
+
+## Page structure
+
+Homepage sections and their purpose: `WEBSITE.md` "Homepage"; status in
+`WEBSITE_ROADMAP.md`.
 
 ## Constraints
 
 - No claims the docs don't support: no invented features, compatibility, release dates,
   download numbers, testimonials, or medical/certification claims (a PRODUCT non-goal).
-  Until a release is published, don't link to a release page as if it existed.
+  Link to `releases/latest`, never to a hard-coded version.
+- The showcase is a real recording of the app; never a mock-up or simulated tracking, and
+  never a browser-based webcam tracker.
 - No web fonts, icon fonts or icon libraries (inline SVG if an icon is needed), no
   third-party embeds, analytics or cookies.
 - No JavaScript for anything CSS and HTML can do.

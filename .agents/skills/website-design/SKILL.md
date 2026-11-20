@@ -21,10 +21,14 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
 ## Rules
 
 - **Colour:** only the token utilities (`bg-bg`, `bg-surface`, `bg-surface-2`, `border-line`,
-  `border-line-strong`, `text-text`, `text-muted`). Two accents, used as in the app:
-  `marker` (`#00ff00`) only for the target-ring motif, `yellow` only as the fill of the one
-  primary call to action per view, always with `text-on-yellow`. No other hues, gradients
-  or tinted greys. Colour photos/screenshots of the app are fine (the app's preview is in
+  `border-line-strong`, `text-text`, `text-muted`). Two accents: `marker` (`#00ff00`) only
+  for the target-ring motif; `yellow` as the fill of the one primary call to action per
+  view (with `text-on-yellow`), and the fixed `brand` yellow as the hero surface
+  (`.on-brand`, black content, black focus outline). No other hues, gradients or tinted
+  greys.
+- **Shape and motion:** angular accents (diagonals, wedges; `.angular-bottom`), decorative
+  only. Motion per `WEBSITE_DESIGN.md` "Motion": one-time CSS entrances and small hover
+  lifts, nothing looping, nothing that moves a control under the pointer. Colour photos/screenshots of the app are fine (the app's preview is in
   colour); chrome stays monochrome.
 - **Themes:** Carbon (dark) and Paper (light) values from `docs/PRODUCT.md`, selected by
   `prefers-color-scheme`. Check every change in both.
@@ -34,7 +38,7 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
 - **Spacing and shape:** Tailwind's 4px scale; content column `max-w-5xl` with `px-4`
   (`sm:px-6`); vertical rhythm in steps of `py-12`/`mt-4`. Radius `rounded-frame` (8px)
   for panels and images, `rounded-widget` (6px) for buttons and inputs. 1px `border-line`
-  separators, no shadows.
+  separators, no shadows. Homepage sections use `Section.astro`.
 - **Responsive:** mobile first, single column at 320px with no horizontal scroll; add
   columns at `sm`/`md`/`lg` only. Text stays readable at 200% zoom and 400% reflow.
   Images get `width`/`height` to avoid layout shift.
