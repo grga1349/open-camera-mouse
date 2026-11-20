@@ -27,8 +27,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/png" href={url("favicon.png")} />
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#ececec" media="(prefers-color-scheme: light)" />
+    <!-- Pages start on the yellow header. -->
+    <meta name="theme-color" content="#ffd60a" />
   </head>
   <body class="flex min-h-dvh flex-col bg-bg text-text">
     <a

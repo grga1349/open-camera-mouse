@@ -1,15 +1,23 @@
 ---
+// Site header on the brand yellow, so every page starts yellow; no rules or borders. On
+// the home page the hero continues the same surface underneath.
 import { url, REPO_URL } from "../lib/url";
+import Logo from "../assets/logo.svg";
 ---
 
-<header class="border-b border-line">
-  <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 px-4 py-3 sm:px-6">
-    <a href={url("/")} class="flex min-h-11 items-center gap-3 font-semibold no-underline">
-      <img src={url("icon-128.png")} alt="" width="32" height="32" class="rounded-widget" />
+<header class="on-brand">
+  <div
+    class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 px-4 py-3 sm:px-6"
+  >
+    <a
+      href={url("/")}
+      class="flex min-h-11 items-center gap-3 text-base font-black tracking-wide uppercase no-underline"
+    >
+      <Logo aria-hidden="true" width="34" height="28" class="shrink-0" />
       Open Camera Mouse
     </a>
     <nav aria-label="Main">
-      <ul class="flex items-center gap-4">
+      <ul class="flex items-center gap-5 font-mono text-sm tracking-wide uppercase">
         <li><a href={url("/#download")} class="inline-flex min-h-11 items-center">Download</a></li>
         <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
       </ul>

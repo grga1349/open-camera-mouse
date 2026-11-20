@@ -9,11 +9,15 @@ visual direction needs the user's OK, as for the app.
 
 - **Character:** monochrome, quiet, practical; real numbers and plain words.
 - **Name:** "Open Camera Mouse", written out in full; never "OCM" in visible text.
-- **Logo:** the app icon, a solid black camera with a yellow C and M (`assets/icon/source.png`;
-  PNG sizes in `assets/icon/png/`). The site uses copies in `website/public/`
-  (`favicon.png` = 32px, `icon-128.png` shown at 32px for high-DPI screens). Use the icon
-  unchanged, at square sizes, with no recolouring, outline or crop. Next to the wordmark it
-  is decorative (`alt=""`).
+- **Logo:** on the website, a one-colour SVG mark: the camera with C and M cut out
+  (`website/src/assets/logo.svg`, one even-odd path, `fill="currentColor"`), traced from the
+  user's transparent PNG (2026-11-20). Imported as an Astro SVG component, drawn black on the
+  yellow header, so the yellow shows through the C and M. Next to the wordmark it is
+  decorative (`aria-hidden`). Don't redraw or recolour it except through `currentColor`. The
+  app icon (black camera, yellow C/M, `assets/icon/`) stays the app's icon and the favicon
+  (`website/public/favicon.png`).
+- **Wordmark:** "OPEN CAMERA MOUSE" in the header: `font-black`, uppercase via CSS,
+  slight tracking.
 - **Accents:** the app's two. Neon green `#00ff00` only for the thin target-ring motif.
   Yellow as the fill of the primary call to action (`#111111` text) and, on the website
   only, as the **brand surface** of the hero band (`#ffd60a` with black, both themes;
@@ -36,7 +40,7 @@ switch yet (it would need JavaScript and storage; decide in the design task).
 | `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action |
 | `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | hero band only; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
 | `rounded-frame` / `rounded-widget` | radius | 8px / 6px | same | panels, images / buttons, inputs |
-| `font-sans` / `font-mono` | font | system UI stack / `ui-monospace` stack | same | no web fonts |
+| `font-sans` / `font-mono` | font | system UI stack / system monospace stack | same | no web fonts; mono for typewriter-style accents |
 
 Tailwind's default colours are removed, so any other colour utility doesn't exist. Spacing
 uses Tailwind's 4px scale.
@@ -60,7 +64,10 @@ borders, not `line-strong`; the Paper yellow button is identified by its label, 
 
 ## Typography and spacing
 
-- System font stack (as in the app). Body 16px (`text-base`, line-height 1.5), help text
+- System font stack (as in the app). Typewriter-style accents in `font-mono`, uppercase with
+  `tracking-wide`, used sparingly: navigation, the hero's small top line, step numbers and
+  similar labels; never body text or headings. (A real typewriter face would be a
+  self-hosted web font: needs the user's OK and an ADR-0023 amendment.) Body 16px (`text-base`, line-height 1.5), help text
   `text-sm`, headings `font-semibold` at `text-3xl`–`text-4xl` (h1) stepping down; no
   all-caps body text.
 - Reading width `max-w-prose`; page column `max-w-5xl`, gutters `px-4` / `sm:px-6`.
@@ -80,16 +87,32 @@ In short: semantic landmarks with a skip link (in the layout), visible 2px focus
 underlined links in text, status never by colour alone, alt text, reduced motion respected
 (global rule in `global.css`), no autoplaying motion without a pause control.
 
-## Hero
+## Header and hero
 
-`src/components/Hero.astro`. A full-width yellow band (`.on-brand`) under the header, with a
-diagonal bottom edge (`.angular-bottom`, slant height `--cut`, content padded below it) and,
-from `md` up, a black wedge with a yellow tracking ring on the right (decorative SVG,
-`aria-hidden`). Contents: a small uppercase line (free, open source, licence), the h1
-headline in heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers
-don't spell it out), one sentence on what it does and that it runs locally, then the primary
-action (black button, yellow text) and a secondary outlined one. Inside the band the focus
-outline is black. Copy is a draft until the user approves it.
+Every page **starts yellow**: `SiteHeader.astro` sits on the brand surface (`.on-brand`) with
+no border or rule; `theme-color` is `#ffd60a`. On the home page the hero
+(`src/components/Hero.astro`) continues the same surface directly under it, so header and
+hero read as one yellow block. The first section under the hero has no top rule either.
+
+Hero shape, all decorative (`aria-hidden`) and built from `--cut` and percentages so it
+scales from 320px up:
+
+1. **Diagonal edge** (`.angular-bottom`): the band's bottom rises from left to right by
+   `--cut` (`clamp(2rem, 6vw, 5rem)`); content is padded below it.
+2. **Blade** (`.hero-blade`, every width): a tapered yellow sliver parallel to the edge, a
+   small gap below it, from the right edge to 35% of the width.
+3. **Wedge** (`.hero-wedge`, `lg` and up): a black triangle on the right whose lower edge
+   runs parallel to the diagonal, a yellow strip above it so it never merges with the black
+   Carbon page. Its tip stays at 70% width and the hero paragraph is capped at 36rem, so it
+   never covers text (checked at 1024px).
+
+No tracking ring or crosshair in the hero (removed at the user's request).
+
+Contents: a small mono uppercase line (free, open source, licence), the h1 headline in heavy
+uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell it
+out), one sentence on what it does and that it runs locally, then the primary action (black
+button, yellow text) and a secondary outlined one. Inside the yellow, text and the focus
+outline are black. Copy is a draft until the user approves it.
 
 ## Angular language
 
@@ -103,7 +126,7 @@ CSS only. Allowed: a one-time entrance (rise/fade ≤ 500 ms, slide ≤ 700 ms, 
 ≤ 250 ms), a small hover lift on buttons, short transitions. Not allowed: looping
 animation, parallax, scroll-jacking, anything that moves a control while it can be pointed
 at or dwelled on (a hover lift is ≤ 2px and the hit area stays put). The global
-`prefers-reduced-motion` rule in `global.css` collapses all of it.
+`prefers-reduced-motion` rule in `global.css` collapses all of it, delays included.
 
 ## Page structure
 

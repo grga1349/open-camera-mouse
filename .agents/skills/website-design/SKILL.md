@@ -42,8 +42,12 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
 - **Responsive:** mobile first, single column at 320px with no horizontal scroll; add
   columns at `sm`/`md`/`lg` only. Text stays readable at 200% zoom and 400% reflow.
   Images get `width`/`height` to avoid layout shift.
-- **Logo:** the app icon (`website/public/icon-128.png`, from `assets/icon/`); next to the
-  wordmark it is decorative (`alt=""`). Don't redraw, recolour or crop it.
+- **Logo and header:** the one-colour SVG mark `website/src/assets/logo.svg`
+  (`import Logo from "../assets/logo.svg"`, `aria-hidden`, colour via `currentColor`) next to
+  the uppercase wordmark. Pages start yellow: the header is `.on-brand` with no borders. The
+  app icon PNG is only the favicon.
+- **Type accents:** `font-mono` uppercase `tracking-wide` for small labels and navigation
+  (typewriter feel), sparingly; never for body text or headings.
 - **Content:** state only what `README.md` and `docs/PRODUCT.md` support. No invented
   features, platform or compatibility claims, download counts, testimonials, release dates
   or medical claims (a non-goal in PRODUCT). Link to the README or the release page

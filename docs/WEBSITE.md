@@ -64,12 +64,13 @@ website/
   astro.config.mjs        site, base "/open-camera-mouse/", trailingSlash "always", Tailwind plugin
   package.json, bun.lock  scripts and pinned dependencies
   tsconfig.json           extends astro/tsconfigs/strict
-  public/                 copied verbatim: favicon.png, icon-128.png (copies of assets/icon/png/)
+  public/                 copied verbatim: favicon.png (copy of assets/icon/png/)
   scripts/check-paths.mjs post-build check of internal URLs in dist/
   src/
     layouts/BaseLayout.astro   <html>, <head>, skip link, header, <main id="main">, footer;
                                `fullBleed` lets a page lay out its own full-width sections
-    components/SiteHeader.astro, SiteFooter.astro
+    assets/logo.svg            one-colour logo mark (currentColor), imported as a component
+    components/SiteHeader.astro, SiteFooter.astro   header on the yellow brand surface
     components/Hero.astro      yellow angular hero
     components/Section.astro   homepage section: column, anchor id, h2
     components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)

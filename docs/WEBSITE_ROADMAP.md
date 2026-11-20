@@ -24,10 +24,16 @@ before the merge to `main`).
 ## Phase 2 — Visual identity  (first pass)
 
 - [x] Brand surface token (`brand` `#ffd60a` / `on-brand` `#000`), yellow angular hero with diagonal edge
-- [x] Hero entrance and hover lift (CSS only, reduced motion respected)
+- [x] Pages start yellow: header on the brand surface, no header borders or rules
+- [x] Layered hero shape: diagonal edge, blade under it, gapped black wedge (`lg`+); crosshair removed
+- [x] Logo as a one-colour SVG mark (`src/assets/logo.svg`), uppercase wordmark
+- [x] Typewriter-style mono accents (nav, labels) on the system monospace stack
+- [x] Hero entrance and hover lift (CSS only; reduced motion collapses them, delays included)
 - [x] Reusable `Hero`, `Section`, `ShowcasePlaceholder` components
-- [~] Responsive layout: checked at 320 and 1280px (headless screenshots); 768px and 200% zoom not checked
-- [ ] Typography decision: system stack today; the heavy hero headline may want a display face (web fonts are currently excluded — needs the user's OK and an ADR-0023 amendment)
+- [~] Responsive layout: checked at 320, 820, 1024 and 1280px (headless screenshots); 200% zoom not checked
+- [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
+- [ ] Header on other pages: yellow with a flat bottom today (only 404 exists); decide whether it gets its own angular edge once the manual/download pages exist
+- [ ] Footer design (still the plain scaffold footer)
 - [ ] Navigation for more pages (manual, download) incl. mobile; theme switch (Carbon/Paper, needs JS + storage)
 - [ ] Hero geometry refinement, section transitions, tracking-inspired accents beyond the hero
 - [ ] Hero copy approved by the user ("Your head. Your mouse." is a draft)

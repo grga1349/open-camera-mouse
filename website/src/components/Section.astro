@@ -5,12 +5,14 @@ interface Props {
   title: string;
   /** Short line under the heading, optional. */
   lead?: string;
+  /** Top rule separating it from the previous section; off for the first one under the hero. */
+  divider?: boolean;
 }
 
-const { id, title, lead } = Astro.props;
+const { id, title, lead, divider = true } = Astro.props;
 ---
 
-<section id={id} aria-labelledby={`${id}-title`} class="scroll-mt-4 border-t border-line">
+<section id={id} aria-labelledby={`${id}-title`} class:list={["scroll-mt-4", divider && "border-t border-line"]}>
   <div class="mx-auto max-w-5xl px-4 py-16 sm:px-6">
     <h2 id={`${id}-title`} class="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2>
     {lead && <p class="mt-4 max-w-prose text-lg text-muted">{lead}</p>}
