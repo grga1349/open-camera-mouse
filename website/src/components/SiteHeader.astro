@@ -1,6 +1,11 @@
 ---
 // Site header on the brand yellow, so every page starts yellow; no rules or borders. On
 // the home page the hero continues the same surface underneath.
+//
+// Theme switch: a button that flips Carbon/Paper and remembers the choice in localStorage
+// (WEBSITE_DESIGN.md "Theme switch"). Progressive enhancement: it ships `hidden` and the
+// script reveals it, so with JavaScript off the theme simply follows the OS. The stored
+// choice is applied before first paint by the inline script in BaseLayout.
 import { url, REPO_URL } from "../lib/url";
 import Logo from "../assets/logo.svg";
 ---
@@ -16,11 +21,63 @@ import Logo from "../assets/logo.svg";
       <Logo aria-hidden="true" width="34" height="28" class="shrink-0" />
       Open Camera Mouse
     </a>
-    <nav aria-label="Main">
-      <ul class="flex items-center gap-5 font-mono text-sm tracking-wide uppercase">
-        <li><a href={url("/#download")} class="inline-flex min-h-11 items-center">Download</a></li>
-        <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
-      </ul>
-    </nav>
+    <div class="flex flex-wrap items-center gap-x-5">
+      <nav aria-label="Main">
+        <ul class="flex items-center gap-5 text-sm tracking-wide uppercase">
+          <li><a href={url("/#download")} class="inline-flex min-h-11 items-center">Download</a></li>
+          <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
+        </ul>
+      </nav>
+      <button
+        type="button"
+        id="theme-switch"
+        hidden
+        class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm tracking-wide uppercase"
+      >
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" class="shrink-0">
+          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+          <path d="M8 1a7 7 0 0 0 0 14z" fill="currentColor"></path>
+        </svg>
+        <span><span class="sr-only">Theme: </span><span data-theme-name>Carbon</span></span>
+      </button>
+    </div>
   </div>
 </header>
+
+<script>
+  type Theme = "carbon" | "paper";
+  const KEY = "ocm-theme";
+  const root = document.documentElement;
+  const button = document.getElementById("theme-switch");
+  const label = button?.querySelector("[data-theme-name]");
+
+  const current = (): Theme => {
+    const set = root.dataset.theme;
+    if (set === "carbon" || set === "paper") return set;
+    return matchMedia("(prefers-color-scheme: light)").matches ? "paper" : "carbon";
+  };
+
+  const show = () => {
+    if (!button || !label) return;
+    const theme = current();
+    label.textContent = theme === "paper" ? "Paper" : "Carbon";
+    button.title = `Switch to ${theme === "paper" ? "Carbon" : "Paper"} theme`;
+  };
+
+  if (button) {
+    button.hidden = false;
+    show();
+    button.addEventListener("click", () => {
+      const next: Theme = current() === "paper" ? "carbon" : "paper";
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem(KEY, next);
+      } catch {
+        // Storage blocked: the switch still works for this page view.
+      }
+      show();
+    });
+    // Following the OS (no stored choice): keep the label right if the OS theme changes.
+    matchMedia("(prefers-color-scheme: light)").addEventListener("change", show);
+  }
+</script>

@@ -3,10 +3,11 @@
 /*
  * Design tokens: the desktop app's Carbon (dark) and Paper (light) themes, from
  * docs/PRODUCT.md ("Design tokens"); keep the values identical. Theme follows the OS
- * (prefers-color-scheme), Carbon when there's no preference. docs/WEBSITE_DESIGN.md.
+ * (prefers-color-scheme), Carbon when there's no preference, unless the visitor picked
+ * one with the header switch (`data-theme` on <html>). docs/WEBSITE_DESIGN.md.
  */
 :root {
-  color-scheme: dark light;
+  color-scheme: dark;
   /* Depth of the hero's V-shaped bottom edge. */
   --cut: clamp(1.5rem, 5vw, 4rem);
   --ocm-bg: #000000;
@@ -20,7 +21,8 @@
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="carbon"]) {
+    color-scheme: light;
     --ocm-bg: #ececec;
     --ocm-surface: #f8f8f8;
     --ocm-surface-2: #ffffff;
@@ -30,6 +32,18 @@
     --ocm-muted: #5a5a5a;
     --ocm-yellow: #f5c518;
   }
+}
+
+:root[data-theme="paper"] {
+  color-scheme: light;
+  --ocm-bg: #ececec;
+  --ocm-surface: #f8f8f8;
+  --ocm-surface-2: #ffffff;
+  --ocm-line: #d6d6d6;
+  --ocm-line-strong: #a8a8a8;
+  --ocm-text: #111111;
+  --ocm-muted: #5a5a5a;
+  --ocm-yellow: #f5c518;
 }
 
 /*
@@ -56,7 +70,7 @@
   --color-on-brand: #000000;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Ubuntu, sans-serif;
-  /* Typewriter-style accents (labels, navigation, numbers); system monospace, no web font. */
+  /* Typewriter face for all text (the html default); system monospace, no web font. */
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-frame: 8px;
@@ -67,7 +81,7 @@
   html {
     background-color: var(--color-bg);
     color: var(--color-text);
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     line-height: 1.5;
     -webkit-text-size-adjust: 100%;
   }

@@ -4,19 +4,21 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Last session (2026-11-20)
+## Last session (2026-11-20, second)
 
-Visual pass on the header and hero, from the user's feedback:
+Two small fixes from the user before Phase 4:
 
-- Logo traced from the user's transparent PNG into `website/src/assets/logo.svg` (one
-  even-odd path, `currentColor`, checked by overlay against the PNG). `icon-128.png` removed;
-  `favicon.png` is still the app icon.
-- Page starts yellow: header on `.on-brand`, no borders; uppercase wordmark; mono uppercase
-  nav and hero label.
-- Hero: crosshair removed; bottom edge is now a shallow symmetric V. A layered
-  diagonal + blade + wedge version was built first and rejected by the user as ugly.
-  Rules in `WEBSITE_DESIGN.md` "Header and hero".
-- Reduced motion now also zeroes animation delays (staggered items were briefly invisible).
+- **Typewriter for all text:** `html` now uses the system monospace stack; the per-element
+  `font-mono` classes were removed as redundant. `WEBSITE_DESIGN.md` "Typography" and the
+  `website-design` skill updated.
+- **Theme switch** in the header (after the nav): flips Carbon/Paper via `data-theme` on
+  `<html>`, stored in `localStorage` (`ocm-theme`), applied before paint by an `is:inline`
+  script in `BaseLayout`; hidden without JS (OS theme then). Rules in `WEBSITE_DESIGN.md`
+  "Theme switch". Click + storage verified headlessly; both themes and 320px screenshotted.
+- At 320px the header wraps to three rows (wordmark / nav / switch); acceptable for now,
+  revisit with the mobile navigation item.
+
+Earlier the same day: SVG logo, yellow header, shallow V hero edge (see git log).
 
 ## State
 
@@ -44,10 +46,10 @@ user (yellow header, SVG logo, shallow V edge); only small polish if asked.
 
 ## Waiting on the user
 
-Hero copy ("Your head. Your mouse." is a draft); a real typewriter/display web font yes/no;
+Hero copy ("Your head. Your mouse." is a draft); a real typewriter web font yes/no (system mono is used for all text now);
 demo recording and screenshots.
 
 ## Not yet checked by hand
 
-200% zoom, keyboard walk-through, VoiceOver, real reduced-motion setting, Windows/Linux
+200% zoom, keyboard walk-through (incl. the theme switch), VoiceOver, real reduced-motion setting, Windows/Linux
 browsers (monospace stack falls back to Cascadia Mono/Consolas, Liberation Mono).

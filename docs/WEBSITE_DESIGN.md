@@ -27,8 +27,8 @@ visual direction needs the user's OK, as for the app.
 
 Defined once in `website/src/styles/global.css`; the values are the app's
 (`apps/desktop/src/theme.rs`, `PRODUCT.md`). The theme follows the visitor's OS setting
-(`prefers-color-scheme`): Carbon when dark or unset, Paper when light. There is no theme
-switch yet (it would need JavaScript and storage; decide in the design task).
+(`prefers-color-scheme`): Carbon when dark or unset, Paper when light, unless the visitor
+picks one with the header switch (see "Theme switch").
 
 | Utility | Token | Carbon | Paper | Use |
 |---|---|---|---|---|
@@ -40,7 +40,7 @@ switch yet (it would need JavaScript and storage; decide in the design task).
 | `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action |
 | `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | hero band only; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
 | `rounded-frame` / `rounded-widget` | radius | 8px / 6px | same | panels, images / buttons, inputs |
-| `font-sans` / `font-mono` | font | system UI stack / system monospace stack | same | no web fonts; mono for typewriter-style accents |
+| `font-mono` (page default) / `font-sans` | font | system monospace stack / system UI stack | same | no web fonts; mono is the typewriter face for all text |
 
 Tailwind's default colours are removed, so any other colour utility doesn't exist. Spacing
 uses Tailwind's 4px scale.
@@ -64,14 +64,28 @@ borders, not `line-strong`; the Paper yellow button is identified by its label, 
 
 ## Typography and spacing
 
-- System font stack (as in the app). Typewriter-style accents in `font-mono`, uppercase with
-  `tracking-wide`, used sparingly: navigation, the hero's small top line, step numbers and
-  similar labels; never body text or headings. (A real typewriter face would be a
-  self-hosted web font: needs the user's OK and an ADR-0023 amendment.) Body 16px (`text-base`, line-height 1.5), help text
+- **Typewriter for all text** (user's call, 2026-11-20): the page default is the system
+  monospace stack (`font-mono`, set on `html`), so body, headings, buttons and labels are all
+  mono. Small labels and navigation are additionally uppercase with `tracking-wide`.
+  `font-sans` remains as a token but is unused. (A real typewriter face would be a
+  self-hosted web font: needs the user's OK and an ADR-0023 amendment.) Mono runs about
+  0.6em per character, so check long words in large headings at 320px. Body 16px (`text-base`, line-height 1.5), help text
   `text-sm`, headings `font-semibold` at `text-3xl`–`text-4xl` (h1) stepping down; no
   all-caps body text.
 - Reading width `max-w-prose`; page column `max-w-5xl`, gutters `px-4` / `sm:px-6`.
 - Sections separated by space (`py-12`) and 1px `border-line` rules, not boxes and shadows.
+
+## Theme switch
+
+A button at the end of the header (after the nav), mono uppercase like the nav: a half-filled
+circle icon (`aria-hidden`) and the current theme's name, "Carbon" or "Paper"; the accessible
+name is "Theme: Carbon" / "Theme: Paper", and `title` says what a click does. A click flips
+the theme by setting `data-theme="carbon|paper"` on `<html>` and stores it in
+`localStorage` (`ocm-theme`); with no stored choice the theme follows the OS. A tiny
+`is:inline` script in `BaseLayout` applies the stored choice before first paint (no flash).
+Progressive enhancement: the button ships `hidden` and its script reveals it, so with
+JavaScript off it isn't shown and the OS setting applies. Storage errors are ignored (the
+switch still works for the page view). Not a cookie; nothing leaves the browser.
 
 ## Responsive
 

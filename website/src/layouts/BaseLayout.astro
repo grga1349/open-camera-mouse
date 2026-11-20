@@ -29,6 +29,16 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <link rel="icon" type="image/png" href={url("favicon.png")} />
     <!-- Pages start on the yellow header. -->
     <meta name="theme-color" content="#ffd60a" />
+    <!--
+      Apply the theme picked with the header switch before first paint (is:inline on
+      purpose: a bundled module runs after paint and would flash the OS theme first).
+    -->
+    <script is:inline>
+      try {
+        var t = localStorage.getItem("ocm-theme");
+        if (t === "carbon" || t === "paper") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body class="flex min-h-dvh flex-col bg-bg text-text">
     <a

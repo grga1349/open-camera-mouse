@@ -27,14 +27,14 @@ before the merge to `main`).
 - [x] Pages start yellow: header on the brand surface, no header borders or rules
 - [x] Hero bottom edge: shallow symmetric V (layered diagonal/blade/wedge tried and rejected); crosshair removed
 - [x] Logo as a one-colour SVG mark (`src/assets/logo.svg`), uppercase wordmark
-- [x] Typewriter-style mono accents (nav, labels) on the system monospace stack
 - [x] Hero entrance and hover lift (CSS only; reduced motion collapses them, delays included)
 - [x] Reusable `Hero`, `Section`, `ShowcasePlaceholder` components
 - [~] Responsive layout: checked at 320 and 1280px for the V edge (headless screenshots); 200% zoom not checked
 - [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
 - [ ] Header on other pages: yellow with a flat bottom today (only 404 exists); decide whether it gets its own angular edge once the manual/download pages exist
 - [ ] Footer design (still the plain scaffold footer)
-- [ ] Navigation for more pages (manual, download) incl. mobile; theme switch (Carbon/Paper, needs JS + storage)
+- [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
+- [ ] Navigation for more pages (manual, download) incl. mobile
 - [ ] Hero geometry refinement, section transitions, tracking-inspired accents beyond the hero
 - [ ] Hero copy approved by the user ("Your head. Your mouse." is a draft)
 

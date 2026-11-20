@@ -31,8 +31,10 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
   lifts, nothing looping, nothing that moves a control under the pointer. Colour photos/screenshots of the app are fine (the app's preview is in
   colour); chrome stays monochrome.
 - **Themes:** Carbon (dark) and Paper (light) values from `docs/PRODUCT.md`, selected by
-  `prefers-color-scheme`. Check every change in both.
-- **Type:** the system stack (`font-sans`); no web fonts. Body ≥ 16px (`text-base`), help
+  `prefers-color-scheme` or the header theme switch (`data-theme` on `<html>`). Check
+  every change in both.
+- **Type:** typewriter for all text: the system monospace stack (`font-mono`) is the page
+  default; no web fonts. Body ≥ 16px (`text-base`), help
   text `text-sm text-muted`, line length `max-w-prose`. Headings by size and weight
   (`font-semibold`), not colour. One `h1` per page.
 - **Spacing and shape:** Tailwind's 4px scale; content column `max-w-5xl` with `px-4`
@@ -46,8 +48,8 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
   (`import Logo from "../assets/logo.svg"`, `aria-hidden`, colour via `currentColor`) next to
   the uppercase wordmark. Pages start yellow: the header is `.on-brand` with no borders. The
   app icon PNG is only the favicon.
-- **Type accents:** `font-mono` uppercase `tracking-wide` for small labels and navigation
-  (typewriter feel), sparingly; never for body text or headings.
+- **Type accents:** uppercase `tracking-wide` for small labels and navigation, sparingly;
+  never all-caps body text.
 - **Content:** state only what `README.md` and `docs/PRODUCT.md` support. No invented
   features, platform or compatibility claims, download counts, testimonials, release dates
   or medical claims (a non-goal in PRODUCT). Link to the README or the release page
