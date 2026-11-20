@@ -77,9 +77,13 @@ borders, not `line-strong`; the Paper yellow button is identified by its label, 
 
 ## Theme switch
 
-A button at the end of the header (after the nav), mono uppercase like the nav: a half-filled
-circle icon (`aria-hidden`) and the current theme's name, "Carbon" or "Paper"; the accessible
-name is "Theme: Carbon" / "Theme: Paper", and `title` says what a click does. A click flips
+A night/day switch at the end of the header (user's call, 2026-11-20): a
+`<button role="switch">` named "Night theme", `aria-checked="true"` for Carbon (night) and
+`false` for Paper (day), with `title` saying what a click does. It looks like a switch: a
+pill track outlined in black with a sun (left) and a moon (right), and a black knob that
+slides to the current side and shows that theme's icon in yellow (CSS
+`group-aria-checked:`; reduced motion makes the slide instant). Icons are `aria-hidden`; the
+target is at least 44px tall. A click flips
 the theme by setting `data-theme="carbon|paper"` on `<html>` and stores it in
 `localStorage` (`ocm-theme`); with no stored choice the theme follows the OS. A tiny
 `is:inline` script in `BaseLayout` applies the stored choice before first paint (no flash).
@@ -116,11 +120,16 @@ wedge was rejected as ugly (2026-11-20).
 
 No tracking ring or crosshair in the hero (removed at the user's request).
 
-Contents: a small mono uppercase line (free, open source, licence), the h1 headline in heavy
-uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell it
-out), one sentence on what it does and that it runs locally, then the primary action (black
-button, yellow text) and a secondary outlined one. Inside the yellow, text and the focus
-outline are black. Copy is a draft until the user approves it.
+Header contents: logo and wordmark (home link), then only the GitHub mark (inline Octicons
+SVG, link named "Source code on GitHub") and the theme switch; no "Download" link (the hero
+has it). At 320px the header wraps to two rows.
+
+Hero contents (copy from the user, 2026-11-20): the h1 "Computing without barriers." in
+heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell
+it out); "Control your computer using head movements and an ordinary webcam. Free and open
+source."; the primary action (black button, yellow text) and a secondary outlined one; then
+one short download line, `v0.4.0 · Apple Silicon · Other platforms` (see "Downloads"). No
+eyebrow line above the headline. Inside the yellow, text and the focus outline are black.
 
 ## Downloads
 
@@ -129,7 +138,9 @@ per file (`border-2 border-text`, the file type as the label, "Download <OS>" fo
 readers), then the install-steps link; under the cards, a text link to the release's notes,
 files and checksums. The hero's black button is the one primary download. With JavaScript,
 the visitor's card gets a "Your system" label (text, not colour) and the hero button reads
-"Download for <OS>" with the version and requirement under it plus an "Other systems" link;
+"Download for <OS>" with `v<version> · <short requirement> · Other platforms` under it
+(`short` in `platforms.ts`; without JS or for an unknown system, `v<version> · macOS,
+Windows, Linux`);
 on a phone, tablet or ChromeOS both say Open Camera Mouse runs on macOS, Windows and Linux
 computers. The CPU isn't guessed, so the requirement (e.g. Apple Silicon) is always shown
 next to a direct download.

@@ -4,7 +4,15 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Last session (2026-11-20, third): Phase 4 OS-aware downloads
+## Latest fixes (2026-11-20, fourth)
+
+User-requested polish: header without the "Download" link; "Source code" is now the GitHub
+mark; the theme control is a night/day `role="switch"` (sun/moon pill, sliding knob); hero
+copy from the user ("Computing without barriers.", new description, eyebrow removed) and a
+short download line `v0.4.0 · Apple Silicon · Other platforms` (`short` in `platforms.ts`).
+Screenshotted in both themes and at 320px; switch click not exercised headlessly.
+
+## Earlier session (2026-11-20, third): Phase 4 OS-aware downloads
 
 - **Decision (user):** release data at **build time**, not from the visitor's browser
   (ADR-0023 amendment 2). The site still makes no third-party request, so no privacy note.
@@ -44,11 +52,11 @@ if the user has screenshots.
 
 ## Waiting on the user
 
-Hero copy ("Your head. Your mouse." is a draft); a real typewriter web font yes/no;
+A real typewriter web font yes/no;
 demo recording and screenshots.
 
 ## Not yet checked by hand
 
-200% zoom, keyboard walk-through (theme switch, new file buttons, "Other systems"),
+200% zoom, keyboard walk-through (night/day switch click + Space/Enter, new file buttons, "Other platforms"),
 VoiceOver (file buttons read "Download macOS Disk image (.dmg)"), real reduced-motion
 setting, Windows/Linux browsers and a real phone (detection + unsupported message).

@@ -1,6 +1,5 @@
 ---
-// Yellow angular hero (WEBSITE_DESIGN.md "Header and hero"), continuing the yellow header. Copy is a
-// first draft, not approved. The primary action goes to the on-page download section; with
+// Yellow angular hero (WEBSITE_DESIGN.md "Header and hero"), continuing the yellow header. The primary action goes to the on-page download section; with
 // JavaScript, DownloadEnhancer.astro points it at the visitor's file instead and swaps the
 // note under it (WEBSITE_DESIGN.md "Downloads").
 import { url } from "../lib/url";
@@ -22,18 +21,14 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
   <div
     class="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-[calc(var(--cut)+3rem)] sm:px-6 md:pt-16"
   >
-    <p class="animate-rise-in text-sm tracking-wide uppercase">
-      Free and open source · MIT licence
-    </p>
     <h1
       id="hero-title"
-      class="animate-rise-in mt-4 max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl"
+      class="animate-rise-in max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl"
     >
-      Your head. Your mouse.
+      Computing without barriers.
     </h1>
     <p class="animate-rise-in mt-6 max-w-[36rem] text-lg [animation-delay:160ms] sm:text-xl">
-      Open Camera Mouse moves the pointer as you move your head, using an ordinary webcam.
-      Everything runs on your computer; no camera image leaves it.
+      Control your computer using head movements and an ordinary webcam. Free and open source.
     </p>
     <ul class="animate-rise-in mt-8 flex flex-wrap gap-4 [animation-delay:240ms]">
       <li>
@@ -56,11 +51,11 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
       </li>
     </ul>
     <div class="animate-rise-in mt-4 text-sm [animation-delay:240ms]">
-      {release && <p data-detect-default>Version {release.version} for macOS, Windows and Linux.</p>}
+      {release && <p data-detect-default>v{release.version} · macOS, Windows, Linux</p>}
       {
         direct.map(({ platform }) => (
           <p data-detect={platform.id} hidden>
-            Version {release!.version}, for {platform.requirement}. <a href={url("#download")}>Other systems</a>
+            v{release!.version} · {platform.short} · <a href={url("#download")}>Other platforms</a>
           </p>
         ))
       }
