@@ -17,7 +17,11 @@ const direct = release
 const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url, name: d.platform.name }]));
 ---
 
-<section aria-labelledby="hero-title" class="on-brand angular-bottom relative overflow-hidden">
+<!--
+  -mt-px: the hero overlaps the header by 1px, so the anti-aliased top edge of the clip-path
+  falls on yellow instead of letting the page background show as a hairline (seen on phones).
+-->
+<section aria-labelledby="hero-title" class="on-brand angular-bottom relative -mt-px overflow-hidden">
   <div
     class="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-[calc(var(--cut)+3rem)] sm:px-6 md:pt-16"
   >
@@ -25,7 +29,7 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
       id="hero-title"
       class="animate-rise-in max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl"
     >
-      Computing without barriers.
+      Computing without barriers
     </h1>
     <p class="animate-rise-in mt-6 max-w-[36rem] text-lg [animation-delay:160ms] sm:text-xl">
       Control your computer using head movements and an ordinary webcam. Free and open source.

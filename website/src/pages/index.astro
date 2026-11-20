@@ -54,6 +54,11 @@ const steps = [
         ))
       }
     </ol>
+    <p class="mt-8">
+      <a href={url("manual/getting-started/")} class="inline-flex min-h-11 items-center font-semibold">
+        Read the manual<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    </p>
   </Section>
 
   <Section
@@ -134,10 +139,11 @@ const steps = [
   <Section id="open-source" title="Open source">
     <p class="max-w-prose">
       Open Camera Mouse is free software under the MIT licence, written in Rust. The source
-      code, documentation and issue tracker are on GitHub.
+      code and issue tracker are on GitHub; how to use the app is in the manual.
     </p>
     <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2">
       <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
+      <li><a href={url("manual/")} class="inline-flex min-h-11 items-center">Manual</a></li>
       <li>
         <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report a problem</a>
       </li>

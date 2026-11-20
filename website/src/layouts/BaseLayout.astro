@@ -41,16 +41,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     </script>
   </head>
   <body class="flex min-h-dvh flex-col bg-bg text-text">
-    <a
-      href="#main"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-10 focus:rounded-widget focus:bg-yellow focus:px-4 focus:py-2 focus:text-on-yellow"
-    >
-      Skip to content
-    </a>
     <SiteHeader />
     <main
       id="main"
-      tabindex="-1"
       class={fullBleed ? "w-full flex-1" : "mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6"}
     >
       <slot />

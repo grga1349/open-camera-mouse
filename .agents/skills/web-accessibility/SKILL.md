@@ -21,7 +21,8 @@ Desktop app accessibility → `egui-development` and `docs/PRODUCT.md`.
 
 - **Structure:** `<html lang="en">`; one `h1`, headings in order with no skipped levels;
   landmarks `header`, `nav` (with `aria-label` when there's more than one), `main`
-  (`id="main"`, target of the layout's skip link), `footer`. Lists for lists, `<table>`
+  (`id="main"`), `footer`. No skip link (user's decision, 2026-11-20): keep the
+  header's tab stops few. Lists for lists, `<table>`
   with `<th scope>` for tables. Unique, descriptive `<title>` per page.
 - **Native first:** links navigate, buttons act (`<button type="button">`); never a
   clickable `div`/`span`. Disclosure → `<details><summary>`; modal → `<dialog>` opened with
@@ -54,7 +55,7 @@ Desktop app accessibility → `egui-development` and `docs/PRODUCT.md`.
 
 ## Deliverables and gates
 
-Per change: keyboard-only walk-through (Tab order, focus visible, skip link works), check in
+Per change: keyboard-only walk-through (Tab order, focus visible), check in
 both themes, 320px width and 200% zoom, VoiceOver (macOS) read-through of new content,
 reduced-motion setting on. Automated: `bun run check` and `bun run build` pass; optionally
 run axe or Lighthouse accessibility against `bun run preview` (no extra dependency

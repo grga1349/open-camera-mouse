@@ -67,14 +67,15 @@ The website manual becomes the canonical end-user documentation (README keeps a 
 install/use summary and links to it).
 
 Slices: (1) infrastructure + getting started, requirements, installation ✅; (2) using it:
-permissions, pointer, tracking point, recentering, clicking/dwell, handover; (3) settings,
+permissions, pointer, tracking point, recentering, clicking/dwell, handover ✅; (3) settings,
 accessibility options, troubleshooting, FAQ, README shortened to link here, defaults check;
 (4) annotated screenshots (needs the user's screenshots).
 
 - [x] Content collection (`src/content/manual/*.md`, Astro built-in, no doc framework), `/manual/` and `/manual/<slug>/` routes, sidebar (`<details>` on small screens), "On this page", prev/next, heading ids
 - [x] Build check resolves relative links and `#anchors` (`check-paths.mjs`)
 - [x] Pages: getting started, system requirements, installation per OS
-- [ ] Pages: first-time setup and permissions, using the pointer, selecting a tracking point, recentering, clicking and dwell clicking, mouse handover, settings, accessibility options, troubleshooting, FAQ — each only from real app behaviour (`PRODUCT.md`, `BEHAVIOR.md`, the code)
+- [x] Pages: first-time setup and permissions, selecting a tracking point, using the pointer, recentering, clicking and dwell clicking, mouse handover (from `status.rs`, `options.rs`, `controller.rs`, `pointer-core`)
+- [ ] Pages: settings, accessibility options, troubleshooting, FAQ — each only from real app behaviour (`PRODUCT.md`, `BEHAVIOR.md`, the code)
 - [ ] README: keep a short install/use summary and link to the manual (after the site is deployed)
 - [ ] Annotated screenshots; a check that manual defaults match the app's
 

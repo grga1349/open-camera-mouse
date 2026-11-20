@@ -8,7 +8,9 @@ visual direction needs the user's OK, as for the app.
 ## Brand
 
 - **Character:** monochrome, quiet, practical; real numbers and plain words.
-- **Name:** "Open Camera Mouse", written out in full; never "OCM" in visible text.
+- **Name:** "Open Camera Mouse", written out in full. One exception (user's call,
+  2026-11-21): below `sm` the header wordmark reads "OCM" so the header fits one row; the
+  full name stays in the link's accessible name. "OCM" appears nowhere else.
 - **Logo:** on the website, a one-colour SVG mark: the camera with C and M cut out
   (`website/src/assets/logo.svg`, one even-odd path, `fill="currentColor"`), traced from the
   user's transparent PNG (2026-11-20). Imported as an Astro SVG component, drawn black on the
@@ -101,7 +103,8 @@ point with their head or dwell-click. Images and screenshots carry `width`/`heig
 ## Accessibility
 
 WCAG 2.2 AA is a requirement, not a goal; the rules are in the `web-accessibility` skill.
-In short: semantic landmarks with a skip link (in the layout), visible 2px focus outline,
+In short: semantic landmarks (no skip link: removed at the user's request, 2026-11-20;
+keyboard and screen-reader users move by landmarks and headings), visible 2px focus outline,
 underlined links in text, status never by colour alone, alt text, reduced motion respected
 (global rule in `global.css`), no autoplaying motion without a pause control.
 
@@ -123,9 +126,14 @@ No tracking ring or crosshair in the hero (removed at the user's request).
 Header contents: logo and wordmark (home link), then a "Manual" text link (uppercase,
 underlined while on a manual page, `aria-current="page"` on `/manual/`), the GitHub mark
 (inline Octicons SVG, link named "Source code on GitHub") and the theme switch; no
-"Download" link (the hero has it). At 320px the header wraps to two rows.
+"Download" link (the hero has it). Below `sm` it stays one row: the wordmark shows "OCM" (link name "OCM Open
+Camera Mouse") and "Manual" becomes an outline book icon (inline SVG, `title` and
+screen-reader text "Manual", a 2px bar under it on manual pages). A nav row
+(Manual, How it works, Download, Open source) with a hamburger menu was tried and dropped
+(2026-11-21): the other links only jumped to home-page sections. Instead the home page links
+the manual from "How it works" ("Read the manual →") and "Open source".
 
-Hero contents (copy from the user, 2026-11-20): the h1 "Computing without barriers." in
+Hero contents (copy from the user, 2026-11-20): the h1 "Computing without barriers" (no full stop) in
 heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell
 it out); "Control your computer using head movements and an ordinary webcam. Free and open
 source."; the primary action (black button, yellow text) and a secondary outlined one; then

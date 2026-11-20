@@ -16,8 +16,8 @@ analytics or tracking, and no third-party requests from the visitor's browser: t
 release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
 Status: first homepage pass (yellow hero, showcase placeholder, how it works, OS-aware
-download cards, open source) and the first manual pages (getting started, system
-requirements, installation); see the roadmap.
+download cards, open source) and the manual's getting-started, installation and everyday-use pages (setup and
+permissions, tracking point, pointer, recentering, clicking, mouse handover); see the roadmap.
 
 ## Homepage
 
@@ -82,7 +82,7 @@ website/
   public/                 copied verbatim: favicon.png (copy of assets/icon/png/)
   scripts/check-paths.mjs post-build check of internal URLs and #anchors in dist/
   src/
-    layouts/BaseLayout.astro   <html>, <head>, skip link, header, <main id="main">, footer;
+    layouts/BaseLayout.astro   <html>, <head>, header, <main id="main">, footer;
                                `fullBleed` lets a page lay out its own full-width sections
     assets/logo.svg            one-colour logo mark (currentColor), imported as a component
     components/SiteHeader.astro, SiteFooter.astro   header on the yellow brand surface
