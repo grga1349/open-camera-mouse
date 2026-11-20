@@ -5,7 +5,7 @@
 import { url } from "../lib/url";
 import { PLATFORMS } from "../lib/platforms";
 import { latestRelease } from "../lib/latest-release";
-import HeroPyramid from "./HeroPyramid.astro";
+import HeroSquirrel from "./HeroSquirrel.astro";
 
 const release = await latestRelease();
 // Platforms the hero can download directly: the preferred (first) file of each.
@@ -70,6 +70,6 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
         </p>
       </div>
     </div>
-    <HeroPyramid />
+    <HeroSquirrel />
   </div>
 </section>

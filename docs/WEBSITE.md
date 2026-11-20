@@ -95,7 +95,7 @@ website/
     assets/logo.svg            one-colour logo mark (currentColor), imported as a component
     components/SiteHeader.astro, SiteFooter.astro   header on the yellow brand surface
     components/Hero.astro      yellow angular hero
-    components/HeroPyramid.astro   decorative pointer-following figure beside the hero text (lg+)
+    components/HeroSquirrel.astro   decorative squirrel that watches the pointer beside the hero text (lg+)
     components/Section.astro   homepage section: column, anchor id, h2
     components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)
     components/DownloadEnhancer.astro      client script: OS detection → hero button, "Your system"
@@ -113,7 +113,7 @@ website/
     lib/latest-release.ts      build-time loader: CI file, else anonymous fetch, else null
     lib/manual-order.ts        manual page order and previous/next (pure, tested)
     lib/faq-excerpt.ts, home-faq.ts   home page FAQ: questions picked from manual/faq.md (tested)
-    lib/pyramid.ts             hero pyramid geometry (pure, tested)
+    lib/squirrel.ts            hero squirrel pose maths (pure, tested)
     lib/manual-defaults.ts     app settings source → expected manual table rows (pure, tested
                                against settings.rs and content/manual/*.md)
     data/latest-release.json   written by CI only (gitignored)

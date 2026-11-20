@@ -48,7 +48,7 @@ Desktop app accessibility → `egui-development` and `docs/PRODUCT.md`.
 - **Motion:** respect `prefers-reduced-motion: reduce` (the global rule in `global.css`
   neutralises animations and transitions; don't override it with `!important`). No
   scroll parallax, no flashing (> 3 per second). Pointer-following decoration (the hero
-  pyramid) must stay still with reduced motion, on touch and without JS, and never move a control.
+  squirrel) must stay still with reduced motion, on touch and without JS, and never move a control.
 - **Forms (if ever):** visible `<label for>`, errors in text linked with
   `aria-describedby`, `autocomplete` on personal fields, no CAPTCHA puzzles.
 - **Zoom and reflow:** usable at 200% text zoom and at 320 CSS px width (1.4.10); never

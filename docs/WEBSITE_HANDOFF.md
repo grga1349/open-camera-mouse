@@ -4,7 +4,7 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, eighth): home page fixes and hero pyramid
+## Latest session (2026-11-21, eighth): home page fixes and hero squirrel
 
 - **Hero flicker on reload:** measured with CDP screencast frames (headless Chrome): the
   first paint after a reload showed an empty yellow hero, then the text faded in (the
@@ -16,12 +16,14 @@ Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
   (`src/lib/home-faq.ts`) from the rendered `manual/faq.md`, links rebased
   (`src/lib/faq-excerpt.ts` + test; the test also checks every picked id exists in faq.md).
   Static two-column list, no disclosure (nothing to click open for dwell users).
-- **Hero pyramid** (`HeroPyramid.astro`, `src/lib/pyramid.ts` + test): stepped pyramid seen
-  from above, right of the hero text from `lg`; its top leans toward the pointer, rAF only
-  while settling, static with reduced motion / touch / no JS. Motion rule amended in
-  `WEBSITE_DESIGN.md`, both website skills.
-- Verified: check 0/0/0, 32 tests, build + path check; screenshots at 1280 (both themes),
-  1024, 320; pointer lean via CDP mouse events.
+- **Hero squirrel** (`HeroSquirrel.astro`, `src/lib/squirrel.ts` + test): line-drawn squirrel
+  seen from the front (mismatched eyes, no crossing lines) right of the hero text from `lg`;
+  head tilts, face slides and pupils look toward the pointer, tail sways; rAF only while
+  settling, static with reduced motion / touch / no JS. Tried first the same session and
+  dropped by the user: a stepped pyramid, then a cubist "Picasso-like"
+  head (too spiky). Motion rule amended in `WEBSITE_DESIGN.md`, both website skills.
+- Verified: check 0/0/0, 34 tests, build + path check; screenshots at 1280 (both themes),
+  1024, 320; pointer poses via CDP mouse events.
 
 ## Earlier sessions
 
@@ -40,6 +42,9 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 - Headless check: Chrome `--headless=new --force-prefers-reduced-motion
   --window-size=W,H --blink-settings=preferredColorScheme=0|1 --screenshot=…`; `#anchor`
   screenshots come out blank, take a tall window and crop; under ~500px use a 320px `<iframe>`.
+- Load flicker / pointer checks: a throwaway Bun script driving Chrome over CDP
+  (`--remote-debugging-port`, Bun's built-in WebSocket; `Page.startScreencast` for frames,
+  `Input.dispatchMouseEvent` for the pointer). Not in the repo; rewrite when needed.
 
 ## Next
 
@@ -55,7 +60,7 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
-Hero pyramid in a real browser with a real mouse and head pointer (feel of the lean, CPU
+Hero squirrel in a real browser with a real mouse and head pointer (feel of the motion, CPU
 while moving); the reload fix in Safari/Firefox.
 Manual (all thirteen pages): keyboard walk-through (sidebar, `<details>` at small widths, "On this page",
 prev/next), VoiceOver read of the tables and `kbd`, 200% zoom.

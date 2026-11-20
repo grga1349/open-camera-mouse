@@ -36,7 +36,7 @@ before the merge to `main`).
 - [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
 - [~] Navigation for more pages: "Manual" link in the header (wraps at 320px); revisit when there are more pages
 - [x] Hero entrance only on the first page of a visit (reload no longer blanks the hero)
-- [x] Hero pyramid: decorative stepped pyramid beside the hero text (lg+) whose top leans toward the pointer
+- [x] Hero squirrel: decorative line-drawn squirrel beside the hero text (lg+) that watches the pointer (a pyramid and a cubist head were tried first)
 - [ ] Hero geometry refinement, section transitions, tracking-inspired accents beyond the hero
 - [ ] Hero copy approved by the user ("Your head. Your mouse." is a draft)
 

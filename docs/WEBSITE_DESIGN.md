@@ -123,13 +123,19 @@ wedge was rejected as ugly (2026-11-20).
 
 No tracking ring or crosshair in the hero (removed at the user's request).
 
-From `lg` up the hero is two columns: the text, and on the right (`HeroPyramid.astro`, at most
-20rem) a stepped pyramid seen from above, a nod to the image pyramid the tracker works on:
-six square levels and four edges in 2px black lines with a filled black top, on the yellow.
-Its top leans toward the pointer (up to 70 of 400 viewBox units, the base stays put), easing
-back to the centre when the pointer leaves the window. Geometry in `src/lib/pyramid.ts`
+From `lg` up the hero is two columns: the text, and on the right (`HeroSquirrel.astro`, at
+most 20rem) a silly squirrel seen from the front, in simple round black lines on the yellow
+(user's call, 2026-11-21, after a stepped pyramid and a cubist head were tried the same day
+and found too spiky; first drawn side-on, then from the front): sitting on a ground line,
+holding an acorn, a big curled tail on its right, one big and one small eye, a small nose and
+two buck teeth. **No line crosses another**: parts in front cover what's behind them with a
+yellow fill, and the face details stay inside the head (mouth and teeth meet at the corners).
+It watches the pointer, a nod to what the app does: the head tilts up to 12° toward the
+pointer's side and shifts up to 6 units toward it, the face slides up to 8 more inside the
+head, both pupils look toward it (each inside its own eye), and the tail sways up to 8° the
+other way; it eases back to looking ahead when the pointer leaves the window. Pose maths in `src/lib/squirrel.ts`
 (tested), shared by the build-time render and the script. `aria-hidden`, no focus, hidden
-below `lg`.
+below `lg`. Being a drawing, it uses curves; the "Angular language" applies to layout shapes.
 
 Header contents: logo and wordmark (home link), then a "Manual" text link (uppercase,
 underlined while on a manual page, `aria-current="page"` on `/manual/`), the GitHub mark
@@ -194,10 +200,10 @@ animation, scroll parallax, scroll-jacking, anything that moves a control while 
 pointed at or dwelled on (a hover lift is ≤ 2px and the hit area stays put). The global
 `prefers-reduced-motion` rule in `global.css` collapses all of it, delays included.
 
-**Hero pyramid** (user's request, 2026-11-21): the one exception to "CSS only", a decorative
+**Hero squirrel** (user's request, 2026-11-21): the one exception to "CSS only", a decorative
 figure that follows the pointer. It moves only while the pointer moves (eases to its goal in
 `requestAnimationFrame`, then stops: no loop), never with reduced motion, on touch-only
-screens (`any-hover: none`) or without JavaScript (then it's a static symmetric pyramid), and
+screens (`any-hover: none`) or without JavaScript (then it looks ahead, still), and
 it isn't a control. Details under "Header and hero".
 
 ## Page structure
