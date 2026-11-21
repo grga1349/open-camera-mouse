@@ -1,6 +1,6 @@
 # ADR-0023: Website in `website/` — Astro + Tailwind v4, built with Bun, hosted on GitHub Pages
 
-Status: Proposed (scaffold on `feature/website`, 2026-11-20)
+Status: Accepted (2026-11-21, before the merge of `feature/website` to `main`; proposed 2026-11-20)
 Date: 2026-11-20
 
 ## Context

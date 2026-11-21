@@ -3,12 +3,9 @@
 Phased plan for the website (`website/`, ADR-0023). How it's built: [`WEBSITE.md`](WEBSITE.md);
 how it looks and what it may say: [`WEBSITE_DESIGN.md`](WEBSITE_DESIGN.md). One phase (or
 slice of one) per session; tick items when they land and note what was deferred. Status as of
-2026-11-20, all on `feature/website` (nothing merged or deployed yet).
+2026-11-21, all on `feature/website` (nothing merged or deployed yet).
 
 Legend: `[x]` done · `[~]` started · `[ ]` open
-
-Current session state and next steps: `docs/WEBSITE_HANDOFF.md` (temporary, deleted
-before the merge to `main`).
 
 ## Phase 1 — Foundation  ✅
 
@@ -90,7 +87,9 @@ which waits for the deployment.
 - [x] Real demonstration recording (23 s screen recording on macOS by the user, trimmed where tracking stops; no simulated tracking), poster, `controls`, no autoplay, no captions (no sound; dropped at the user's request, the figcaption describes the video) — not a diagnostic recording; only the user is shown (2026-11-21). The figcaption wording goes into the final copy pass
 - [x] Big centred play button over the video (progressive enhancement: hidden native controls until the first play, back after the end; focus moves to the video) (2026-11-21)
 - [ ] ~~Application screenshots~~ dropped (user's call, 2026-11-21)
-- [~] Mobile pass; accessibility audit: automated part done 2026-11-21 (Lighthouse, axe on all pages × both themes × 320/768/1280, no overflow; one empty table header fixed, now tested). By hand still open: keyboard, VoiceOver/NVDA, 200% zoom, real reduced-motion setting, a real phone
-- [x] Performance check: Lighthouse 100 mobile and desktop, 11–17 KiB per page, CLS 0 (2026-11-21; re-run after the showcase video lands)
-- [ ] Before merging: delete `docs/WEBSITE_HANDOFF.md` and the references to it (this file, `AGENTS.md`)
-- [ ] Merge to `main`, enable Pages, first deployment; ADR-0023 → Accepted
+- [~] Mobile pass; accessibility audit: automated part done 2026-11-21 (Lighthouse, axe on all pages × both themes × 320/768/1280, no overflow; one empty table header fixed, now tested). By hand still open (user: during use): keyboard, VoiceOver/NVDA, 200% zoom, real reduced-motion setting, a real phone, Safari and Firefox; in particular the asymmetric hero V at 320px, the two-line headline on Windows and Linux fonts, video playback and the play button, the squirrel with a real head pointer, OS detection on Windows and Linux
+- [x] Performance check: Lighthouse 100 mobile and desktop, 12–14 KiB per manual page, 119 KiB home (video poster), CLS 0 on mobile after the hero layout-shift fixes (2026-11-21, re-run with the video)
+- [x] Yellow accent on Carbon (headings, rules, list markers, labels), highlighter under headings on Paper, dimmer Carbon text (user's call, 2026-11-21)
+- [ ] The user's own read of all copy (a final pass over the whole site, after the merge is fine)
+- [x] Before merging: temporary `docs/WEBSITE_HANDOFF.md` deleted with its references; ADR-0023 → Accepted (2026-11-21)
+- [ ] Merge to `main`, enable Pages (source: GitHub Actions) and set `WEBSITE_DEPLOY=true`, first deployment
