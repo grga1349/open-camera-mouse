@@ -1,10 +1,19 @@
 name: CI
 
+# Website-only changes don't compile Rust; they have their own workflow (website.yml, ADR-0023).
 on:
   push:
     branches: [main, rewrite/rust]
+    paths-ignore:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+      - 'docs/WEBSITE*.md'
   pull_request:
     branches: [main, rewrite/rust]
+    paths-ignore:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+      - 'docs/WEBSITE*.md'
   workflow_dispatch:
 
 env:
@@ -20,7 +29,7 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # libclang-dev: nokhwa's V4L2 bindings (v4l2-sys-mit) run bindgen at build time.
       - name: Linux system libraries for eframe/winit and the camera
         if: runner.os == 'Linux'
@@ -64,7 +73,7 @@ jobs:
     name: licenses and bans
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check licenses bans sources

@@ -1,0 +1,59 @@
+---
+import "../styles/global.css";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { url } from "../lib/url";
+
+interface Props {
+  /** Page-specific title; the site name is appended. */
+  title?: string;
+  description: string;
+  /** The page lays out its own full-width sections and column; default is one padded column. */
+  fullBleed?: boolean;
+}
+
+const { title, description, fullBleed = false } = Astro.props;
+const siteName = "Open Camera Mouse";
+const fullTitle = title ? `${title} · ${siteName}` : siteName;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/png" href={url("favicon.png")} />
+    <!-- Pages start on the yellow header. -->
+    <meta name="theme-color" content="#ffd60a" />
+    <!--
+      Before first paint (is:inline on purpose: a bundled module may run after paint):
+      - apply the theme picked with the header switch, so the OS theme doesn't flash first;
+      - mark a page after the first of this visit (`data-entered`), so the hero's entrance
+        plays once and a reload or a later page doesn't blank the hero and fade it back in.
+    -->
+    <script is:inline>
+      try {
+        var t = localStorage.getItem("ocm-theme");
+        if (t === "carbon" || t === "paper") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+      try {
+        if (sessionStorage.getItem("ocm-entered")) document.documentElement.dataset.entered = "";
+        else sessionStorage.setItem("ocm-entered", "1");
+      } catch (e) {}
+    </script>
+  </head>
+  <body class="flex min-h-dvh flex-col bg-bg text-text">
+    <SiteHeader />
+    <main
+      id="main"
+      class={fullBleed ? "w-full flex-1" : "mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6"}
+    >
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

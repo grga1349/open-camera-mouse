@@ -1,0 +1,22 @@
+{
+  "name": "open-camera-mouse-website",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "scripts": {
+    "dev": "astro dev",
+    "check": "astro check",
+    "test": "bun test src",
+    "build": "astro build && bun scripts/check-paths.mjs",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "astro": "7.4.13",
+    "tailwindcss": "4.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "typescript": "6.0.3"
+  }
+}

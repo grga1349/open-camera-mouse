@@ -1,0 +1,81 @@
+---
+// Yellow angular hero (WEBSITE_DESIGN.md "Header and hero"), continuing the yellow header. The primary action goes to the on-page download section; with
+// JavaScript, DownloadEnhancer.astro points it at the visitor's file instead and swaps the
+// note under it (WEBSITE_DESIGN.md "Downloads").
+import { url } from "../lib/url";
+import { PLATFORMS } from "../lib/platforms";
+import { latestRelease } from "../lib/latest-release";
+import HeroSquirrel from "./HeroSquirrel.astro";
+
+const release = await latestRelease();
+// Platforms the hero can download directly: the preferred (first) file of each.
+const direct = release
+  ? PLATFORMS.flatMap((p) => {
+      const file = release.downloads[p.id][0];
+      return file ? [{ platform: p, url: file.url }] : [];
+    })
+  : [];
+const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url, name: d.platform.name }]));
+---
+
+<!--
+  -mt-px: the hero overlaps the header by 1px, so the anti-aliased top edge of the clip-path
+  falls on yellow instead of letting the page background show as a hairline (seen on phones).
+-->
+<section aria-labelledby="hero-title" class="on-brand angular-bottom relative -mt-px overflow-hidden">
+  <div
+    class="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-[calc(var(--cut)+3rem)] sm:px-6 md:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-center lg:gap-12"
+  >
+    <div>
+      <h1
+        id="hero-title"
+        class="animate-rise-in max-w-[12ch] text-5xl leading-none font-black tracking-tight uppercase [animation-delay:80ms] sm:text-7xl lg:max-w-none lg:text-6xl"
+      >
+        Computing without barriers
+      </h1>
+      <p class="animate-rise-in mt-6 max-w-[36rem] text-lg [animation-delay:160ms] sm:text-xl">
+        Control your computer using head movements and an ordinary webcam. Free and open source.
+      </p>
+      <ul
+        class="animate-rise-in mt-8 flex flex-col items-start gap-4 [animation-delay:240ms] sm:flex-row sm:flex-wrap"
+      >
+        <li>
+          <a
+            id="hero-download"
+            href={url("#download")}
+            data-downloads={JSON.stringify(links)}
+            class="inline-flex min-h-12 items-center rounded-widget bg-on-brand px-6 text-lg font-semibold text-brand no-underline transition-transform hover:-translate-y-0.5"
+          >
+            Download
+          </a>
+        </li>
+        <li>
+          <a
+            href={url("#showcase")}
+            class="inline-flex min-h-12 items-center rounded-widget border-2 border-on-brand px-6 text-lg font-semibold no-underline transition-transform hover:-translate-y-0.5"
+          >
+            See it working
+          </a>
+        </li>
+      </ul>
+      {/* All variants of the download line share one grid cell (`.detect-stack`), so the
+          script swapping them never moves the page. */}
+      <div
+        class="detect-stack animate-rise-in mt-4 text-sm [animation-delay:240ms]"
+      >
+        {release && <p data-detect-default>v{release.version} · macOS, Windows, Linux</p>}
+        {
+          direct.map(({ platform }) => (
+            <p data-detect={platform.id} hidden>
+              v{release!.version} · {platform.short} · <a href={url("#download")}>Other platforms</a>
+            </p>
+          ))
+        }
+        <p data-detect="unsupported" hidden>
+          Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device.
+        </p>
+      </div>
+    </div>
+    <HeroSquirrel />
+  </div>
+</section>

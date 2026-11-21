@@ -1,0 +1,23 @@
+---
+// One homepage section: the page column, an anchor id and an h2 that labels it.
+interface Props {
+  id: string;
+  title: string;
+  /** Short line under the heading, optional. */
+  lead?: string;
+  /** Top rule separating it from the previous section; off for the first one under the hero. */
+  divider?: boolean;
+}
+
+const { id, title, lead, divider = true } = Astro.props;
+---
+
+<section id={id} aria-labelledby={`${id}-title`} class:list={["scroll-mt-4", divider && "border-t border-line"]}>
+  <div class="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+    <h2 id={`${id}-title`} class="heading-accent text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2>
+    {lead && <p class="mt-4 max-w-prose text-lg text-muted">{lead}</p>}
+    <div class="mt-8">
+      <slot />
+    </div>
+  </div>
+</section>

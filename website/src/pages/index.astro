@@ -1,0 +1,286 @@
+---
+// Home page, first structure (docs/WEBSITE.md "Homepage"). Only sections with content the
+// README and PRODUCT.md support are built; the rest are listed in docs/WEBSITE_ROADMAP.md.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/Hero.astro";
+import Section from "../components/Section.astro";
+import Showcase from "../components/Showcase.astro";
+import DownloadEnhancer from "../components/DownloadEnhancer.astro";
+import { REPO_URL, url } from "../lib/url";
+import { PLATFORMS } from "../lib/platforms";
+import { latestRelease } from "../lib/latest-release";
+import { getEntry } from "astro:content";
+import { pickFaq, rebaseLinks, splitFaq } from "../lib/faq-excerpt";
+import { HOME_FAQ } from "../lib/home-faq";
+
+const RELEASES_URL = `${REPO_URL}/releases/latest`;
+// Read at build time; null when the API wasn't reachable (cards then link the Releases page).
+const release = await latestRelease();
+
+// A few FAQ answers, taken from the manual's FAQ page so they have one source.
+const faqPage = await getEntry("manual", "faq");
+if (!faqPage?.rendered) throw new Error("manual/faq.md is missing or not rendered");
+const faq = pickFaq(splitFaq(faqPage.rendered.html), HOME_FAQ).map((item) => ({
+  ...item,
+  answer: rebaseLinks(item.answer, url("manual/faq/")),
+}));
+
+// Engineering notes, each from README.md / docs/PRODUCT.md / docs/ARCHITECTURE.md /
+// docs/TESTING.md; nothing here may say more than those do.
+const engineering = [
+  {
+    title: "Built from scratch",
+    body: "An independent implementation in Rust, with its own computer-vision tracker. No OpenCV and no machine-learning models.",
+  },
+  {
+    title: "Precise control",
+    body: "Pointer speed and smoothing are adjustable, and small jitter is ignored, so the pointer stays still when your head does. If something passes in front of the camera, tracking stops instead of dragging the pointer away.",
+  },
+  {
+    title: "Tested on every change",
+    body: "The tracker and the pointer are tested automatically against generated video with known motion, on macOS, Windows and Linux.",
+  },
+  {
+    title: "Private",
+    body: "All camera processing happens locally. No cloud, no accounts, no telemetry.",
+  },
+];
+
+const DOCS_URL = `${REPO_URL}/blob/main/docs`;
+
+// Origin story sources (docs/WEBSITE.md "Origin story"): every historical sentence in
+// #why-it-exists is backed by one of these, checked 2026-11-21.
+const originSources = [
+  {
+    label: "Betke, Gips and Fleming, “The Camera Mouse: visual tracking of body features to provide computer access for people with severe disabilities”, IEEE TNSRE, 2002",
+    href: "https://doi.org/10.1109/TNSRE.2002.1021581",
+  },
+  {
+    label: "Boston College News, “BC ‘Camera Mouse’ Assistive Technology Tops 3 Million Downloads”, 2016",
+    href: "https://www.bc.edu/content/bc-web/bcnews/science-tech-and-health/technology/camera-mouse-boston-college.html",
+  },
+];
+
+const steps = [
+  {
+    title: "Select a tracking point",
+    body: "Start the camera and click a point on your face in the preview. The tip of the nose works well.",
+  },
+  {
+    title: "Move your head",
+    body: "The pointer follows your head.",
+  },
+  {
+    title: "Click by holding still",
+    body: "Optionally, turn on dwell click: hold the pointer still over something and it clicks.",
+  },
+];
+---
+
+<BaseLayout
+  fullBleed
+  description="Control the mouse pointer with your head, using an ordinary webcam. Free and open source for macOS, Windows and Linux."
+>
+  <Hero />
+
+  <Section id="showcase" title="See it working" divider={false}>
+    <Showcase />
+  </Section>
+
+  <Section id="why-it-exists" title="Why it exists">
+    <div class="max-w-prose space-y-4">
+      <p>
+        Camera Mouse was developed at Boston College by James Gips and Margrit Betke. A camera
+        follows a point on the face, such as the tip of the nose, and moves the mouse pointer
+        with it, so people who can't use their hands reliably can still use a computer.
+      </p>
+      <p>
+        Boston College made it a free download in 2007. By 2016 it had been downloaded more than
+        three million times, by people with cerebral palsy, ALS, spinal muscular atrophy, brain
+        injuries and other conditions.
+      </p>
+      <p>
+        Open Camera Mouse carries the idea forward as a new program, written from scratch, open
+        source and available for macOS, Windows and Linux. It is an independent project, not
+        affiliated with or endorsed by Boston College or the original authors.
+      </p>
+    </div>
+    <h3 class="mt-10 text-sm tracking-wide text-accent uppercase">Sources</h3>
+    <ol class="mt-2 max-w-prose list-decimal space-y-2 pl-6 text-sm text-muted">
+      {
+        originSources.map((s) => (
+          <li>
+            <a href={s.href} class="text-text">{s.label}</a>
+          </li>
+        ))
+      }
+    </ol>
+  </Section>
+
+  <Section id="how-it-works" title="How it works">
+    <ol class="grid gap-8 md:grid-cols-3">
+      {
+        steps.map((step, i) => (
+          <li class="border-t-4 border-accent pt-4">
+            <p class="text-sm text-muted" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
+            </p>
+            <h3 class="mt-2 text-xl font-semibold">{step.title}</h3>
+            <p class="mt-2">{step.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="mt-8">
+      <a href={url("manual/getting-started/")} class="inline-flex min-h-11 items-center font-semibold">
+        Read the manual<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    </p>
+  </Section>
+
+  <Section
+    id="engineering"
+    title="Engineering"
+  >
+    <ul class="grid gap-x-12 gap-y-10 md:grid-cols-2">
+      {
+        engineering.map((item) => (
+          <li class="border-t-4 border-accent pt-4">
+            <h3 class="text-xl font-semibold">{item.title}</h3>
+            <p class="mt-2">{item.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="mt-10">
+      <a href={`${DOCS_URL}/ARCHITECTURE.md`} class="inline-flex min-h-11 items-center font-semibold">
+        Architecture on GitHub<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    </p>
+  </Section>
+
+  <Section
+    id="download"
+    title="Download"
+    lead={release
+      ? `Version ${release.version} for macOS, Windows and Linux.`
+      : "The latest release for macOS, Windows and Linux."}
+  >
+    <p data-detect="unsupported" hidden class="mb-8 max-w-prose border-l-4 border-accent pl-4">
+      Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device. Download
+      it on the computer you want to use it with.
+    </p>
+    <ul class="grid gap-6 md:grid-cols-3">
+      {
+        PLATFORMS.map((p) => {
+          const files = release?.downloads[p.id] ?? [];
+          return (
+            <li class="flex flex-col rounded-frame border border-line bg-surface p-6">
+              <p data-detect={p.id} hidden class="mb-2 text-sm tracking-wide text-accent uppercase">
+                Your system
+              </p>
+              <h3 class="text-xl font-semibold">{p.name}</h3>
+              <p class="mt-1 text-muted">{p.requirement}</p>
+              {files.length === 0 && (
+                <p class="mt-4 text-sm">{p.assets.map((a) => a.label).join(" or ")}</p>
+              )}
+              <ul class="mt-4 list-disc pl-5 text-sm text-muted">
+                {p.notes.map((n) => (
+                  <li>{n}</li>
+                ))}
+              </ul>
+              {files.length > 0 && (
+                <ul class="mt-6 flex flex-col gap-3">
+                  {files.map((f) => (
+                    <li>
+                      <a
+                        href={f.url}
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-widget border-2 border-text px-4 text-center font-semibold no-underline"
+                      >
+                        <span class="sr-only">Download {p.name} </span>
+                        {f.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p class="mt-auto pt-6">
+                <a href={url(`manual/installation/#${p.installAnchor}`)} class="inline-flex min-h-11 items-center">
+                  {p.name} install steps
+                </a>
+              </p>
+            </li>
+          );
+        })
+      }
+    </ul>
+    {
+      release ? (
+        <p class="mt-8">
+          <a href={release.pageUrl} class="inline-flex min-h-11 items-center">
+            All files, checksums and release notes for version {release.version}
+          </a>
+        </p>
+      ) : (
+        <p class="mt-8">
+          <a
+            href={RELEASES_URL}
+            class="inline-flex min-h-12 items-center rounded-widget bg-yellow px-6 text-lg font-semibold text-on-yellow no-underline"
+          >
+            Go to the latest release
+          </a>
+        </p>
+      )
+    }
+  </Section>
+
+  <Section id="faq" title="Questions">
+    <ul class="grid gap-x-12 gap-y-10 md:grid-cols-2">
+      {
+        faq.map((item) => (
+          <li class="border-t border-line pt-6">
+            <h3 class="text-xl font-semibold" set:html={item.question} />
+            <div class="manual-prose mt-3" set:html={item.answer} />
+          </li>
+        ))
+      }
+    </ul>
+    <p class="mt-10">
+      <a href={url("manual/faq/")} class="inline-flex min-h-11 items-center font-semibold">
+        All questions<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    </p>
+  </Section>
+
+  <Section id="open-source" title="Open source">
+    <p class="max-w-prose">
+      The code is on GitHub under the MIT licence. Bug reports, ideas and contributions are
+      welcome there.
+    </p>
+    <div class="mt-8 grid gap-x-12 gap-y-8 md:grid-cols-2">
+      <div>
+        <h3 class="text-sm tracking-wide text-accent uppercase">Get involved</h3>
+        <ul class="mt-2">
+          <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
+          <li>
+            <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report an issue</a>
+          </li>
+          <li>
+            <a href={`${REPO_URL}#develop`} class="inline-flex min-h-11 items-center">Contribute</a>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm tracking-wide text-accent uppercase">Documentation</h3>
+        <ul class="mt-2">
+          <li><a href={url("manual/")} class="inline-flex min-h-11 items-center">User manual</a></li>
+          <li>
+            <a href={`${REPO_URL}/tree/main/docs`} class="inline-flex min-h-11 items-center">Developer documentation</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </Section>
+
+  <DownloadEnhancer />
+</BaseLayout>

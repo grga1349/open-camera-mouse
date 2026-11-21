@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.astro/
+# Written by CI before the build (website.yml, src/lib/latest-release.ts).
+src/data/latest-release.json

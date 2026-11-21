@@ -47,4 +47,8 @@ Open items, roughly by priority:
 11. **Multi-monitor:** with uneven monitors the cursor sticks to edges where the desktop's
     bounding box has dead zones (snap). Fine for v1.
 
+## Website
+
+Phases, status and open items: `docs/WEBSITE_ROADMAP.md` (on `feature/website`, ADR-0023).
+
 New work arrives as prompts (see `AGENTS.md`); add an item here only when it is deferred.

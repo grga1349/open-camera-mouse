@@ -1,0 +1,302 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens: the desktop app's Carbon (dark) and Paper (light) themes, from
+ * docs/PRODUCT.md ("Design tokens"); keep the values identical. Theme follows the OS
+ * (prefers-color-scheme), Carbon when there's no preference, unless the visitor picked
+ * one with the header switch (`data-theme` on <html>). docs/WEBSITE_DESIGN.md.
+ */
+:root {
+  color-scheme: dark;
+  /* Depth of the hero's V-shaped bottom edge, and how far across its point sits. */
+  --cut: clamp(1.5rem, 5vw, 4rem);
+  --apex: 30%;
+  --ocm-bg: #000000;
+  --ocm-surface: #0a0a0a;
+  --ocm-surface-2: #151515;
+  --ocm-line: #262626;
+  --ocm-line-strong: #3f3f3f;
+  /* Slightly dimmer than the app's #fafafa: less glare for long monospace text on black. */
+  --ocm-text: #e6e6e6;
+  --ocm-muted: #8f8f8f;
+  --ocm-yellow: #ffd60a;
+  /* Accent: yellow text and rules on Carbon; on Paper yellow text fails
+     contrast, so it falls back to the text colour and headings get a yellow mark instead. */
+  --ocm-accent: #ffd60a;
+  --ocm-mark: transparent;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="carbon"]) {
+    color-scheme: light;
+    --ocm-bg: #ececec;
+    --ocm-surface: #f8f8f8;
+    --ocm-surface-2: #ffffff;
+    --ocm-line: #d6d6d6;
+    --ocm-line-strong: #a8a8a8;
+    --ocm-text: #111111;
+    --ocm-muted: #5a5a5a;
+    --ocm-yellow: #f5c518;
+    --ocm-accent: #111111;
+    --ocm-mark: #f5c518;
+  }
+}
+
+:root[data-theme="paper"] {
+  color-scheme: light;
+  --ocm-bg: #ececec;
+  --ocm-surface: #f8f8f8;
+  --ocm-surface-2: #ffffff;
+  --ocm-line: #d6d6d6;
+  --ocm-line-strong: #a8a8a8;
+  --ocm-text: #111111;
+  --ocm-muted: #5a5a5a;
+  --ocm-yellow: #f5c518;
+  --ocm-accent: #111111;
+  --ocm-mark: #f5c518;
+}
+
+/*
+ * Tailwind theme. `--color-*: initial` drops Tailwind's default palette so only the brand
+ * colours exist as utilities (bg-bg, bg-surface, text-text, text-muted, border-line, …).
+ * Accents: marker (target ring only), yellow (primary fill, brand surface) and accent
+ * (yellow headings, rules and markers on Carbon; text colour on Paper, with `mark` under headings).
+ */
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--ocm-bg);
+  --color-surface: var(--ocm-surface);
+  --color-surface-2: var(--ocm-surface-2);
+  --color-line: var(--ocm-line);
+  --color-line-strong: var(--ocm-line-strong);
+  --color-text: var(--ocm-text);
+  --color-muted: var(--ocm-muted);
+  --color-marker: #00ff00;
+  --color-yellow: var(--ocm-yellow);
+  --color-accent: var(--ocm-accent);
+  --color-mark: var(--ocm-mark);
+  --color-on-yellow: #111111;
+  /* Brand surface for the hero band: the same in both themes (WEBSITE_DESIGN.md "Hero"). */
+  --color-brand: #ffd60a;
+  --color-on-brand: #000000;
+  /* Overlay on the demo video (Showcase.astro): the same in both themes, since it sits on
+     the video, not the page. White on scrim/50 over the video's brightest pixel is 3.9:1. */
+  --color-scrim: #000000;
+  --color-on-scrim: #ffffff;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Ubuntu, sans-serif;
+  /* Typewriter face for all text (the html default); system monospace, no web font. */
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius-frame: 8px;
+  --radius-widget: 6px;
+}
+
+@layer base {
+  /* Variants that a script swaps with the `hidden` attribute (the hero's download line):
+     all share one grid cell, and the hidden ones keep their height but stay invisible (so
+     out of the accessibility tree and the tab order). The block is as tall as the longest
+     variant, so the swap causes no layout shift. In this layer because Tailwind's
+     `[hidden] { display: none !important }` is here too, and an !important rule in a later
+     layer would lose to it. */
+  .detect-stack {
+    display: grid;
+  }
+  .detect-stack > * {
+    grid-area: 1 / 1;
+  }
+  .detect-stack > [hidden] {
+    display: block !important;
+    visibility: hidden;
+  }
+
+  html {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Visible focus for keyboard users (WCAG 2.4.7 / 2.4.11); 2px like the app's normal size. */
+  :focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  a {
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* Page and section headings yellow on Carbon; on Paper a yellow highlighter stroke
+     under the black text (WEBSITE_DESIGN.md "Colour"). */
+  .heading-accent,
+  .manual-prose h2 {
+    color: var(--color-accent);
+    text-decoration-line: underline;
+    text-decoration-color: var(--color-mark);
+    text-decoration-thickness: 0.35em;
+    text-underline-offset: -0.15em;
+    text-decoration-skip-ink: none;
+  }
+
+  main li::marker {
+    color: var(--color-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important; /* staggered entrances must not sit invisible */
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Brand (yellow) surface: the hero band. Everything inside is black on #ffd60a (14.9:1),
+ * including the focus outline, which would otherwise be the near-white Carbon text colour.
+ */
+.on-brand {
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+.on-brand :focus-visible {
+  outline-color: var(--color-on-brand);
+}
+
+/*
+ * Angular edge: the hero's bottom is a shallow asymmetric V, both sides --cut above the
+ * point, which sits --apex from the left (a short steep left side, a long gentle right one). Content keeps at least --cut of bottom padding so nothing (focus
+ * outlines included) is clipped.
+ */
+.angular-bottom {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    var(--apex) 100%,
+    0 calc(100% - var(--cut))
+  );
+}
+
+/*
+ * Hero entrance: a short rise and fade on the first page of a visit only (`data-entered` is
+ * set before first paint by BaseLayout's inline script on every later page and on reload,
+ * which otherwise blanked the hero for a moment). Reduced motion collapses it (rule above).
+ */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+.animate-rise-in {
+  animation: rise-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+:root[data-entered] .animate-rise-in {
+  animation: none;
+}
+
+/*
+ * Manual pages: Markdown rendered by Astro (no typography plugin). Monochrome, token
+ * colours only; long file names in `code` may break anywhere so 320px never scrolls.
+ */
+@layer components {
+  .manual-prose > * + * {
+    margin-top: 1rem;
+  }
+  .manual-prose h2 {
+    margin-top: 3rem;
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+    font-weight: 600;
+    scroll-margin-top: 1rem;
+  }
+  .manual-prose h3 {
+    margin-top: 2rem;
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+    font-weight: 600;
+    scroll-margin-top: 1rem;
+  }
+  .manual-prose ul,
+  .manual-prose ol {
+    padding-left: 1.5rem;
+  }
+  .manual-prose ul {
+    list-style-type: disc;
+  }
+  .manual-prose ol {
+    list-style-type: decimal;
+  }
+  .manual-prose li + li,
+  .manual-prose li > * + * {
+    margin-top: 0.5rem;
+  }
+  .manual-prose hr {
+    margin-top: 3rem;
+    border-color: var(--color-line);
+  }
+  .manual-prose strong {
+    font-weight: 700;
+  }
+  .manual-prose code,
+  .manual-prose kbd {
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    background-color: var(--color-surface-2);
+    padding: 0 0.3em;
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
+  .manual-prose kbd {
+    border-color: var(--color-text);
+    font-weight: 600;
+  }
+  /* Wrap instead of scrolling sideways: a scroll box would need to be focusable (2.1.1). */
+  .manual-prose pre {
+    white-space: pre-wrap;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-frame);
+    background-color: var(--color-surface);
+    padding: 1rem;
+  }
+  .manual-prose pre code {
+    border: 0;
+    background: none;
+    padding: 0;
+  }
+  .manual-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+  .manual-prose th,
+  .manual-prose td {
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .manual-prose th {
+    border-bottom-color: var(--color-text);
+    font-weight: 600;
+  }
+}
+
+/*
+ * Footer edge: a shallow Λ that mirrors the hero's V, the point --cut above both sides, so
+ * every page starts and ends on yellow. Content keeps at least --cut of top padding.
+ */
+.angular-top {
+  clip-path: polygon(0 var(--cut), 50% 0, 100% var(--cut), 100% 100%, 0 100%);
+}

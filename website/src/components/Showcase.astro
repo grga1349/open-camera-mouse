@@ -1,0 +1,83 @@
+---
+// The demonstration recording (WEBSITE_ROADMAP.md Phase 6): a real screen recording of the
+// app on macOS, trimmed and re-encoded (H.264, no audio, faststart). No autoplay, no captions
+// (user's call): the video has no sound, and the figcaption, for screen readers only
+// (no visible description, user's call), is its text alternative
+// (WCAG 1.2.1, video only). Never a mock-up or simulated tracking.
+//
+// Big play button (progressive enhancement): without JavaScript the native controls show and
+// the button stays `hidden`. With it, the script hides the native controls and reveals the
+// button, which covers the whole video (a large target for dwell clicking) with a dark
+// scrim and a white play ring in the centre. Pressing it brings the controls back, plays,
+// and moves focus to the video so keyboard focus isn't lost. When the video ends the button returns, for a replay.
+import { url } from "../lib/url";
+---
+
+<figure>
+  <div class="relative">
+    <video
+      id="showcase-video"
+      controls
+      preload="metadata"
+      playsinline
+      width="1920"
+      height="1200"
+      poster={url("showcase/poster.jpg")}
+      class="block h-auto w-full rounded-frame border border-line bg-surface"
+      aria-describedby="showcase-caption"
+    >
+      <source src={url("showcase/demo.mp4")} type="video/mp4" />
+      <a href={url("showcase/demo.mp4")}>Download the demonstration video (MP4)</a>
+    </video>
+    <button
+      id="showcase-play"
+      type="button"
+      hidden
+      aria-label="Play the demonstration video"
+      class="group absolute inset-0 flex cursor-pointer items-center justify-center rounded-frame bg-scrim/50 text-on-scrim transition-colors duration-150 hover:bg-scrim/60"
+    >
+      <span
+        class="flex size-20 items-center justify-center rounded-full border-4 border-on-scrim transition-transform duration-150 group-hover:scale-105 sm:size-28"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          class="ml-1 size-9 sm:size-12"
+          fill="currentColor"
+        >
+          <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"
+          ></path>
+        </svg>
+      </span>
+    </button>
+  </div>
+  <figcaption id="showcase-caption" class="sr-only">
+    A 23-second screen recording of Open Camera Mouse on macOS, without sound: it resumes with
+    a short recentering countdown, then the green ring follows the tip of the nose and head
+    movements move the pointer across the screen.
+  </figcaption>
+</figure>
+
+<script>
+  const video = document.getElementById("showcase-video");
+  const play = document.getElementById("showcase-play");
+
+  if (video instanceof HTMLVideoElement && play instanceof HTMLButtonElement) {
+    const showButton = () => {
+      video.controls = false;
+      play.hidden = false;
+    };
+    showButton();
+
+    play.addEventListener("click", () => {
+      play.hidden = true;
+      video.controls = true;
+      video.focus();
+      video.play().catch(() => {
+        // Playback refused or failed: the native controls are back, so the visitor can retry.
+      });
+    });
+
+    video.addEventListener("ended", showButton);
+  }
+</script>

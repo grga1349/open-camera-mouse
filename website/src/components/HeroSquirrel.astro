@@ -1,0 +1,142 @@
+---
+// Decorative hero figure (WEBSITE_DESIGN.md "Header and hero"): a cute squirrel seen from
+// the front, in faceted black lines (straight edges, obtuse angles, round joins) on the brand
+// yellow: big head, chubby body, one big and one small eye with a shine. It
+// watches the pointer: the head tilts toward it, the face slides that way, both pupils look
+// at it, the tail sways. No line crosses another: parts in front cover what's behind them
+// (yellow fill), and the face details stay inside the head. aria-hidden, nothing to click. Rendered looking ahead at build
+// time; the script only adds the pose. It moves only while the pointer moves (no loop), and
+// not at all with reduced motion, on touch-only screens or with JavaScript off. Shown from lg
+// up, beside the hero text. Pose maths: src/lib/squirrel.ts.
+import { VIEW, squirrelPose, squirrelTransform } from "../lib/squirrel";
+
+const t = squirrelTransform(squirrelPose(0, 0));
+const line = {
+  fill: "none",
+  stroke: "currentColor",
+  "stroke-width": 4,
+  "stroke-linecap": "round",
+  "stroke-linejoin": "round",
+} as const;
+---
+
+<svg
+  id="hero-squirrel"
+  aria-hidden="true"
+  focusable="false"
+  viewBox={`0 0 ${VIEW} ${VIEW}`}
+  width={VIEW}
+  height={VIEW}
+  class="animate-rise-in hidden h-auto w-full max-w-80 justify-self-end [animation-delay:320ms] lg:block"
+>
+  <path d="M100 352L300 352" {...line}></path>
+
+  <!-- Tail, behind the body: a faceted curl up the right side, curling back in at the top. -->
+  <g data-part="tail" transform={t.tail}>
+    <path
+      d="M240 344L302 334L336 286L334 222L314 184L318 154L338 138L360 152L362 110L332 86L288 90L262 124L254 172L266 222L260 258L246 290"
+      class="fill-brand" {...{ ...line, fill: undefined }}></path>
+    <!-- Black facets: the curl's tip and one band lower down. -->
+    <path d="M288 90L332 86L362 110L360 152L338 138Z" {...{ ...line, fill: "currentColor" }}></path>
+    <path d="M314 184L334 222L266 222L254 172Z" {...{ ...line, fill: "currentColor" }}></path>
+  </g>
+
+  <!-- The chubby body, the feet in front of it, then the acorn and paws inside the body. -->
+  <path d="M154 346L146 296L166 250L200 238L234 250L254 296L246 346Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+  <path d="M142 352L150 336L180 336L184 352Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+  <path d="M258 352L250 336L220 336L216 352Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+  <path d="M188 280L186 272L214 272L212 280Z" {...line}></path>
+  <path d="M200 272L204 262" {...line}></path>
+  <path d="M188 284L212 284L210 300L200 310L190 300Z" {...line}></path>
+  <path d="M168 264L178 280L178 298M232 264L222 280L222 298" {...line}></path>
+
+  <!-- Head: black ears behind, then the faceted head, then the face inside it. -->
+  <g data-part="head" transform={t.head}>
+    <path d="M134 142L146 76L192 122Z" {...{ ...line, fill: "currentColor" }}></path>
+    <path d="M266 142L254 76L208 122Z" {...{ ...line, fill: "currentColor" }}></path>
+    <path d="M152 118L248 118L278 150L280 206L252 240L148 240L120 206L122 150Z" class="fill-brand" {...{ ...line, fill: undefined }}></path>
+    <g data-part="face" transform={t.face}>
+      <circle cx="166" cy="170" r="22" {...line}></circle>
+      <g data-part="pupilBig" transform={t.pupilBig}>
+        <circle cx="166" cy="170" r="11" fill="currentColor"></circle>
+        <circle cx="170" cy="166" r="3.5" class="fill-brand"></circle>
+      </g>
+      <circle cx="236" cy="174" r="15" {...line}></circle>
+      <g data-part="pupilSmall" transform={t.pupilSmall}>
+        <circle cx="236" cy="174" r="7" fill="currentColor"></circle>
+        <circle cx="238.5" cy="171.5" r="2" class="fill-brand"></circle>
+      </g>
+      <!-- Blush: two short slashes on each cheek. -->
+      <path d="M134 206L140 197M144 208L150 199M250 208L256 199M260 206L266 197" {...line} stroke-width="3"></path>
+      <path d="M192 196L208 196L200 205Z" {...{ ...line, fill: "currentColor" }}></path>
+      <!-- A small "w" mouth; the teeth meet it at points only. -->
+      <path d="M184 212L192 218L200 212L208 218L216 212" {...line} stroke-width="3"></path>
+      <path d="M194 216.5L194 226L206 226L206 216.5M200 212L200 226" {...line} stroke-width="3"></path>
+    </g>
+  </g>
+</svg>
+
+<script>
+  import { squirrelPose, squirrelTransform } from "../lib/squirrel";
+
+  const svg = document.getElementById("hero-squirrel");
+  const parts = svg ? Array.from(svg.querySelectorAll<SVGGElement>("[data-part]")) : [];
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  // Follows a mouse, pen or head pointer; a touch-only screen has nothing to follow.
+  const fine = matchMedia("(any-hover: hover)");
+
+  let cur = { x: 0, y: 0 };
+  let goal = { x: 0, y: 0 };
+  let frame = 0;
+
+  const draw = () => {
+    const t = squirrelTransform(squirrelPose(cur.x, cur.y)) as Record<string, string>;
+    for (const g of parts) g.setAttribute("transform", t[g.dataset.part ?? ""] ?? "");
+  };
+
+  // Ease toward the goal; stop once there, so nothing runs while the pointer rests.
+  const step = () => {
+    cur = { x: cur.x + (goal.x - cur.x) * 0.12, y: cur.y + (goal.y - cur.y) * 0.12 };
+    if (Math.abs(goal.x - cur.x) < 0.002 && Math.abs(goal.y - cur.y) < 0.002) cur = goal;
+    draw();
+    frame = cur === goal ? 0 : requestAnimationFrame(step);
+  };
+
+  const aim = (next: { x: number; y: number }) => {
+    goal = next;
+    if (!frame) frame = requestAnimationFrame(step);
+  };
+
+  const onMove = (e: PointerEvent) => {
+    if (e.pointerType === "touch" || !svg) return;
+    const r = svg.getBoundingClientRect();
+    if (r.width === 0) return; // hidden below lg
+    aim({
+      x: (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2),
+      y: (e.clientY - (r.top + r.height / 2)) / (innerHeight / 2),
+    });
+  };
+  const onLeave = (e: PointerEvent) => {
+    if (!e.relatedTarget) aim({ x: 0, y: 0 });
+  };
+
+  const sync = () => {
+    removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerout", onLeave);
+    if (still.matches || !fine.matches) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      cur = goal = { x: 0, y: 0 };
+      draw();
+      return;
+    }
+    addEventListener("pointermove", onMove, { passive: true });
+    document.addEventListener("pointerout", onLeave);
+  };
+
+  if (svg && parts.length) {
+    sync();
+    still.addEventListener("change", sync);
+    fine.addEventListener("change", sync);
+  }
+</script>

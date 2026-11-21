@@ -1,0 +1,157 @@
+---
+// Site header on the brand yellow, so every page starts yellow; no rules or borders. On
+// the home page the hero continues the same surface underneath.
+//
+// Theme switch: a night/day switch (role="switch") that flips Carbon/Paper and remembers the choice in localStorage
+// (WEBSITE_DESIGN.md "Theme switch"). Progressive enhancement: it ships `hidden` and the
+// script reveals it, so with JavaScript off the theme simply follows the OS. The stored
+// choice is applied before first paint by the inline script in BaseLayout.
+import { url, REPO_URL } from "../lib/url";
+import Logo from "../assets/logo.svg";
+
+const manualPath = url("manual/");
+const isManualHome = Astro.url.pathname === manualPath;
+---
+
+<header class="on-brand">
+  <div
+    class="mx-auto flex max-w-5xl items-center justify-between gap-x-4 px-4 py-3 sm:gap-x-6 sm:px-6"
+  >
+    <a
+      href={url("/")}
+      class="flex min-h-11 items-center gap-3 text-base font-black tracking-wide uppercase no-underline"
+    >
+      <Logo aria-hidden="true" width="34" height="28" class="shrink-0" />
+      <!--
+        Below sm the wordmark is "OCM" so the header stays one row (user's call, 2026-11-21).
+        The full name is still read out: the link's name is "OCM Open Camera Mouse", which
+        starts with the visible label (WCAG 2.5.3).
+      -->
+      <span class="sm:hidden">OCM</span>
+      <span class="sr-only sm:not-sr-only">Open Camera Mouse</span>
+    </a>
+    <div class="flex items-center gap-x-4">
+      <nav aria-label="Main">
+        <ul class="flex items-center gap-x-2">
+          <li>
+            <a
+              href={url("manual/")}
+              aria-current={isManualHome ? "page" : undefined}
+              title="Manual"
+              class="inline-flex min-h-11 min-w-11 items-center justify-center font-semibold tracking-wide uppercase no-underline hover:underline sm:px-2"
+            >
+              <!-- Below sm: a book icon; the text stays for screen readers. No "you are here" mark
+                   on manual pages: it's the header's only link (user's call). -->
+              <span aria-hidden="true" class="inline-flex sm:hidden">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+                  <path d="M12 6.5C10 5 7 4.5 3 4.5v14c4 0 7 .5 9 2 2-1.5 5-2 9-2v-14c-4 0-7 .5-9 2z"></path>
+                  <path d="M12 6.5v14"></path>
+                </svg>
+              </span>
+              <span class="sr-only sm:not-sr-only">Manual</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href={REPO_URL}
+              class="inline-flex min-h-11 min-w-11 items-center justify-center"
+              aria-label="Source code on GitHub"
+              title="Source code on GitHub"
+            >
+              <!-- GitHub mark (Octicons, MIT). -->
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+                ></path>
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <!--
+        Night/day switch: role="switch", on = night (Carbon). The knob slides to the moon side
+        and shows the current theme's icon; the track shows the other one.
+      -->
+      <button
+        type="button"
+        id="theme-switch"
+        role="switch"
+        aria-checked="true"
+        aria-label="Night theme"
+        hidden
+        class="group inline-flex min-h-11 cursor-pointer items-center"
+      >
+        <span
+          class="relative inline-flex h-8 w-15 items-center justify-between rounded-full border-2 border-on-brand px-1.5"
+        >
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" class="shrink-0">
+            <circle cx="8" cy="8" r="3.2" fill="currentColor"></circle>
+            <path
+              d="M8 .5v2.2M8 13.3v2.2M.5 8h2.2M13.3 8h2.2M2.7 2.7l1.6 1.6M11.7 11.7l1.6 1.6M2.7 13.3l1.6-1.6M11.7 4.3l1.6-1.6"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            ></path>
+          </svg>
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" class="shrink-0">
+            <path d="M6.2.6a7.5 7.5 0 1 0 9.2 9.2A6 6 0 0 1 6.2.6z" fill="currentColor"></path>
+          </svg>
+          <span
+            class="absolute top-0.5 left-0.5 inline-flex size-6 items-center justify-center rounded-full bg-on-brand text-brand transition-transform duration-200 group-aria-checked:translate-x-7"
+          >
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" class="group-aria-checked:hidden">
+              <circle cx="8" cy="8" r="3.2" fill="currentColor"></circle>
+              <path
+                d="M8 .5v2.2M8 13.3v2.2M.5 8h2.2M13.3 8h2.2M2.7 2.7l1.6 1.6M11.7 11.7l1.6 1.6M2.7 13.3l1.6-1.6M11.7 4.3l1.6-1.6"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              ></path>
+            </svg>
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" class="hidden group-aria-checked:block">
+              <path d="M6.2.6a7.5 7.5 0 1 0 9.2 9.2A6 6 0 0 1 6.2.6z" fill="currentColor"></path>
+            </svg>
+          </span>
+        </span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  type Theme = "carbon" | "paper";
+  const KEY = "ocm-theme";
+  const root = document.documentElement;
+  const button = document.getElementById("theme-switch");
+
+  const current = (): Theme => {
+    const set = root.dataset.theme;
+    if (set === "carbon" || set === "paper") return set;
+    return matchMedia("(prefers-color-scheme: light)").matches ? "paper" : "carbon";
+  };
+
+  // Switch on = night (Carbon), off = day (Paper).
+  const show = () => {
+    if (!button) return;
+    const night = current() === "carbon";
+    button.setAttribute("aria-checked", String(night));
+    button.title = night ? "Switch to the day theme" : "Switch to the night theme";
+  };
+
+  if (button) {
+    button.hidden = false;
+    show();
+    button.addEventListener("click", () => {
+      const next: Theme = current() === "paper" ? "carbon" : "paper";
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem(KEY, next);
+      } catch {
+        // Storage blocked: the switch still works for this page view.
+      }
+      show();
+    });
+    // Following the OS (no stored choice): keep the label right if the OS theme changes.
+    matchMedia("(prefers-color-scheme: light)").addEventListener("change", show);
+  }
+</script>
