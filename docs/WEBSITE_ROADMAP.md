@@ -88,7 +88,7 @@ which waits for the deployment.
 
 - [ ] Real 30–45 s demonstration recording (no simulated tracking), poster, captions (`.vtt`), `controls`, no autoplay — not a diagnostic recording; consent of anyone shown
 - [ ] Application screenshots, regenerated per UI change
-- [ ] Mobile pass; accessibility audit (keyboard, VoiceOver/NVDA, axe/Lighthouse, 200% zoom, reduced motion)
-- [ ] Performance check (page weight, Lighthouse)
+- [~] Mobile pass; accessibility audit: automated part done 2026-11-21 (Lighthouse, axe on all pages × both themes × 320/768/1280, no overflow; one empty table header fixed, now tested). By hand still open: keyboard, VoiceOver/NVDA, 200% zoom, real reduced-motion setting, a real phone
+- [x] Performance check: Lighthouse 100 mobile and desktop, 11–17 KiB per page, CLS 0 (2026-11-21; re-run after the showcase video lands)
 - [ ] Before merging: delete `docs/WEBSITE_HANDOFF.md` and the references to it (this file, `AGENTS.md`)
 - [ ] Merge to `main`, enable Pages, first deployment; ADR-0023 → Accepted

@@ -12,7 +12,7 @@ to be easy to see and to operate. This page collects the options for that.
 **Options → General → Larger controls** (off by default) makes the controls in both
 windows bigger:
 
-| | Normal | Larger |
+| Element | Normal | Larger |
 |---|---|---|
 | Text | 14 pt | 16 pt |
 | Buttons and switches (height) | 36 pt | 48 pt |

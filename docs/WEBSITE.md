@@ -72,7 +72,8 @@ Settings tables use the header `| Setting | Range | Default |` and the app's lab
 first cell. `src/lib/manual-defaults.test.ts` checks every such row on every page against
 `crates/app-core/src/settings.rs` (ranges and `Default` impls) and that the Settings page
 lists every setting; a new setting needs a row in `expectedRows` (`manual-defaults.ts`).
-The website workflow also runs when `settings.rs` changes.
+The website workflow also runs when `settings.rs` changes. Every table column needs a
+header (no empty first cell; screen readers announce it): `manual-tables.test.ts` checks it.
 
 ## Technology
 
@@ -124,6 +125,7 @@ website/
     lib/squirrel.ts            hero squirrel pose maths (pure, tested)
     lib/manual-defaults.ts     app settings source → expected manual table rows (pure, tested
                                against settings.rs and content/manual/*.md)
+    lib/manual-tables.ts       manual table header rows (tested: no empty header cells)
     data/latest-release.json   written by CI only (gitignored)
 ```
 
@@ -145,6 +147,13 @@ The dev server and preview serve under the base too, so a link that only works a
 up locally. Astro's anonymous CLI telemetry is on by default; turn it off on your machine
 with `bunx astro telemetry disable` (CI sets `ASTRO_TELEMETRY_DISABLED=1`). It is not part
 of the built site.
+
+Audits (not in CI, no dependency committed): install Lighthouse in a scratch folder outside
+the repo (it bundles `axe-core` and `puppeteer-core`), then run Lighthouse against `bun run
+preview` and the full axe rule set (`wcag2a`…`wcag22aa`, `best-practice`) on every page in
+both themes at 320/768/1280px. Last run 2026-11-21: Lighthouse 100 in all four categories
+(mobile and desktop, 11–17 KiB per page, CLS 0); axe 0 violations, the only "incomplete"
+items are the `aria-hidden` `→` arrows; no horizontal scroll at any width.
 
 ## Conventions
 

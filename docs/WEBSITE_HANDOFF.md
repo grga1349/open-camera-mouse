@@ -4,21 +4,25 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, eleventh): origin story
+## Latest session (2026-11-21, twelfth): automated accessibility and performance audit
 
-- **Why it exists** (`#why-it-exists`, between the showcase and How it works): three
-  paragraphs (classic Camera Mouse at Boston College by Gips and Betke from EagleEyes; free
-  download since June 2007, 3M+ downloads by 2016, who used it, Gips died 2018; Open Camera
-  Mouse as an independent from-scratch successor, not affiliated with or endorsed by BC or
-  the authors), then a numbered "Sources" list (`originSources` in `index.astro`): the 2002
-  IEEE TNSRE paper (DOI), BC News 2016, BC News In Memoriam 2018. Details and what was
-  deliberately left out (current availability, licence, platforms of the classic program:
-  `cameramouse.org` refused connections, only third-party mirrors list Camera Mouse 2018) are
-  in `WEBSITE.md` "Origin story". Wording goes into the user's final copy pass.
-- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); headless screenshots at
-  1280 Carbon and 320 Paper.
-- Preview: Astro 7's `astro preview` reuses an already-running preview server (one was on
-  `:4330`) and exits instead of starting a second; use that one (`astro preview status`).
+- Lighthouse 12.6.1 (installed in the session scratchpad, not the repo) against the
+  preview: home, manual index, settings, troubleshooting, 404, mobile and desktop presets,
+  all 100 in accessibility, performance, best practices and SEO; 11–17 KiB per page, CLS 0.
+- Full axe-core 4.14 (WCAG 2.0–2.2 A/AA + best practice) on all 16 pages × Carbon/Paper ×
+  320/768/1280px, `<details>` opened, reduced motion: one violation, an empty first header
+  cell in the "Larger controls" table (`manual/accessibility.md`), now "Element"; new
+  `manual-tables.test.ts` fails on any empty manual table header (seen failing before the
+  fix). Remaining "incomplete": the `aria-hidden` `→` arrows (false positives). No
+  horizontal overflow at any width. How to re-run: `WEBSITE.md` "Local development".
+- Verified: check 0/0/0, 50 tests, build + path check (672 URLs).
+
+### Eleventh session (2026-11-21): origin story
+
+- Why it exists (`#why-it-exists`) with three cited sources (`originSources` in
+  `index.astro`); what was left out is in `WEBSITE.md` "Origin story". Wording goes into
+  the user's final copy pass.
+- Astro 7's `astro preview` reuses an already-running preview server (one was on `:4330`).
 
 ### Tenth session (2026-11-21): engineering and open source sections
 
@@ -58,8 +62,9 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 ## Next
 
-Phase 5 slice 4 and the Features section need the user's screenshots; without them: the
-squirrel ear/cheek tweak if the user wants it, or hero geometry/section accents (Phase 2). README shortening waits for the deployment.
+Phase 5 slice 4 and the Features section need the user's screenshots. Without them only
+visual items remain, and they need the user's OK first: the squirrel ear/cheek tweak, hero
+geometry/section accents (Phase 2), the header edge on other pages. README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
@@ -68,6 +73,8 @@ A real typewriter web font yes/no;
 demo recording and screenshots.
 
 ## Not yet checked by hand
+
+Automated audit is done (above); what follows needs a person.
 
 Why it exists: keyboard walk-through of the source links, VoiceOver, 200% zoom, 768px;
 the three source URLs from a normal browser (checked by fetch only).
