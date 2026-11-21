@@ -4,7 +4,15 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, twelfth): automated accessibility and performance audit
+## Latest session (2026-11-21, thirteenth): decisions, asymmetric hero V
+
+- User decisions: manual/other pages keep the simple flat yellow header; the squirrel stays
+  as drawn (no ear/cheek tweak); the hero V becomes asymmetric with its point to the left.
+- `.angular-bottom` point now at `--apex` (30%, in `:root` next to `--cut`). Footer Λ stays
+  centred (user's call). Headless screenshots at 1280/768, both
+  themes. Verified: build + path check (672 URLs).
+
+### Twelfth session (2026-11-21): automated accessibility and performance audit
 
 - Lighthouse 12.6.1 (installed in the session scratchpad, not the repo) against the
   preview: home, manual index, settings, troubleshooting, 404, mobile and desktop presets,
@@ -62,9 +70,8 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 ## Next
 
-Phase 5 slice 4 and the Features section need the user's screenshots. Without them only
-visual items remain, and they need the user's OK first: the squirrel ear/cheek tweak, hero
-geometry/section accents (Phase 2), the header edge on other pages. README shortening waits for the deployment.
+Phase 5 slice 4 and the Features section need the user's screenshots; the showcase needs
+the demo recording. Optional, with the user's OK: section transitions/accents (Phase 2). Then Phase 6 merge prep. README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
@@ -75,6 +82,8 @@ demo recording and screenshots.
 ## Not yet checked by hand
 
 Automated audit is done (above); what follows needs a person.
+
+Asymmetric hero V at 320px and in Safari/Firefox.
 
 Why it exists: keyboard walk-through of the source links, VoiceOver, 200% zoom, 768px;
 the three source URLs from a normal browser (checked by fetch only).

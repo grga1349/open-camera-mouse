@@ -115,8 +115,10 @@ no border or rule; `theme-color` is `#ffd60a`. On the home page the hero
 (`src/components/Hero.astro`) continues the same surface directly under it, so header and
 hero read as one yellow block. The first section under the hero has no top rule either.
 
-Hero shape: the bottom edge is a **shallow symmetric V** (`.angular-bottom`): both sides
-sit `--cut` (`clamp(1.5rem, 5vw, 4rem)`) above the point in the middle. Built from `--cut`
+Hero shape: the bottom edge is a **shallow asymmetric V** (`.angular-bottom`): both sides
+sit `--cut` (`clamp(1.5rem, 5vw, 4rem)`) above the point, which sits `--apex` (30%) from
+the left, so a short steeper left side and a long gentle right one (user's call,
+2026-11-21; it was centred before). Built from `--cut`
 and percentages, so it keeps its proportions from 320px up; content is padded by at least
 `--cut` below. No other shapes in the hero: an earlier one-way diagonal with a blade and a
 wedge was rejected as ugly (2026-11-20).
@@ -198,8 +200,8 @@ Tables stay narrow enough to fit 320px (no sideways scrolling).
 
 ## Angular language
 
-Sharp, not rounded, and calm: straight edges and shallow, symmetric angles (the hero's V)
-in solid fills, no gradients or shadows. The footer's Λ is the hero's V mirrored, not a new shape. Fewer shapes beat more: the user rejected a
+Sharp, not rounded, and calm: straight edges and shallow angles (the hero's V, its point off-centre to the left)
+in solid fills, no gradients or shadows. The footer's Λ echoes the hero's V (still centred), not a new shape. Fewer shapes beat more: the user rejected a
 layered diagonal/blade/wedge hero as ugly.
 Geometry is decorative (`aria-hidden`) and never carries information. Controls keep the
 normal radius and rectangular hit areas.

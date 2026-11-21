@@ -8,8 +8,9 @@
  */
 :root {
   color-scheme: dark;
-  /* Depth of the hero's V-shaped bottom edge. */
+  /* Depth of the hero's V-shaped bottom edge, and how far across its point sits. */
   --cut: clamp(1.5rem, 5vw, 4rem);
+  --apex: 30%;
   --ocm-bg: #000000;
   --ocm-surface: #0a0a0a;
   --ocm-surface-2: #151515;
@@ -123,8 +124,8 @@
 }
 
 /*
- * Angular edge: the hero's bottom is a shallow symmetric V, both sides --cut above the
- * point in the middle. Content keeps at least --cut of bottom padding so nothing (focus
+ * Angular edge: the hero's bottom is a shallow asymmetric V, both sides --cut above the
+ * point, which sits --apex from the left (a short steep left side, a long gentle right one). Content keeps at least --cut of bottom padding so nothing (focus
  * outlines included) is clipped.
  */
 .angular-bottom {
@@ -132,7 +133,7 @@
     0 0,
     100% 0,
     100% calc(100% - var(--cut)),
-    50% 100%,
+    var(--apex) 100%,
     0 calc(100% - var(--cut))
   );
 }

@@ -31,13 +31,14 @@ before the merge to `main`).
 - [x] Reusable `Hero`, `Section`, `ShowcasePlaceholder` components
 - [~] Responsive layout: checked at 320 and 1280px for the V edge (headless screenshots); 200% zoom not checked
 - [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
-- [ ] Header on other pages: yellow with a flat bottom today (only 404 exists); decide whether it gets its own angular edge once the manual/download pages exist
+- [x] Header on other pages: stays simple and practical, yellow with a flat bottom (user's call, 2026-11-21)
 - [x] Footer: yellow bookend with a Λ top edge mirroring the hero, manual and project links, licence (awaiting the user's OK)
 - [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
 - [~] Navigation for more pages: "Manual" link in the header (wraps at 320px); revisit when there are more pages
 - [x] Hero entrance only on the first page of a visit (reload no longer blanks the hero)
-- [x] Hero squirrel: decorative line-drawn squirrel beside the hero text (lg+) that watches the pointer (a pyramid and a cubist head were tried first)
-- [ ] Hero geometry refinement, section transitions, tracking-inspired accents beyond the hero
+- [x] Hero squirrel: decorative line-drawn squirrel beside the hero text (lg+) that watches the pointer (a pyramid and a cubist head were tried first); final as drawn (user's call, 2026-11-21)
+- [x] Hero geometry: the V's point moved left (`--apex` 30%), asymmetric (2026-11-21)
+- [ ] Section transitions, tracking-inspired accents beyond the hero (optional)
 - [ ] Hero copy approved by the user ("Your head. Your mouse." is a draft)
 
 ## Phase 3 — Homepage content
