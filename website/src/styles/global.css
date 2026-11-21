@@ -83,6 +83,23 @@
 }
 
 @layer base {
+  /* Variants that a script swaps with the `hidden` attribute (the hero's download line):
+     all share one grid cell, and the hidden ones keep their height but stay invisible (so
+     out of the accessibility tree and the tab order). The block is as tall as the longest
+     variant, so the swap causes no layout shift. In this layer because Tailwind's
+     `[hidden] { display: none !important }` is here too, and an !important rule in a later
+     layer would lose to it. */
+  .detect-stack {
+    display: grid;
+  }
+  .detect-stack > * {
+    grid-area: 1 / 1;
+  }
+  .detect-stack > [hidden] {
+    display: block !important;
+    visibility: hidden;
+  }
+
   html {
     background-color: var(--color-bg);
     color: var(--color-text);

@@ -155,9 +155,12 @@ preview` and the full axe rule set (`wcag2a`…`wcag22aa`, `best-practice`) on e
 both themes at 320/768/1280px. Last run 2026-11-21 (after the demo video and its play button): Lighthouse 100 in all four
 categories on every page (mobile and desktop; manual pages 12–14 KiB, home 119 KiB with the
 video poster); axe 0 violations and no "incomplete" items on all 16 pages, both themes,
-320/768/1280px; no horizontal scroll at any width. CLS 0 everywhere,
-after the hero's two buttons were stacked below `sm` (a longer "Download for macOS" label used
-to wrap "See it working" onto a new row on phones: CLS 0.008).
+320/768/1280px; no horizontal scroll at any width. CLS 0 on mobile
+after two fixes for the script's swap of the hero download text: the two buttons stack below
+`sm`, and the download line's variants share one grid cell (`.detect-stack` in `global.css`).
+A puppeteer check (JS off vs on, macOS/Windows/Linux/iPhone user agents, 320–1280px) shows no
+shift. Desktop can show CLS ≈ 0.0004 from the header's theme switch appearing after its script
+runs (by design: it ships `hidden`).
 
 ## Conventions
 

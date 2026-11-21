@@ -18,10 +18,13 @@ Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
   small layout shift on the home page on mobile (CLS 0.008, from before this session): the hero
   button's "Download for macOS" label wrapped "See it working" to a new row. Fixed (user
   chose this option): the two hero buttons stack below `sm` (`flex-col items-start`,
-  `sm:flex-row sm:flex-wrap`). Lighthouse mobile CLS is now 0. A puppeteer check (JS off vs
-  on, mac/win/linux/iPhone UAs, 320–1280px) still shows a 16–40px shift where the line under
-  the buttons gets longer after detection and wraps (macOS at 320–360px, iPhone at all
-  widths). Not fixed; would need the variants to reserve the same height.
+  `sm:flex-row sm:flex-wrap`). The line under them also jumped (its detected variant is
+  longer and wraps), so all variants now share one grid cell, `.detect-stack` in
+  `global.css` `@layer base` (it has to sit in the base layer, next to Tailwind's
+  `[hidden] { display: none !important }`). It reserves at most one extra line inside the
+  yellow. Lighthouse home: mobile CLS 0, desktop ≈ 0.0004 (header theme switch reveal, from
+  before, left alone). Puppeteer JS-off-vs-on check: no shift at any width/UA. axe lists
+  `video-caption` as "needs review" (no captions: user's call).
 
 ## Previous session (2026-11-21, thirteenth): decisions, hero, demo video, copy pass
 
@@ -95,13 +98,12 @@ build time.
 
 ## Next
 
-1. Optional: the remaining small shift of the line under the hero buttons (latest session).
-2. Merge prep (Phase 6):
+1. Merge prep (Phase 6):
    - delete this file and the references to it (`WEBSITE_ROADMAP.md`, `AGENTS.md`),
    - mark ADR-0023 Accepted,
    - with the user's OK, merge to `main`.
-3. The user turns on Pages (source: GitHub Actions) and sets `WEBSITE_DEPLOY=true`.
-4. After the first deployment:
+2. The user turns on Pages (source: GitHub Actions) and sets `WEBSITE_DEPLOY=true`.
+3. After the first deployment:
    - shorten the README to link to the manual,
    - verify that publishing a release rebuilds the site.
 

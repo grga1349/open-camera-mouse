@@ -58,7 +58,11 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
           </a>
         </li>
       </ul>
-      <div class="animate-rise-in mt-4 text-sm [animation-delay:240ms]">
+      {/* All variants of the download line share one grid cell (`.detect-stack`), so the
+          script swapping them never moves the page. */}
+      <div
+        class="detect-stack animate-rise-in mt-4 text-sm [animation-delay:240ms]"
+      >
         {release && <p data-detect-default>v{release.version} · macOS, Windows, Linux</p>}
         {
           direct.map(({ platform }) => (

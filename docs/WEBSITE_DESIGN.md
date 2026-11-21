@@ -160,7 +160,8 @@ it out), three lines below `lg`, two from `lg` up ("Computing without" / "barrie
 smaller `text-6xl`, to keep the hero short; user's call, 2026-11-21); "Control your computer using head movements and an ordinary webcam. Free and open
 source."; the primary action (black button, yellow text) and a secondary outlined one (stacked below `sm`, so the longer
 "Download for …" label set by script can't wrap the second button and shift the page); then
-one short download line, `v0.4.0 · Apple Silicon · Other platforms` (see "Downloads"). No
+one short download line, `v0.4.0 · Apple Silicon · Other platforms` (see "Downloads"); its
+variants share one grid cell (`.detect-stack`), so the block keeps the longest one's height. No
 eyebrow line above the headline. Inside the yellow, text and the focus outline are black.
 
 ## Footer
