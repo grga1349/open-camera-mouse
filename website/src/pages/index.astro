@@ -25,6 +25,29 @@ const faq = pickFaq(splitFaq(faqPage.rendered.html), HOME_FAQ).map((item) => ({
   answer: rebaseLinks(item.answer, url("manual/faq/")),
 }));
 
+// Engineering notes, each from README.md / docs/PRODUCT.md / docs/ARCHITECTURE.md /
+// docs/TESTING.md; nothing here may say more than those do.
+const engineering = [
+  {
+    title: "Independent Rust implementation",
+    body: "Written from scratch in Rust, with no OpenCV. Behaviour starts from the classic Camera Mouse 2018 and improves on it where it was weak; new behaviour arrives as an option, off by default.",
+  },
+  {
+    title: "Tracking and stability",
+    body: "The spot you pick is followed with pyramidal Lucas–Kanade optical flow and checked against how it looked a moment earlier, so a hand passing in front of the camera ends tracking instead of dragging the pointer. Smoothing and a small steady zone keep the pointer still while your head is.",
+  },
+  {
+    title: "Private by design",
+    body: "Everything runs on your computer: no camera image leaves it. No accounts, no cloud, no telemetry. Settings are a plain text file in your user folder.",
+  },
+  {
+    title: "Tested without a camera",
+    body: "The tracker and the pointer maths are tested on synthetic, seeded video with known ground truth, and every change runs the tests on macOS, Windows and Linux. Windows and Linux builds have not been tried on a real device yet.",
+  },
+];
+
+const DOCS_URL = `${REPO_URL}/blob/main/docs`;
+
 const steps = [
   {
     title: "Pick a spot",
@@ -68,6 +91,28 @@ const steps = [
     <p class="mt-8">
       <a href={url("manual/getting-started/")} class="inline-flex min-h-11 items-center font-semibold">
         Read the manual<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    </p>
+  </Section>
+
+  <Section
+    id="engineering"
+    title="Engineering"
+    lead="How Open Camera Mouse is built, and what that means for you."
+  >
+    <ul class="grid gap-x-12 gap-y-10 md:grid-cols-2">
+      {
+        engineering.map((item) => (
+          <li class="border-t-4 border-text pt-4">
+            <h3 class="text-xl font-semibold">{item.title}</h3>
+            <p class="mt-2">{item.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="mt-10">
+      <a href={`${DOCS_URL}/ARCHITECTURE.md`} class="inline-flex min-h-11 items-center font-semibold">
+        Architecture on GitHub<span aria-hidden="true">&nbsp;→</span>
       </a>
     </p>
   </Section>
@@ -167,16 +212,41 @@ const steps = [
 
   <Section id="open-source" title="Open source">
     <p class="max-w-prose">
-      Open Camera Mouse is free software under the MIT licence, written in Rust. The source
-      code and issue tracker are on GitHub; how to use the app is in the manual.
+      Open Camera Mouse is free software under the MIT licence. The code, the issue tracker and
+      the developer documentation are on GitHub; how to use the app is in the manual.
     </p>
-    <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2">
-      <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
-      <li><a href={url("manual/")} class="inline-flex min-h-11 items-center">Manual</a></li>
-      <li>
-        <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report a problem</a>
-      </li>
-    </ul>
+    <div class="mt-8 grid gap-x-12 gap-y-8 md:grid-cols-2">
+      <div>
+        <h3 class="text-sm tracking-wide uppercase">Get involved</h3>
+        <ul class="mt-2">
+          <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
+          <li>
+            <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report a problem or suggest a change</a>
+          </li>
+          <li>
+            <a href={`${REPO_URL}#develop`} class="inline-flex min-h-11 items-center">Build it yourself</a>
+          </li>
+          <li>
+            <a href={`${REPO_URL}/blob/main/AGENTS.md`} class="inline-flex min-h-11 items-center">How work is done in the repository</a>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm tracking-wide uppercase">Documentation</h3>
+        <ul class="mt-2">
+          <li><a href={url("manual/")} class="inline-flex min-h-11 items-center">User manual</a></li>
+          <li>
+            <a href={`${DOCS_URL}/PRODUCT.md`} class="inline-flex min-h-11 items-center">Product and defaults</a>
+          </li>
+          <li>
+            <a href={`${DOCS_URL}/TESTING.md`} class="inline-flex min-h-11 items-center">Testing</a>
+          </li>
+          <li>
+            <a href={`${REPO_URL}/tree/main/docs/architecture/decisions`} class="inline-flex min-h-11 items-center">Design decisions</a>
+          </li>
+        </ul>
+      </div>
+    </div>
   </Section>
 
   <DownloadEnhancer />

@@ -42,17 +42,17 @@ before the merge to `main`).
 
 ## Phase 3 — Homepage content
 
-Built: hero, showcase placeholder, how it works (3 steps, from README "Use"), download cards,
-open source. Open:
+Built: hero, showcase placeholder, how it works (3 steps, from README "Use"), engineering,
+download cards, questions, open source. Open:
 
 - [ ] Why it exists: the classic Camera Mouse and its legacy. **Research first**: every
       historical claim needs a citable source; distinguish the discontinued classic
       distribution from later research or implementations; no implied affiliation or
       endorsement (rules in `WEBSITE.md` "Origin story")
 - [ ] Features with real screenshots (tracking window, Options)
-- [ ] Engineering: independent Rust implementation, tracking and stability, privacy, testing
+- [x] Engineering (`#engineering`): independent Rust implementation, tracking and stability, privacy, testing
 - [x] Questions (`#faq`): six FAQ answers from the manual's `faq.md`, one source
-- [ ] Open source: contributing, documentation links
+- [x] Open source: "Get involved" and "Documentation" link lists (no CONTRIBUTING file exists; links go to issues, README build steps and `AGENTS.md`)
 
 ## Phase 4 — Downloads  (mostly done)
 

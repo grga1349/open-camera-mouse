@@ -4,30 +4,33 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, ninth): footer, squirrel redraw
+## Latest session (2026-11-21, tenth): engineering and open source sections
 
-- **Footer** (`SiteFooter.astro`, `.angular-top` in `global.css`): the yellow brand surface
-  again with a shallow Λ top edge mirroring the hero's V, so every page starts and ends
-  yellow. Logo + wordmark, the hero's one-liner, a "Footer" nav with Manual (getting started,
-  installation, troubleshooting, questions) and Project (download, all releases, source
-  code, report a problem) lists, a 2px black rule, licence line, "No cookies, no analytics."
-  No script. The user committed it without comment on the direction or the "No cookies"
-  line; treat both as accepted unless they say otherwise.
-- **Squirrel redrawn "more cute and angular"** (user's request), then "ears all black and
-  some black in the tail": faceted outlines (straight edges, obtuse angles, round joins), big
-  octagonal head, chubby body, solid black triangle ears, eyes with a shine, blush slashes,
-  "w" mouth, hexagonal acorn, trapezoid feet in front, bushy faceted tail with a black tip and
-  a black band. Pose maths unchanged except `SMALL_REACH` 5 and `NECK` y 236. Open: it can
-  read a little cat-like (octagon head + pointed ears); offered shorter tufted ears and
-  puffier cheeks if the user agrees.
-- **Gotcha:** in Astro, `{...line} fill="currentColor"` renders two `fill` attributes and the
-  HTML parser keeps the first (`none`); merge into the spread instead
-  (`{...{ ...line, fill: "currentColor" }}`). The nose had this bug unnoticed.
-- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); footer headless screenshots
-  at 1280 (both themes, home and 404) and 320; squirrel as zoomed stills only.
-- **Preview servers:** don't run `bunx astro preview stop` or kill by port: it stopped the
-  user's preview this session. Start your own (`bunx astro preview --port 4321` in the
-  background), note its pid, and stop only that pid.
+- **Engineering** (`#engineering`, between How it works and Download): four notes in a
+  2-column grid (`border-t-4 border-text`, like the steps): independent Rust implementation
+  (no OpenCV, starts from Camera Mouse 2018, new behaviour opt-in), tracking and stability
+  (pyramidal LK, appearance check so a hand in front ends tracking, smoothing + steady zone),
+  private by design (nothing leaves the computer, no accounts/cloud/telemetry, settings a
+  text file), tested without a camera (synthetic seeded video with ground truth, CI on three
+  OSes, Windows/Linux not yet on a device). Link "Architecture on GitHub →". Copy only from
+  README/PRODUCT/ARCHITECTURE/TESTING/ADR-0018; data array at the top of `index.astro`.
+  Wording and content get the user's review in one final pass, not per session.
+- **Open source** expanded: licence line, then "Get involved" (source, issues, README
+  `#develop`, `AGENTS.md`) and "Documentation" (manual, PRODUCT, TESTING, ADR folder) lists.
+  Docs links point at `main` (`blob/main/docs/…`, `tree/main/…` for the ADR folder). There
+  is no CONTRIBUTING file; "pull requests welcome" was not written because no doc says it.
+- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); headless screenshots of
+  the home page at 1280 (Carbon and Paper) and the engineering section at 320.
+- Preview servers: start your own on another port, and stop it by the `node … astro preview`
+  pid from `lsof -iTCP:<port>` (the `bunx` wrapper pid exits early). Never touch `:4321`.
+
+### Ninth session (2026-11-21): footer, squirrel redraw
+
+- Yellow footer with a Λ top edge (`SiteFooter.astro`, `.angular-top`), committed by the user.
+- Squirrel redrawn cuter and faceted, black ears and tail facets. Open: may read a little
+  cat-like; offered shorter tufted ears and puffier cheeks.
+- Gotcha: in Astro, `{...line} fill="currentColor"` renders two `fill` attributes and the
+  parser keeps the first; merge into the spread (`{...{ ...line, fill: "currentColor" }}`).
 
 ## Earlier sessions
 
@@ -53,8 +56,9 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 ## Next
 
-Phase 5 slice 4 needs the user's screenshots; until then pick from the roadmap: Phase 3 features / engineering sections (screenshots again) or the
-origin story (research with sources first). README shortening waits for the deployment.
+Phase 5 slice 4 and the Features section need the user's screenshots; without them: the
+origin story (research with sources first), or the squirrel ear/cheek tweak if the user
+wants it. README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
@@ -64,6 +68,8 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
+Engineering and Open source sections: keyboard walk-through, VoiceOver (the two `h3` link
+lists), 200% zoom, 768px.
 Squirrel redraw with a real pointer (tilt/pupils/tail with the new shapes).
 Footer: keyboard walk-through, VoiceOver (footer nav and list labels), 200% zoom, 768px.
 Hero squirrel in a real browser with a real mouse and head pointer (feel of the motion, CPU

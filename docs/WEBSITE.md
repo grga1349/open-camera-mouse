@@ -15,8 +15,8 @@ code; the manual describes them and must not contradict them. No accounts, forms
 analytics or tracking, and no third-party requests from the visitor's browser: the latest
 release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
-Status: first homepage pass (yellow hero, showcase placeholder, how it works, OS-aware
-download cards, open source) and the manual's thirteen pages (getting started, requirements,
+Status: first homepage pass (yellow hero, showcase placeholder, how it works, engineering,
+OS-aware download cards, questions, open source) and the manual's thirteen pages (getting started, requirements,
 installation, everyday use, settings, accessibility options, troubleshooting, FAQ); see the
 roadmap.
 
@@ -31,10 +31,10 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 | 3 | Why it exists | The classic Camera Mouse's legacy and why a maintained open-source successor is useful | Phase 3 |
 | 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
-| 6 | Engineering | Independent Rust implementation, tracking and stability, privacy (on-device), testing | Phase 3 |
+| 6 | Engineering (`#engineering`) | Four notes: independent Rust implementation, tracking and stability, privacy (on-device), testing (incl. that Windows/Linux haven't run on a device); link to `ARCHITECTURE.md`. Copy only from README, PRODUCT, ARCHITECTURE, TESTING | built (before Features, which waits for screenshots) |
 | 7 | Download (`#download`) | Supported platforms, caveats, direct files, install guidance | built, OS-aware |
 | 7b | Questions (`#faq`) | Six questions from the manual's FAQ (`HOME_FAQ` in `src/lib/home-faq.ts`), taken from the rendered `faq.md` so the answers have one source; links rebased to `/manual/…`; "All questions →" | built |
-| 8 | Open source (`#open-source`) | Repository, issues, contributing, documentation | built (minimal) |
+| 8 | Open source (`#open-source`) | Licence line, then two labelled link lists: "Get involved" (source, issues, build steps in the README, `AGENTS.md`) and "Documentation" (manual, PRODUCT, TESTING, ADRs) | built |
 
 ### Origin story
 
