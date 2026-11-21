@@ -155,7 +155,8 @@ the manual from "How it works" ("Read the manual →") and "Open source".
 
 Hero contents (copy from the user, 2026-11-20): the h1 "Computing without barriers" (no full stop) in
 heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell
-it out); "Control your computer using head movements and an ordinary webcam. Free and open
+it out), three lines below `lg`, two from `lg` up ("Computing without" / "barriers", a
+smaller `text-6xl`, to keep the hero short; user's call, 2026-11-21); "Control your computer using head movements and an ordinary webcam. Free and open
 source."; the primary action (black button, yellow text) and a secondary outlined one; then
 one short download line, `v0.4.0 · Apple Silicon · Other platforms` (see "Downloads"). No
 eyebrow line above the headline. Inside the yellow, text and the focus outline are black.

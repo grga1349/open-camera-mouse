@@ -9,7 +9,9 @@ Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 - User decisions: manual/other pages keep the simple flat yellow header; the squirrel stays
   as drawn (no ear/cheek tweak); the hero V becomes asymmetric with its point to the left.
 - `.angular-bottom` point now at `--apex` (30%, in `:root` next to `--cut`). Footer Λ stays
-  centred (user's call). Headless screenshots at 1280/768, both
+  centred (user's call).
+- Headline on two lines from `lg` up (`lg:text-6xl lg:max-w-none`), hero ~90px shorter;
+  the wrap depends on the system monospace width (other OSes may still wrap to three). Headless screenshots at 1280/768, both
   themes. Verified: build + path check (672 URLs).
 
 ### Twelfth session (2026-11-21): automated accessibility and performance audit
