@@ -6,7 +6,7 @@ description: Visual design of the Open Camera Mouse website — brand identity s
 ## Objective
 
 The site should read as the same product as the desktop app: quiet, monochrome, practical.
-Source of truth: `docs/WEBSITE_DESIGN.md`, which derives from `docs/PRODUCT.md` ("UI
+Source of truth: `docs/WEBSITE.md` "Design" and "Content rules", which derive from `docs/PRODUCT.md` ("UI
 design", "Design tokens") and `docs/design-lab.html`. Changing the visual direction needs
 the user's OK.
 
@@ -29,7 +29,7 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
   (Paper's yellow highlighter under page and section headings). Links are never yellow.
   No other hues, gradients or tinted greys.
 - **Shape and motion:** calm, shallow angles (the hero's V, `.angular-bottom`, point at `--apex` 30% from the left),
-  decorative only; no stacked slivers or wedges. Motion per `WEBSITE_DESIGN.md` "Motion": one-time CSS entrances and small hover
+  decorative only; no stacked slivers or wedges. Motion per `WEBSITE.md` "Design": one-time CSS entrances and small hover
   lifts, nothing looping, nothing that moves a control under the pointer; the one exception is the hero squirrel that watches the pointer (`HeroSquirrel.astro`). Colour photos/screenshots of the app are fine (the app's preview is in
   colour); chrome stays monochrome.
 - **Themes:** Carbon (dark) and Paper (light) values from `docs/PRODUCT.md`, selected by
@@ -59,6 +59,6 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
 
 ## Deliverables and gates
 
-Tokens changed in `src/styles/global.css` and `docs/WEBSITE_DESIGN.md` together; both
+Tokens changed in `src/styles/global.css` and `docs/WEBSITE.md` together; both
 themes and widths 320/768/1280px checked by hand (say so in the report);
 `astro-development` and `web-accessibility` gates pass.

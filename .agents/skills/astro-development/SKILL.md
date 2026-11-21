@@ -45,7 +45,7 @@ Brand, layout and token choices → `website-design`. Rust/egui UI → `egui-dev
   `tailwind.config.*`. The default palette is removed (`--color-*: initial`), so only token
   utilities exist (`bg-bg`, `bg-surface`, `text-text`, `text-muted`, `border-line`,
   `bg-yellow text-on-yellow`, `rounded-frame`/`rounded-widget`). New tokens go in
-  `@theme` and in `docs/WEBSITE_DESIGN.md` together. Prefer utilities; use `@layer base`
+  `@theme` and in `docs/WEBSITE.md` "Tokens" together. Prefer utilities; use `@layer base`
   for element defaults, not ad-hoc `<style>` per page.
 - **Build-time data:** external data (the latest release) is read in the frontmatter at
   build time through `src/lib/` and baked into HTML; the visitor's browser makes no

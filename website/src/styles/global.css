@@ -4,7 +4,7 @@
  * Design tokens: the desktop app's Carbon (dark) and Paper (light) themes, from
  * docs/PRODUCT.md ("Design tokens"); keep the values identical. Theme follows the OS
  * (prefers-color-scheme), Carbon when there's no preference, unless the visitor picked
- * one with the header switch (`data-theme` on <html>). docs/WEBSITE_DESIGN.md.
+ * one with the header switch (`data-theme` on <html>). docs/WEBSITE.md "Design".
  */
 :root {
   color-scheme: dark;
@@ -78,7 +78,7 @@
   --color-accent: var(--ocm-accent);
   --color-mark: var(--ocm-mark);
   --color-on-yellow: #111111;
-  /* Brand surface for the hero band: the same in both themes (WEBSITE_DESIGN.md "Hero"). */
+  /* Brand surface for the hero band: the same in both themes (docs/WEBSITE.md "Design"). */
   --color-brand: #ffd60a;
   --color-on-brand: #000000;
   /* Overlay on the demo video (Showcase.astro): the same in both themes, since it sits on
@@ -132,7 +132,7 @@
   }
 
   /* Page and section headings yellow on Carbon; on Paper a yellow highlighter stroke
-     under the black text (WEBSITE_DESIGN.md "Colour"). */
+     under the black text (docs/WEBSITE.md "Design"). */
   .heading-accent,
   .manual-prose h2 {
     color: var(--color-accent);

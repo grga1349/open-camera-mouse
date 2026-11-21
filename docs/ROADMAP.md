@@ -49,6 +49,16 @@ Open items, roughly by priority:
 
 ## Website
 
-Phases, status and open items: `docs/WEBSITE_ROADMAP.md` (on `feature/website`, ADR-0023).
+Live since 2026-11-21 (PR #2, ADR-0023); how it's built and its rules: `docs/WEBSITE.md`.
+Open:
+
+1. **Copy read-through** by the user over the whole site (wording isn't approved per change).
+2. **Checks by hand** (done during use): keyboard walk-through, VoiceOver/NVDA, 200% zoom,
+   the real reduced-motion setting, a real phone, Safari and Firefox; in particular the hero
+   V at 320px, the two-line headline with Windows and Linux fonts, video playback and the
+   play button, the squirrel with a real head pointer, OS detection on Windows and Linux.
+3. **Release-triggered rebuild:** verify on the next published release that the site
+   rebuilds and shows the new version (`website.yml` `rebuild` job).
+4. Optional, only with the user's OK: section transitions and accents beyond the hero.
 
 New work arrives as prompts (see `AGENTS.md`); add an item here only when it is deferred.

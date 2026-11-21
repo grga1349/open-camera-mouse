@@ -42,7 +42,7 @@ Option 3.
   `typescript` (6.x: `@astrojs/check` 0.9 does not accept 7.x yet). All MIT/Apache-2.0.
   Adding any other package needs an amendment to this ADR, the same rule as crates.
 - `.github/workflows/website.yml` builds on pull requests and pushes that touch the website,
-  including `feature/website`. It deploys only from `main` (push or manual run), and only when the
+  on `main` (pushes to `feature/website` too until the merge). It deploys only from `main` (push or manual run), and only when the
   repository variable `WEBSITE_DEPLOY` is `true`, so nothing is published before Pages is
   enabled. The build job has `contents: read` only; `pages: write` and `id-token: write`
   exist only on the deploy job, which never runs for `pull_request` events. No secrets.
@@ -57,7 +57,7 @@ Option 3.
   wait on checks that never start (skipped by `paths-ignore`). Fix then by making those
   checks non-required or adding a no-op job, not now.
 - The visual design follows `docs/PRODUCT.md` tokens (Carbon/Paper, two accents); the actual
-  landing-page design is a separate task (`docs/WEBSITE_DESIGN.md`).
+  landing-page design is a separate task (`docs/WEBSITE.md` "Design").
 - Status becomes Accepted when the user approves the merge to `main`.
 
 ## Amendment 1 (2026-11-20): scope and visual direction
@@ -66,9 +66,9 @@ At the user's request (website foundation brief):
 
 - **Scope.** The site will host the user manual as the canonical end-user documentation
   (Markdown content collection, Phase 5) and an OS-aware download button (Phase 4); the
-  README keeps a short summary that links to it. Plan and status: `docs/WEBSITE_ROADMAP.md`.
+  README keeps a short summary that links to it. Open items: `docs/ROADMAP.md` "Website".
 - **Visual direction.** Yellow `#ffd60a` is also the website's hero surface (brand
-  token), with angular geometry and CSS entrance animations (`docs/WEBSITE_DESIGN.md`).
+  token), with angular geometry and CSS entrance animations (`docs/WEBSITE.md` "Design").
   The desktop app's direction is unchanged.
 - **Tests** for website logic use `bun test` (part of Bun), so no package is added.
 - **Open:** the download button would make the first third-party request

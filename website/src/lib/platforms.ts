@@ -1,7 +1,7 @@
 /**
  * The platforms a release ships for, as built by `.github/workflows/release.yml` ("Collect"
  * step). Asset names are `open-camera-mouse-<version>-<suffix>`; the suffixes here are what
- * the OS-aware download (WEBSITE_ROADMAP.md Phase 4) will match against. Requirements and
+ * the OS-aware download (docs/WEBSITE.md "Downloads") matches against. Requirements and
  * caveats come from README.md ("Install", "Known limitations"); keep them in sync.
  */
 export type PlatformId = "macos" | "windows" | "linux";

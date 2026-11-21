@@ -8,59 +8,38 @@ Everything runs on your computer; no camera image leaves it.
 Written in Rust (egui), no OpenCV. Behaviour follows the classic Camera Mouse 2018, with
 improvements. Free software under the MIT licence.
 
+**Website and user manual: <https://grga1349.github.io/open-camera-mouse/>.** The
+[manual](https://grga1349.github.io/open-camera-mouse/manual/) covers installation, permissions, everyday use, every setting, accessibility
+options and troubleshooting.
+
 ## Install
 
 Download the file for your system from the
-[latest release](https://github.com/grga1349/open-camera-mouse/releases/latest) and check
-it against `SHA256SUMS` if you like.
+[latest release](https://github.com/grga1349/open-camera-mouse/releases/latest) (or the
+[website](https://grga1349.github.io/open-camera-mouse/#download)) and check it against
+`SHA256SUMS` if you like. Step-by-step instructions: [Installation](https://grga1349.github.io/open-camera-mouse/manual/installation/).
 
-### macOS (Apple Silicon)
-
-1. Open `open-camera-mouse-<version>-macos-arm64.dmg` and drag **Open Camera Mouse** to
-   Applications.
-2. The app isn't notarized yet, so macOS blocks the first launch. Open it once, then go to
-   **System Settings → Privacy & Security** and click **Open Anyway**. (Or, in Terminal:
-   `xattr -dr com.apple.quarantine "/Applications/Open Camera Mouse.app"`.)
-3. Allow **Camera** when asked. Then grant **Accessibility** (System Settings → Privacy &
-   Security → Accessibility → Open Camera Mouse on); the app shows a button that opens the
-   right page. It notices the grant within a few seconds, no restart needed.
-
-Updates keep both permissions. Intel Macs aren't supported.
-
-### Windows (x64)
-
-1. Run `open-camera-mouse-<version>-windows-x64-setup.exe` (installs for your user only, no
-   admin rights needed).
-2. The installer isn't signed yet, so SmartScreen may warn: click **More info → Run anyway**.
-3. Allow camera access if Windows asks (Settings → Privacy & security → Camera → let desktop
-   apps access your camera).
-
-### Linux (x86_64, X11)
-
-AppImage: `chmod +x open-camera-mouse-<version>-linux-x86_64.AppImage` and run it (needs FUSE
-2, e.g. `libfuse2`). Or unpack the `.tar.gz` and run `open-camera-mouse`; a `.desktop` file
-and icon are included. Your user needs access to the camera (usually the `video` group).
-
-**Use an X11 session.** On Wayland the app can't move the pointer or catch global hotkeys
-(see Known limitations).
+- **macOS (Apple Silicon):** open the `.dmg` and drag the app to Applications. It isn't
+  notarized yet: after the first blocked launch, **System Settings → Privacy & Security →
+  Open Anyway**. Then allow Camera and Accessibility.
+- **Windows (x64):** run the `-setup.exe` (per-user, no admin). It isn't signed yet:
+  SmartScreen → **More info → Run anyway**.
+- **Linux (x86_64, X11):** run the AppImage (`chmod +x`, needs FUSE 2) or unpack the
+  `.tar.gz`. **Use an X11 session**: on Wayland the app can't move the pointer or catch
+  global hotkeys.
 
 ## Use
 
-1. Press **Start** (or the start key) and click a spot on your face in the preview.
-2. Keep the mouse still for 4 s: the camera takes over the pointer. Moving the physical mouse
-   takes it back at once; 4 s still hands it to the camera again.
-3. **Recenter** (F12) puts a circle in the middle of the preview and counts 5-4-3-2-1; look
-   straight at the screen, and the spot in the circle becomes the new target.
-4. **Options** has speed (gain), smoothing, dwell click, camera, screen limits, main monitor,
-   theme and larger controls. Changes are saved at once.
+Press **Start** and click a point on your face in the preview; after 4 s of a still mouse the
+camera moves the pointer. **Recenter** (F12) counts down 5 s and takes the point in the
+middle of the preview as the new target. **Options** has speed, smoothing, dwell click,
+camera and screen settings. More in the manual: [Getting started](https://grga1349.github.io/open-camera-mouse/manual/getting-started/),
+[Using the pointer](https://grga1349.github.io/open-camera-mouse/manual/using-the-pointer/), [Settings](https://grga1349.github.io/open-camera-mouse/manual/settings/).
 
 | Key | macOS | Windows / Linux |
 |---|---|---|
 | Start / pause | F10 | F11 |
 | Recenter | F12 | F12 |
-
-On a Mac laptop keyboard you may need `Fn`. The keys work from any app where the OS allows
-it, and always inside the app window; the window shows which ones work globally.
 
 ## Known limitations
 
@@ -93,7 +72,7 @@ When run from a terminal, macOS asks for camera and Accessibility permission for
 Docs: [`AGENTS.md`](AGENTS.md) (how to work in this repo, also for AI agents),
 [`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/BEHAVIOR.md`](docs/BEHAVIOR.md),
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/TESTING.md`](docs/TESTING.md),
-[`docs/ROADMAP.md`](docs/ROADMAP.md), decisions in
+[`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/WEBSITE.md`](docs/WEBSITE.md) (the website), decisions in
 [`docs/architecture/decisions/`](docs/architecture/decisions/).
 
 ### Package

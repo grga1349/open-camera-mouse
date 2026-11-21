@@ -14,7 +14,7 @@ on:
       # The manual's defaults test (src/lib/manual-defaults.test.ts) reads this file.
       - 'crates/app-core/src/settings.rs'
   push:
-    branches: [main, feature/website]
+    branches: [main]
     paths:
       - 'website/**'
       - '.github/workflows/website.yml'
