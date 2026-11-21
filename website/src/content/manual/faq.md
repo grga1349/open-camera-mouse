@@ -23,8 +23,7 @@ deliver MJPEG aren't supported, and external USB webcams haven't been tested yet
 ## Which systems does it run on?
 
 macOS on Apple Silicon, 64-bit Windows, and x86_64 Linux with an X11 session. Not Intel
-Macs, Wayland sessions, phones or tablets. Windows and Linux builds are tested
-automatically but not yet on real devices ([System requirements](../system-requirements/)).
+Macs, Wayland sessions, phones or tablets ([System requirements](../system-requirements/)).
 
 ## Which point on my face should I pick?
 

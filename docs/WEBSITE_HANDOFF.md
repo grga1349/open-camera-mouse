@@ -4,7 +4,15 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, thirteenth): decisions, asymmetric hero V
+## Latest session (2026-11-21, thirteenth): decisions, asymmetric hero V, demo video
+
+- Demo video in: the user's screen recording (2880×1800, 27.75 s, on their Desktop, not
+  in the repo) cut at 23.0 s where camera tracking ends (then they took the mouse and
+  paused), scaled to 1920×1200 30 fps, x264 CRF 24, no audio, faststart → 1.6 MB.
+  `Showcase.astro` replaces the placeholder; poster from 10 s. Captions were added, then
+  removed at the user's request; the figcaption is the text alternative, visually
+  hidden (`sr-only`) at the user's request. Timeline: paused
+  0–2 s, recentering countdown 2–7 s, tracking 7–23 s.
 
 - User decisions: manual/other pages keep the simple flat yellow header; the squirrel stays
   as drawn (no ear/cheek tweak); the hero V becomes asymmetric with its point to the left.
@@ -12,7 +20,11 @@ Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
   centred (user's call).
 - Headline on two lines from `lg` up (`lg:text-6xl lg:max-w-none`), hero ~90px shorter;
   the wrap depends on the system monospace width (other OSes may still wrap to three). Headless screenshots at 1280/768, both
-  themes. Verified: build + path check (672 URLs).
+  themes. Verified: check 0/0/0, build + path check (676 URLs), video served and
+  showing its length in headless Chrome.
+- Removed the "Windows/Linux not tried on a real device" caveat from the whole site
+  (engineering note, download card notes, system requirements, FAQ); rule in
+  `WEBSITE_DESIGN.md` "Constraints". Video description is `sr-only`.
 
 ### Twelfth session (2026-11-21): automated accessibility and performance audit
 
@@ -72,20 +84,21 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 ## Next
 
-Phase 5 slice 4 and the Features section need the user's screenshots; the showcase needs
-the demo recording. Optional, with the user's OK: section transitions/accents (Phase 2). Then Phase 6 merge prep. README shortening waits for the deployment.
+Phase 5 slice 4 and the Features section need the user's screenshots. Re-run Lighthouse
+and axe now that the video is in (tooling isn't in the repo; reinstall in the scratchpad). Optional, with the user's OK: section transitions/accents (Phase 2). Then Phase 6 merge prep. README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
 
 A real typewriter web font yes/no;
-demo recording and screenshots.
+screenshots.
 
 ## Not yet checked by hand
 
 Automated audit is done (above); what follows needs a person.
 
 Asymmetric hero V at 320px and in Safari/Firefox.
+Demo video: playback in Safari/Firefox/a phone, keyboard on the controls.
 
 Why it exists: keyboard walk-through of the source links, VoiceOver, 200% zoom, 768px;
 the three source URLs from a normal browser (checked by fetch only).

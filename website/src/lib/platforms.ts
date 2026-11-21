@@ -38,10 +38,7 @@ export const PLATFORMS: Platform[] = [
     short: "x64",
     assets: [{ suffix: "windows-x64-setup.exe", label: "Installer (.exe)" }],
     installAnchor: "windows-x64",
-    notes: [
-      "Unsigned: SmartScreen shows a warning.",
-      "Not yet tested on a real Windows device.",
-    ],
+    notes: ["Unsigned: SmartScreen shows a warning."],
   },
   {
     id: "linux",
@@ -53,6 +50,6 @@ export const PLATFORMS: Platform[] = [
       { suffix: "linux-x86_64.tar.gz", label: "Archive (.tar.gz)" },
     ],
     installAnchor: "linux-x86_64-x11",
-    notes: ["Wayland isn't supported.", "Not yet tested on a real Linux device."],
+    notes: ["Wayland isn't supported."],
   },
 ];

@@ -15,7 +15,7 @@ code; the manual describes them and must not contradict them. No accounts, forms
 analytics or tracking, and no third-party requests from the visitor's browser: the latest
 release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
-Status: first homepage pass (yellow hero, showcase placeholder, why it exists, how it works, engineering,
+Status: first homepage pass (yellow hero, demo video, why it exists, how it works, engineering,
 OS-aware download cards, questions, open source) and the manual's thirteen pages (getting started, requirements,
 installation, everyday use, settings, accessibility options, troubleshooting, FAQ); see the
 roadmap.
@@ -27,11 +27,11 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 | # | Section | Purpose | Status |
 |---|---|---|---|
 | 1 | Hero | What it is, that it uses an ordinary webcam, free and open source; primary download, link to the showcase | built (draft copy) |
-| 2 | Showcase (`#showcase`) | A real recording of the app in use | placeholder |
+| 2 | Showcase (`#showcase`) | A real recording of the app in use: `public/showcase/` (`demo.mp4` 23 s, H.264, no audio, ~1.6 MB; `poster.jpg`), no autoplay, no captions (no sound; the user dropped them), the figcaption (screen readers only, `sr-only`) is the text alternative | built |
 | 3 | Why it exists (`#why-it-exists`) | Three short paragraphs: the classic Camera Mouse (Boston College, Gips and Betke, EagleEyes), its free release in 2007 and reach, then Open Camera Mouse as an independent successor with a non-affiliation line; a numbered "Sources" list (`originSources` in `index.astro`) | built |
 | 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
-| 6 | Engineering (`#engineering`) | Four notes: independent Rust implementation, tracking and stability, privacy (on-device), testing (incl. that Windows/Linux haven't run on a device); link to `ARCHITECTURE.md`. Copy only from README, PRODUCT, ARCHITECTURE, TESTING | built (before Features, which waits for screenshots) |
+| 6 | Engineering (`#engineering`) | Four notes: independent Rust implementation, tracking and stability, privacy (on-device), testing (CI on all three systems; the not-yet-tried-on-a-device caveat is left out of this section, user's call); link to `ARCHITECTURE.md`. Copy only from README, PRODUCT, ARCHITECTURE, TESTING | built (before Features, which waits for screenshots) |
 | 7 | Download (`#download`) | Supported platforms, caveats, direct files, install guidance | built, OS-aware |
 | 7b | Questions (`#faq`) | Six questions from the manual's FAQ (`HOME_FAQ` in `src/lib/home-faq.ts`), taken from the rendered `faq.md` so the answers have one source; links rebased to `/manual/…`; "All questions →" | built |
 | 8 | Open source (`#open-source`) | Licence line, then two labelled link lists: "Get involved" (source, issues, build steps in the README, `AGENTS.md`) and "Documentation" (manual, PRODUCT, TESTING, ADRs) | built |
@@ -106,7 +106,7 @@ website/
     components/Hero.astro      yellow angular hero
     components/HeroSquirrel.astro   decorative squirrel that watches the pointer beside the hero text (lg+)
     components/Section.astro   homepage section: column, anchor id, h2
-    components/ShowcasePlaceholder.astro   stand-in for the demo video (swap-in markup inside)
+    components/Showcase.astro    the demo video (`<video controls preload="metadata">`)
     components/DownloadEnhancer.astro      client script: OS detection → hero button, "Your system"
     components/ManualNav.astro   manual contents: <details> on small screens, sidebar from md
     pages/index.astro, 404.astro   routes (file = URL)

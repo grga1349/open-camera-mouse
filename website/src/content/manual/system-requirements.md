@@ -37,8 +37,8 @@ on a real device yet.
 | System | Limitation |
 |---|---|
 | macOS | Not notarized yet, so macOS blocks the first launch until you allow it ([how](../installation/#macos-apple-silicon)). Apple Silicon only. |
-| Windows | Not signed yet, so SmartScreen shows a warning. The pointer can't control windows that run as administrator, the User Account Control prompt or the lock screen. Not yet tested on a real Windows device: built and tested automatically only. |
-| Linux | X11 only. On Wayland the app can't move the pointer or catch the start and recenter keys outside its window; inside the window the keys still work. Not yet tested on a real Linux device: built and tested automatically only. |
+| Windows | Not signed yet, so SmartScreen shows a warning. The pointer can't control windows that run as administrator, the User Account Control prompt or the lock screen. |
+| Linux | X11 only. On Wayland the app can't move the pointer or catch the start and recenter keys outside its window; inside the window the keys still work. |
 | All | The "Searching" animation doesn't follow the system's reduce-motion setting. |
 
 If you run into a problem, please report it on

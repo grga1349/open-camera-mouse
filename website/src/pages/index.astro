@@ -4,7 +4,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Hero from "../components/Hero.astro";
 import Section from "../components/Section.astro";
-import ShowcasePlaceholder from "../components/ShowcasePlaceholder.astro";
+import Showcase from "../components/Showcase.astro";
 import DownloadEnhancer from "../components/DownloadEnhancer.astro";
 import { REPO_URL, url } from "../lib/url";
 import { PLATFORMS } from "../lib/platforms";
@@ -42,7 +42,7 @@ const engineering = [
   },
   {
     title: "Tested without a camera",
-    body: "The tracker and the pointer maths are tested on synthetic, seeded video with known ground truth, and every change runs the tests on macOS, Windows and Linux. Windows and Linux builds have not been tried on a real device yet.",
+    body: "The tracker and the pointer maths are tested on synthetic, seeded video with known ground truth, and every change runs the tests on macOS, Windows and Linux.",
   },
 ];
 
@@ -88,7 +88,7 @@ const steps = [
   <Hero />
 
   <Section id="showcase" title="See it working" divider={false}>
-    <ShowcasePlaceholder />
+    <Showcase />
   </Section>
 
   <Section id="why-it-exists" title="Why it exists">

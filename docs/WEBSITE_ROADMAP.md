@@ -28,7 +28,7 @@ before the merge to `main`).
 - [x] Hero bottom edge: shallow symmetric V (layered diagonal/blade/wedge tried and rejected); crosshair removed
 - [x] Logo as a one-colour SVG mark (`src/assets/logo.svg`), uppercase wordmark
 - [x] Hero entrance and hover lift (CSS only; reduced motion collapses them, delays included)
-- [x] Reusable `Hero`, `Section`, `ShowcasePlaceholder` components
+- [x] Reusable `Hero`, `Section`, `Showcase` components
 - [~] Responsive layout: checked at 320 and 1280px for the V edge (headless screenshots); 200% zoom not checked
 - [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
 - [x] Header on other pages: stays simple and practical, yellow with a flat bottom (user's call, 2026-11-21)
@@ -43,7 +43,7 @@ before the merge to `main`).
 
 ## Phase 3 — Homepage content
 
-Built: hero, showcase placeholder, why it exists, how it works (3 steps, from README "Use"), engineering,
+Built: hero, demo video, why it exists, how it works (3 steps, from README "Use"), engineering,
 download cards, questions, open source. Open:
 
 - [x] Why it exists (`#why-it-exists`): the classic Camera Mouse and its legacy, three cited sources (wording awaits the user's final copy pass). **Research first**: every
@@ -87,7 +87,7 @@ which waits for the deployment.
 
 ## Phase 6 — Showcase and launch
 
-- [ ] Real 30–45 s demonstration recording (no simulated tracking), poster, captions (`.vtt`), `controls`, no autoplay — not a diagnostic recording; consent of anyone shown
+- [x] Real demonstration recording (23 s screen recording on macOS by the user, trimmed where tracking stops; no simulated tracking), poster, `controls`, no autoplay, no captions (no sound; dropped at the user's request, the figcaption describes the video) — not a diagnostic recording; only the user is shown (2026-11-21). The figcaption wording goes into the final copy pass
 - [ ] Application screenshots, regenerated per UI change
 - [~] Mobile pass; accessibility audit: automated part done 2026-11-21 (Lighthouse, axe on all pages × both themes × 320/768/1280, no overflow; one empty table header fixed, now tested). By hand still open: keyboard, VoiceOver/NVDA, 200% zoom, real reduced-motion setting, a real phone
 - [x] Performance check: Lighthouse 100 mobile and desktop, 11–17 KiB per page, CLS 0 (2026-11-21; re-run after the showcase video lands)

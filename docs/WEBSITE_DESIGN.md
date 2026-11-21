@@ -236,6 +236,10 @@ Homepage sections and their purpose: `WEBSITE.md` "Homepage"; status in
   download numbers, testimonials, or medical/certification claims (a PRODUCT non-goal).
   Versions and file links come from the latest release at build time, never typed by hand;
   without release data, link to `releases/latest`.
+- Don't say on the site that the Windows or Linux builds haven't been tried on a real device
+  (home page, download cards, manual, FAQ): the user's call, 2026-11-21. That caveat stays
+  in the repo docs (`README.md`, `TESTING.md`). Other limits, like untested USB webcams,
+  stay on the site.
 - The showcase is a real recording of the app; never a mock-up or simulated tracking, and
   never a browser-based webcam tracker.
 - No web fonts, icon fonts or icon libraries (inline SVG if an icon is needed), no

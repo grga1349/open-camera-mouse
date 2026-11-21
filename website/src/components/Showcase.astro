@@ -1,0 +1,29 @@
+---
+// The demonstration recording (WEBSITE_ROADMAP.md Phase 6): a real screen recording of the
+// app on macOS, trimmed and re-encoded (H.264, no audio, faststart). No autoplay, no captions
+// (user's call): the video has no sound, and the figcaption, for screen readers only
+// (no visible description, user's call), is its text alternative
+// (WCAG 1.2.1, video only). Never a mock-up or simulated tracking.
+import { url } from "../lib/url";
+---
+
+<figure>
+  <video
+    controls
+    preload="metadata"
+    playsinline
+    width="1920"
+    height="1200"
+    poster={url("showcase/poster.jpg")}
+    class="h-auto w-full rounded-frame border border-line bg-surface"
+    aria-describedby="showcase-caption"
+  >
+    <source src={url("showcase/demo.mp4")} type="video/mp4" />
+    <a href={url("showcase/demo.mp4")}>Download the demonstration video (MP4)</a>
+  </video>
+  <figcaption id="showcase-caption" class="sr-only">
+    A 23-second screen recording of Open Camera Mouse on macOS, without sound: it resumes with
+    a short recentering countdown, then the green ring follows the tip of the nose and head
+    movements move the pointer across the screen.
+  </figcaption>
+</figure>
