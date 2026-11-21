@@ -17,12 +17,11 @@ tablets or Chromebooks.
 
 ## Camera
 
-Any webcam your system can use. The app asks the camera for 640×480 at 30 frames per
-second and uses the nearest format the camera offers. The preview is in colour and
-mirrored.
+A webcam that your system recognises, such as the one built into a laptop. The app asks
+the camera for 640×480 at 30 frames per second and uses the nearest format it offers.
 
 Cameras that only deliver MJPEG aren't supported. External USB webcams haven't been tested
-on a real device yet.
+yet.
 
 ## Permissions
 
@@ -39,7 +38,7 @@ on a real device yet.
 | macOS | Not notarized yet, so macOS blocks the first launch until you allow it ([how](../installation/#macos-apple-silicon)). Apple Silicon only. |
 | Windows | Not signed yet, so SmartScreen shows a warning. The pointer can't control windows that run as administrator, the User Account Control prompt or the lock screen. |
 | Linux | X11 only. On Wayland the app can't move the pointer or catch the start and recenter keys outside its window; inside the window the keys still work. |
-| All | The "Searching" animation doesn't follow the system's reduce-motion setting. |
+| All | The "Searching" animation in the preview doesn't follow the system's reduce-motion setting. |
 
-If you run into a problem, please report it on
+If you run into a problem, report it on
 [GitHub Issues](https://github.com/grga1349/open-camera-mouse/issues).

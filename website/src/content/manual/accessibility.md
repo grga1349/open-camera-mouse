@@ -4,8 +4,8 @@ description: Larger controls, the dark and light themes, the fixed keys, and how
 order: 11
 ---
 
-Open Camera Mouse is made for people who can't easily use a mouse, so the app itself tries
-to be easy to see and to operate. This page collects the options for that.
+The app is meant to be easy to see and to operate with a head-controlled pointer. These are
+the options and behaviours that help.
 
 ## Larger controls
 
@@ -57,6 +57,6 @@ adjustable.
 
 ## Known gaps
 
-- The "Looking for the target…" animation doesn't follow the system's reduce-motion
+- The "Searching" animation in the preview doesn't follow the system's reduce-motion
   setting yet.
 - Screen readers haven't been tested with the app on any system yet.

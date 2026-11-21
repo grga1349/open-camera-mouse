@@ -13,9 +13,9 @@ to click**.
 1. Move the pointer to what you want to click and hold your head still.
 2. A thin green arc around the target ring in the preview fills up while you hold still.
 3. When it is full, after the dwell time (1 second by default), the app clicks once.
-4. It doesn't click again in the same place. The next click needs you to move away and
-   come to rest again, or to stay still until the pause after a click (2 seconds by
-   default) has passed and then for the dwell time again.
+4. It doesn't click again in the same place right away. For the next click, move away and
+   come to rest again, or keep still through the pause after a click (2 seconds by
+   default) and then the dwell time again.
 
 "Still" means the pointer stays inside a small area around where it came to rest, so a
 little wobble doesn't restart the count.

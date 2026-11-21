@@ -1,32 +1,32 @@
 ---
 title: Selecting a tracking point
-description: How to pick the spot on your face that the camera follows, which spots work well, and what the ring around it tells you.
+description: How to choose the point on your face that the camera follows, which points work well, and what the ring around it tells you.
 order: 5
 ---
 
-The app follows one small spot on your face, the **target**, and moves the pointer with
-it. You choose that spot yourself, by clicking it in the camera preview or by
+The app follows one small point on your face, the **target**, and moves the pointer with
+it. You choose the point yourself, by clicking it in the camera preview or by
 [recentering](../recentering/).
 
 ## Picking a point
 
 When the camera is on, hover over the preview: a dashed white circle follows the mouse and
-says "Click to select". Click the spot you want to track. A thin green ring marks it, and
+says "Click to select". Click the point you want to track. A thin green ring marks it, and
 the status changes to **Tracking**.
 
-You can click another point at any time while the camera runs, also after the target was
-lost.
+You can click another point at any time while the camera runs, including after the target
+was lost.
 
-Right after the click your hand is still on the mouse, so the mouse keeps the pointer for
-a moment: keep it still for 4 seconds and the camera takes over. The pointer then moves to
+Right after the click your hand is still on the mouse, so the mouse keeps the pointer:
+keep it still for 4 seconds and the camera takes over. The pointer then moves to
 the middle of the screen (the [main monitor](../using-the-pointer/#several-monitors)),
 and from there it follows your head. See [Mouse handover](../mouse-handover/).
 
-## Which spot works well
+## Which point works well
 
 Pick a point with clear detail that keeps its shape when you move:
 
-- the **tip of the nose**, which works well;
+- the **tip of the nose**;
 - the point **between the eyebrows**, or an eyebrow.
 
 Avoid plain areas with little detail, such as the middle of a cheek: they are harder to

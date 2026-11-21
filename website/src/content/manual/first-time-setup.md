@@ -6,8 +6,7 @@ order: 4
 
 Open Camera Mouse needs two things from your system: the **camera**, to see your face,
 and permission to **move the pointer**. [Installation](../installation/) shows where each
-one is granted on your system. This page shows what the app does before and after you
-grant them.
+one is granted. This page describes what the app shows before and after you grant them.
 
 ## The first launch
 
@@ -20,7 +19,7 @@ usually takes a second or two. When the picture appears, the status reads **Sele
 target**: click a point on your face, as described in
 [Selecting a tracking point](../tracking-point/).
 
-The video stays on your computer. Nothing is recorded or sent.
+The video is processed on your computer and isn't uploaded anywhere.
 
 ## Camera permission
 

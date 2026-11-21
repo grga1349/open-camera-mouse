@@ -4,7 +4,7 @@ description: What to do when the app won't open, the camera or pointer doesn't w
 order: 12
 ---
 
-Find the problem below. If none of it helps, please
+Find the problem below. If none of it helps,
 [report it on GitHub](https://github.com/grga1349/open-camera-mouse/issues) and say which
 system you use and what the status line under the preview says.
 
@@ -12,7 +12,9 @@ system you use and what the status line under the preview says.
 
 - **macOS says the app can't be opened or is from an unidentified developer.** The app
   isn't notarized yet. Open it once, then click **Open Anyway** in **System Settings →
-  Privacy & Security** ([Installation](../installation/#macos-apple-silicon)).
+  Privacy & Security** ([Installation](../installation/#macos-apple-silicon)). If that
+  button doesn't appear, you can clear the download flag in Terminal instead:
+  `xattr -dr com.apple.quarantine "/Applications/Open Camera Mouse.app"`.
 - **Windows shows a SmartScreen warning.** The installer isn't signed yet: click **More
   info → Run anyway** ([Installation](../installation/#windows-x64)).
 - **The Linux AppImage doesn't start.** It needs FUSE 2 (for example the `libfuse2`
@@ -54,8 +56,8 @@ Look at the status line: after "Pointer:" it says who moves the pointer.
   **Recenter** ([Selecting a tracking point](../tracking-point/)).
 - **Paused**: press **Resume** or the start key.
 
-On **Windows**, the pointer can't control windows running as administrator, the user
-account control (UAC) prompt or the lock screen. Windows doesn't allow it.
+On **Windows**, the pointer can't control windows running as administrator, the User
+Account Control prompt or the lock screen. Windows doesn't allow it.
 
 ## The pointer is shaky, slow or can't reach an edge
 
@@ -71,8 +73,8 @@ account control (UAC) prompt or the lock screen. Windows doesn't allow it.
 
 ## Tracking stops or the target is lost often
 
-- Pick a spot with clear detail, such as the **tip of the nose** or an eyebrow, not a
-  plain cheek ([Which spot works well](../tracking-point/#which-spot-works-well)).
+- Pick a point with clear detail, such as the **tip of the nose** or an eyebrow, not a
+  plain cheek ([Which point works well](../tracking-point/#which-point-works-well)).
 - **Holding · moved too fast:** move a little slower; tracking continues by itself.
 - **Holding · near the edge:** move back toward the middle of the picture.
 - To have the app look for a lost target by itself, turn on **Find the target again** in

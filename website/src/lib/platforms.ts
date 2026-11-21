@@ -29,7 +29,7 @@ export const PLATFORMS: Platform[] = [
     short: "Apple Silicon",
     assets: [{ suffix: "macos-arm64.dmg", label: "Disk image (.dmg)" }],
     installAnchor: "macos-apple-silicon",
-    notes: ["Intel Macs aren't supported.", "Not notarized yet: macOS blocks the first launch."],
+    notes: ["Intel Macs aren't supported.", "Not notarized: allow the first launch in System Settings."],
   },
   {
     id: "windows",
@@ -38,7 +38,7 @@ export const PLATFORMS: Platform[] = [
     short: "x64",
     assets: [{ suffix: "windows-x64-setup.exe", label: "Installer (.exe)" }],
     installAnchor: "windows-x64",
-    notes: ["Unsigned: SmartScreen shows a warning."],
+    notes: ["Not signed: SmartScreen shows a warning."],
   },
   {
     id: "linux",

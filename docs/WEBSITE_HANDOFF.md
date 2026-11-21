@@ -4,7 +4,15 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, thirteenth): decisions, asymmetric hero V, demo video
+## Latest session (2026-11-21, thirteenth): decisions, asymmetric hero V, demo video, copy pass
+
+- Copy pass over the whole site (user's brief): home (why it exists, how it works,
+  engineering rewritten as built from scratch / precise control / tested / private, download
+  lead and notes, open source links), footer line, manual index, every manual page
+  (spot → point, "Searching" animation naming, macOS `xattr` moved to troubleshooting,
+  FAQ privacy answer mentions the opt-in local diagnostic recording). Hero copy unchanged.
+- User decisions: no screenshots (Features section and annotated manual dropped); keep the
+  system monospace typewriter (no web font); by-hand checks happen during use.
 
 - Demo video in: the user's screen recording (2880×1800, 27.75 s, on their Desktop, not
   in the repo) cut at 23.0 s where camera tracking ends (then they took the mouse and
@@ -84,14 +92,13 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 
 ## Next
 
-Phase 5 slice 4 and the Features section need the user's screenshots. Re-run Lighthouse
+Merge prep (Phase 6). Re-run Lighthouse
 and axe now that the video is in (tooling isn't in the repo; reinstall in the scratchpad). Optional, with the user's OK: section transitions/accents (Phase 2). Then Phase 6 merge prep. README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
 
-A real typewriter web font yes/no;
-screenshots.
+Their own read of the copy (later, not now); OK to merge.
 
 ## Not yet checked by hand
 

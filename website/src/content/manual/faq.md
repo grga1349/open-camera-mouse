@@ -6,8 +6,11 @@ order: 13
 
 ## Does the camera picture leave my computer?
 
-No. The video is processed on your computer and never recorded or sent. There are no
-accounts, no cloud and no telemetry.
+No. Open Camera Mouse processes the camera picture entirely on your computer and doesn't
+record or upload video. There are no accounts, no cloud and no telemetry.
+
+For debugging, developers can turn on a local diagnostic recording. It is off unless
+explicitly enabled, stays on your computer, and is only shared if you choose to share it.
 
 ## What does it cost?
 
@@ -29,7 +32,7 @@ Macs, Wayland sessions, phones or tablets ([System requirements](../system-requi
 
 The tip of the nose works well; the point between the eyebrows or an eyebrow works too.
 Avoid plain areas with little detail
-([Selecting a tracking point](../tracking-point/#which-spot-works-well)).
+([Selecting a tracking point](../tracking-point/#which-point-works-well)).
 
 ## How do I click without a mouse?
 
@@ -62,5 +65,6 @@ theme and larger controls ([Settings](../settings/#restore-defaults)).
 
 ## Is it related to the original Camera Mouse?
 
-Open Camera Mouse is an independent open-source project inspired by the classic Camera
-Mouse. It isn't affiliated with or endorsed by the original authors.
+It is inspired by the classic Camera Mouse, created at Boston College by James Gips and
+Margrit Betke, but it is an independent project, written from scratch. It isn't affiliated
+with or endorsed by Boston College or the original authors.

@@ -5,15 +5,15 @@ order: 6
 ---
 
 Once the camera has the pointer, the pointer follows your head: turn or move your head
-right and the pointer moves right, up and it moves up. The preview is mirrored, like a
-mirror, so it moves the same way you do.
+right and the pointer moves right, up and it moves up. The preview is mirrored, so it
+moves the same way you do.
 
 ## How movement maps to the screen
 
 Each position of your head corresponds to one position on the screen. When the camera
 takes over, the position your head is in at that moment becomes the middle of the screen;
 from there, the further you move, the further the pointer goes. If you keep your head
-still, the pointer stays still: small jitter is ignored automatically.
+still, the pointer stays still: small jitter is ignored.
 
 If you can't comfortably reach an edge, raise the speed or
 [recenter](../recentering/) in a more comfortable position.

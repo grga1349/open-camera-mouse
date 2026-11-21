@@ -28,13 +28,13 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 |---|---|---|---|
 | 1 | Hero | What it is, that it uses an ordinary webcam, free and open source; primary download, link to the showcase | built (draft copy) |
 | 2 | Showcase (`#showcase`) | A real recording of the app in use: `public/showcase/` (`demo.mp4` 23 s, H.264, no audio, ~1.6 MB; `poster.jpg`), no autoplay, no captions (no sound; the user dropped them), the figcaption (screen readers only, `sr-only`) is the text alternative | built |
-| 3 | Why it exists (`#why-it-exists`) | Three short paragraphs: the classic Camera Mouse (Boston College, Gips and Betke, EagleEyes), its free release in 2007 and reach, then Open Camera Mouse as an independent successor with a non-affiliation line; a numbered "Sources" list (`originSources` in `index.astro`) | built |
+| 3 | Why it exists (`#why-it-exists`) | Three short paragraphs: the classic Camera Mouse (Boston College, Gips and Betke), its free release in 2007 and reach, then Open Camera Mouse carrying the idea forward with a non-affiliation line; a short numbered "Sources" list (`originSources` in `index.astro`) | built |
 | 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
-| 6 | Engineering (`#engineering`) | Four notes: independent Rust implementation, tracking and stability, privacy (on-device), testing (CI on all three systems; the not-yet-tried-on-a-device caveat is left out of this section, user's call); link to `ARCHITECTURE.md`. Copy only from README, PRODUCT, ARCHITECTURE, TESTING | built (before Features, which waits for screenshots) |
+| 6 | Engineering (`#engineering`) | Four short notes: built from scratch (Rust, own tracker, no OpenCV or ML models), precise control, tested on every change, private (local processing, no cloud/accounts/telemetry); no algorithm names or project policy; link to `ARCHITECTURE.md`. Copy only from README, PRODUCT, ARCHITECTURE, TESTING | built (before Features, which waits for screenshots) |
 | 7 | Download (`#download`) | Supported platforms, caveats, direct files, install guidance | built, OS-aware |
 | 7b | Questions (`#faq`) | Six questions from the manual's FAQ (`HOME_FAQ` in `src/lib/home-faq.ts`), taken from the rendered `faq.md` so the answers have one source; links rebased to `/manual/…`; "All questions →" | built |
-| 8 | Open source (`#open-source`) | Licence line, then two labelled link lists: "Get involved" (source, issues, build steps in the README, `AGENTS.md`) and "Documentation" (manual, PRODUCT, TESTING, ADRs) | built |
+| 8 | Open source (`#open-source`) | One line (MIT, contributions welcome on GitHub), then two labelled link lists: "Get involved" (source code, report an issue, contribute → README "Develop") and "Documentation" (user manual, developer documentation → `docs/`) | built |
 
 ### Origin story
 
@@ -46,11 +46,12 @@ plainly that the project is not affiliated with or endorsed by the original auth
 respectful, no marketing superlatives. Never use decompiled or proprietary material
 (`AGENTS.md`).
 
-Built (2026-11-21) from three sources, listed under the section: Betke, Gips & Fleming,
+Built (2026-11-21) from two sources, listed under the section: Betke, Gips & Fleming,
 IEEE TNSRE 10(1), 2002 (DOI 10.1109/TNSRE.2002.1021581); Boston College News, 25 August
-2016 (free since June 2007, over three million downloads, users); Boston College News, In
-Memoriam James Gips, 12 June 2018. The section claims nothing about the classic program's
-current availability, licence or platforms: `cameramouse.org` refused connections on
+2016 (free since June 2007, over three million downloads, users). The copy pass the same
+day dropped the EagleEyes and 2018 In Memoriam sentences (and that source). The section
+claims nothing about the classic program's current availability, licence, platforms or
+whether its development stopped (no source found for that): `cameramouse.org` refused connections on
 2026-11-21 and only third-party download sites list Camera Mouse 2018, so neither is cited.
 A new sentence needs a source in that list.
 

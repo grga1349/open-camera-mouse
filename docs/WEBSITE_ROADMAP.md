@@ -30,7 +30,7 @@ before the merge to `main`).
 - [x] Hero entrance and hover lift (CSS only; reduced motion collapses them, delays included)
 - [x] Reusable `Hero`, `Section`, `Showcase` components
 - [~] Responsive layout: checked at 320 and 1280px for the V edge (headless screenshots); 200% zoom not checked
-- [ ] Typography decision: a real typewriter or display face would be a self-hosted web font (currently excluded; needs the user's OK and an ADR-0023 amendment)
+- [x] Typography decision: keep the system monospace typewriter, no web font (user's call, 2026-11-21)
 - [x] Header on other pages: stays simple and practical, yellow with a flat bottom (user's call, 2026-11-21)
 - [x] Footer: yellow bookend with a Λ top edge mirroring the hero, manual and project links, licence (awaiting the user's OK)
 - [x] Typewriter (system monospace) for all text; Carbon/Paper theme switch in the header (JS + localStorage, hidden without JS)
@@ -50,7 +50,7 @@ download cards, questions, open source. Open:
       historical claim needs a citable source; distinguish the discontinued classic
       distribution from later research or implementations; no implied affiliation or
       endorsement (rules in `WEBSITE.md` "Origin story")
-- [ ] Features with real screenshots (tracking window, Options)
+- [ ] ~~Features with real screenshots~~ dropped: no screenshots (user's call, 2026-11-21)
 - [x] Engineering (`#engineering`): independent Rust implementation, tracking and stability, privacy, testing
 - [x] Questions (`#faq`): six FAQ answers from the manual's `faq.md`, one source
 - [x] Open source: "Get involved" and "Documentation" link lists (no CONTRIBUTING file exists; links go to issues, README build steps and `AGENTS.md`)
@@ -83,12 +83,12 @@ which waits for the deployment.
 - [x] Pages: settings (every Options tab, Restore defaults, file location, settings notices), accessibility options, troubleshooting, FAQ — from `options.rs`, `settings.rs`, `settings_store.rs`, `theme.rs`, `status.rs`, README
 - [x] A check that the manual's defaults match the app's: `manual-defaults.test.ts` compares every "Setting | Range | Default" table row with `crates/app-core/src/settings.rs` (the website workflow also runs when that file changes)
 - [ ] README: keep a short install/use summary and link to the manual (after the site is deployed)
-- [ ] Annotated screenshots
+- [ ] ~~Annotated screenshots~~ dropped (no screenshots, user's call, 2026-11-21)
 
 ## Phase 6 — Showcase and launch
 
 - [x] Real demonstration recording (23 s screen recording on macOS by the user, trimmed where tracking stops; no simulated tracking), poster, `controls`, no autoplay, no captions (no sound; dropped at the user's request, the figcaption describes the video) — not a diagnostic recording; only the user is shown (2026-11-21). The figcaption wording goes into the final copy pass
-- [ ] Application screenshots, regenerated per UI change
+- [ ] ~~Application screenshots~~ dropped (user's call, 2026-11-21)
 - [~] Mobile pass; accessibility audit: automated part done 2026-11-21 (Lighthouse, axe on all pages × both themes × 320/768/1280, no overflow; one empty table header fixed, now tested). By hand still open: keyboard, VoiceOver/NVDA, 200% zoom, real reduced-motion setting, a real phone
 - [x] Performance check: Lighthouse 100 mobile and desktop, 11–17 KiB per page, CLS 0 (2026-11-21; re-run after the showcase video lands)
 - [ ] Before merging: delete `docs/WEBSITE_HANDOFF.md` and the references to it (this file, `AGENTS.md`)

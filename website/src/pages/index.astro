@@ -29,20 +29,20 @@ const faq = pickFaq(splitFaq(faqPage.rendered.html), HOME_FAQ).map((item) => ({
 // docs/TESTING.md; nothing here may say more than those do.
 const engineering = [
   {
-    title: "Independent Rust implementation",
-    body: "Written from scratch in Rust, with no OpenCV. Behaviour starts from the classic Camera Mouse 2018 and improves on it where it was weak; new behaviour arrives as an option, off by default.",
+    title: "Built from scratch",
+    body: "An independent implementation in Rust, with its own computer-vision tracker. No OpenCV and no machine-learning models.",
   },
   {
-    title: "Tracking and stability",
-    body: "The spot you pick is followed with pyramidal Lucas–Kanade optical flow and checked against how it looked a moment earlier, so a hand passing in front of the camera ends tracking instead of dragging the pointer. Smoothing and a small steady zone keep the pointer still while your head is.",
+    title: "Precise control",
+    body: "Pointer speed and smoothing are adjustable, and small jitter is ignored, so the pointer stays still when your head does. If something passes in front of the camera, tracking stops instead of dragging the pointer away.",
   },
   {
-    title: "Private by design",
-    body: "Everything runs on your computer: no camera image leaves it. No accounts, no cloud, no telemetry. Settings are a plain text file in your user folder.",
+    title: "Tested on every change",
+    body: "The tracker and the pointer are tested automatically against generated video with known motion, on macOS, Windows and Linux.",
   },
   {
-    title: "Tested without a camera",
-    body: "The tracker and the pointer maths are tested on synthetic, seeded video with known ground truth, and every change runs the tests on macOS, Windows and Linux.",
+    title: "Private",
+    body: "All camera processing happens locally. No cloud, no accounts, no telemetry.",
   },
 ];
 
@@ -52,31 +52,27 @@ const DOCS_URL = `${REPO_URL}/blob/main/docs`;
 // #why-it-exists is backed by one of these, checked 2026-11-21.
 const originSources = [
   {
-    label: "M. Betke, J. Gips, P. Fleming, “The Camera Mouse: visual tracking of body features to provide computer access for people with severe disabilities”, IEEE Transactions on Neural Systems and Rehabilitation Engineering 10(1), 1–10, March 2002",
+    label: "Betke, Gips and Fleming, “The Camera Mouse: visual tracking of body features to provide computer access for people with severe disabilities”, IEEE TNSRE, 2002",
     href: "https://doi.org/10.1109/TNSRE.2002.1021581",
   },
   {
-    label: "Boston College News, “BC ‘Camera Mouse’ Assistive Technology Tops 3 Million Downloads”, 25 August 2016",
+    label: "Boston College News, “BC ‘Camera Mouse’ Assistive Technology Tops 3 Million Downloads”, 2016",
     href: "https://www.bc.edu/content/bc-web/bcnews/science-tech-and-health/technology/camera-mouse-boston-college.html",
-  },
-  {
-    label: "Boston College News, “In Memoriam: Boston College Computer Scientist James Gips”, 12 June 2018",
-    href: "https://www.bc.edu/content/bc-web/bcnews/campus-community/faculty/in-memoriam--james-gips.html",
   },
 ];
 
 const steps = [
   {
-    title: "Pick a spot",
-    body: "Press Start and click a spot on your face in the camera preview. The tip of the nose works well.",
+    title: "Select a tracking point",
+    body: "Start the camera and click a point on your face in the preview. The tip of the nose works well.",
   },
   {
     title: "Move your head",
-    body: "The pointer follows. Moving the physical mouse takes over at once; keep it still for 4 seconds and the camera has the pointer again.",
+    body: "The pointer follows your head.",
   },
   {
     title: "Click by holding still",
-    body: "Turn on dwell click in Options, and holding the pointer still over something clicks it.",
+    body: "Optionally, turn on dwell click: hold the pointer still over something and it clicks.",
   },
 ];
 ---
@@ -94,21 +90,19 @@ const steps = [
   <Section id="why-it-exists" title="Why it exists">
     <div class="max-w-prose space-y-4">
       <p>
-        Camera Mouse was created at Boston College by James Gips and Margrit Betke, growing out
-        of the college's EagleEyes project. A video camera follows a feature of the body, such as
-        the tip of the nose, and its movement moves the mouse pointer, so people who can't
-        reliably use their hands can still use a computer.
+        Camera Mouse was developed at Boston College by James Gips and Margrit Betke. A camera
+        follows a point on the face, such as the tip of the nose, and moves the mouse pointer
+        with it, so people who can't use their hands reliably can still use a computer.
       </p>
       <p>
-        It became a free download in June 2007. By 2016 it had been downloaded more
-        than three million times, by people with cerebral palsy, ALS, spinal muscular atrophy,
-        brain injuries and other conditions. James Gips died in 2018.
+        Boston College made it a free download in 2007. By 2016 it had been downloaded more than
+        three million times, by people with cerebral palsy, ALS, spinal muscular atrophy, brain
+        injuries and other conditions.
       </p>
       <p>
-        Open Camera Mouse continues the idea as a new, independent program: written from scratch,
-        open source, and for macOS, Windows and Linux. It starts from how Camera Mouse 2018
-        behaves and improves on it. It is not affiliated with or endorsed by Boston College or
-        the original authors.
+        Open Camera Mouse carries the idea forward as a new program, written from scratch, open
+        source and available for macOS, Windows and Linux. It is an independent project, not
+        affiliated with or endorsed by Boston College or the original authors.
       </p>
     </div>
     <h3 class="mt-10 text-sm tracking-wide uppercase">Sources</h3>
@@ -147,7 +141,6 @@ const steps = [
   <Section
     id="engineering"
     title="Engineering"
-    lead="How Open Camera Mouse is built, and what that means for you."
   >
     <ul class="grid gap-x-12 gap-y-10 md:grid-cols-2">
       {
@@ -170,8 +163,8 @@ const steps = [
     id="download"
     title="Download"
     lead={release
-      ? `Version ${release.version}. Pick the file for your system. Installation steps and permissions are in the manual.`
-      : "Pick the file for your system from the latest release. Installation steps and permissions are in the manual."}
+      ? `Version ${release.version} for macOS, Windows and Linux.`
+      : "The latest release for macOS, Windows and Linux."}
   >
     <p data-detect="unsupported" hidden class="mb-8 max-w-prose border-l-4 border-text pl-4">
       Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device. Download
@@ -225,7 +218,7 @@ const steps = [
       release ? (
         <p class="mt-8">
           <a href={release.pageUrl} class="inline-flex min-h-11 items-center">
-            Release notes, all files and checksums for version {release.version}
+            All files, checksums and release notes for version {release.version}
           </a>
         </p>
       ) : (
@@ -261,8 +254,8 @@ const steps = [
 
   <Section id="open-source" title="Open source">
     <p class="max-w-prose">
-      Open Camera Mouse is free software under the MIT licence. The code, the issue tracker and
-      the developer documentation are on GitHub; how to use the app is in the manual.
+      The code is on GitHub under the MIT licence. Bug reports, ideas and contributions are
+      welcome there.
     </p>
     <div class="mt-8 grid gap-x-12 gap-y-8 md:grid-cols-2">
       <div>
@@ -270,13 +263,10 @@ const steps = [
         <ul class="mt-2">
           <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
           <li>
-            <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report a problem or suggest a change</a>
+            <a href={`${REPO_URL}/issues`} class="inline-flex min-h-11 items-center">Report an issue</a>
           </li>
           <li>
-            <a href={`${REPO_URL}#develop`} class="inline-flex min-h-11 items-center">Build it yourself</a>
-          </li>
-          <li>
-            <a href={`${REPO_URL}/blob/main/AGENTS.md`} class="inline-flex min-h-11 items-center">How work is done in the repository</a>
+            <a href={`${REPO_URL}#develop`} class="inline-flex min-h-11 items-center">Contribute</a>
           </li>
         </ul>
       </div>
@@ -285,13 +275,7 @@ const steps = [
         <ul class="mt-2">
           <li><a href={url("manual/")} class="inline-flex min-h-11 items-center">User manual</a></li>
           <li>
-            <a href={`${DOCS_URL}/PRODUCT.md`} class="inline-flex min-h-11 items-center">Product and defaults</a>
-          </li>
-          <li>
-            <a href={`${DOCS_URL}/TESTING.md`} class="inline-flex min-h-11 items-center">Testing</a>
-          </li>
-          <li>
-            <a href={`${REPO_URL}/tree/main/docs/architecture/decisions`} class="inline-flex min-h-11 items-center">Design decisions</a>
+            <a href={`${REPO_URL}/tree/main/docs`} class="inline-flex min-h-11 items-center">Developer documentation</a>
           </li>
         </ul>
       </div>

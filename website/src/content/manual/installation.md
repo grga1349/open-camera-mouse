@@ -8,7 +8,7 @@ Download the file for your system from the [download section](../../#download) o
 the [latest release](https://github.com/grga1349/open-camera-mouse/releases/latest) on
 GitHub. Check the [system requirements](../system-requirements/) first.
 
-Each release also lists a `SHA256SUMS` file. If you like, compare your download with it:
+Each release also has a `SHA256SUMS` file. To verify a download, compare it with that file:
 `shasum -a 256 <file>` on macOS, `sha256sum <file>` on Linux, and
 `Get-FileHash <file>` in PowerShell on Windows.
 
@@ -17,18 +17,11 @@ Each release also lists a `SHA256SUMS` file. If you like, compare your download 
 1. Open `open-camera-mouse-<version>-macos-arm64.dmg` and drag **Open Camera Mouse** to
    Applications.
 2. The app isn't notarized yet, so macOS blocks the first launch. Open it once, then go to
-   **System Settings → Privacy & Security** and click **Open Anyway**. In Terminal, this
-   does the same:
-
-   ```sh
-   xattr -dr com.apple.quarantine "/Applications/Open Camera Mouse.app"
-   ```
-
+   **System Settings → Privacy & Security** and click **Open Anyway**.
 3. Allow **Camera** when macOS asks.
 4. Grant **Accessibility**, so the app can move the pointer: **System Settings → Privacy &
-   Security → Accessibility**, then turn **Open Camera Mouse** on. The app shows a button
-   that opens the right page, and notices the change within a few seconds; you don't need
-   to restart it.
+   Security → Accessibility**, then turn **Open Camera Mouse** on. The app has a button
+   that opens this page and notices the change within a few seconds, without a restart.
 
 Updates keep both permissions. Intel Macs aren't supported.
 
