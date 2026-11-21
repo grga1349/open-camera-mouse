@@ -42,10 +42,10 @@ before the merge to `main`).
 
 ## Phase 3 — Homepage content
 
-Built: hero, showcase placeholder, how it works (3 steps, from README "Use"), engineering,
+Built: hero, showcase placeholder, why it exists, how it works (3 steps, from README "Use"), engineering,
 download cards, questions, open source. Open:
 
-- [ ] Why it exists: the classic Camera Mouse and its legacy. **Research first**: every
+- [x] Why it exists (`#why-it-exists`): the classic Camera Mouse and its legacy, three cited sources (wording awaits the user's final copy pass). **Research first**: every
       historical claim needs a citable source; distinguish the discontinued classic
       distribution from later research or implementations; no implied affiliation or
       endorsement (rules in `WEBSITE.md` "Origin story")

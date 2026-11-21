@@ -48,6 +48,23 @@ const engineering = [
 
 const DOCS_URL = `${REPO_URL}/blob/main/docs`;
 
+// Origin story sources (docs/WEBSITE.md "Origin story"): every historical sentence in
+// #why-it-exists is backed by one of these, checked 2026-11-21.
+const originSources = [
+  {
+    label: "M. Betke, J. Gips, P. Fleming, “The Camera Mouse: visual tracking of body features to provide computer access for people with severe disabilities”, IEEE Transactions on Neural Systems and Rehabilitation Engineering 10(1), 1–10, March 2002",
+    href: "https://doi.org/10.1109/TNSRE.2002.1021581",
+  },
+  {
+    label: "Boston College News, “BC ‘Camera Mouse’ Assistive Technology Tops 3 Million Downloads”, 25 August 2016",
+    href: "https://www.bc.edu/content/bc-web/bcnews/science-tech-and-health/technology/camera-mouse-boston-college.html",
+  },
+  {
+    label: "Boston College News, “In Memoriam: Boston College Computer Scientist James Gips”, 12 June 2018",
+    href: "https://www.bc.edu/content/bc-web/bcnews/campus-community/faculty/in-memoriam--james-gips.html",
+  },
+];
+
 const steps = [
   {
     title: "Pick a spot",
@@ -72,6 +89,38 @@ const steps = [
 
   <Section id="showcase" title="See it working" divider={false}>
     <ShowcasePlaceholder />
+  </Section>
+
+  <Section id="why-it-exists" title="Why it exists">
+    <div class="max-w-prose space-y-4">
+      <p>
+        Camera Mouse was created at Boston College by James Gips and Margrit Betke, growing out
+        of the college's EagleEyes project. A video camera follows a feature of the body, such as
+        the tip of the nose, and its movement moves the mouse pointer, so people who can't
+        reliably use their hands can still use a computer.
+      </p>
+      <p>
+        It became a free download in June 2007. By 2016 it had been downloaded more
+        than three million times, by people with cerebral palsy, ALS, spinal muscular atrophy,
+        brain injuries and other conditions. James Gips died in 2018.
+      </p>
+      <p>
+        Open Camera Mouse continues the idea as a new, independent program: written from scratch,
+        open source, and for macOS, Windows and Linux. It starts from how Camera Mouse 2018
+        behaves and improves on it. It is not affiliated with or endorsed by Boston College or
+        the original authors.
+      </p>
+    </div>
+    <h3 class="mt-10 text-sm tracking-wide uppercase">Sources</h3>
+    <ol class="mt-2 max-w-prose list-decimal space-y-2 pl-6 text-sm text-muted">
+      {
+        originSources.map((s) => (
+          <li>
+            <a href={s.href} class="text-text">{s.label}</a>
+          </li>
+        ))
+      }
+    </ol>
   </Section>
 
   <Section id="how-it-works" title="How it works">

@@ -15,7 +15,7 @@ code; the manual describes them and must not contradict them. No accounts, forms
 analytics or tracking, and no third-party requests from the visitor's browser: the latest
 release is read at build time (ADR-0023 amendment 2, "Downloads" below).
 
-Status: first homepage pass (yellow hero, showcase placeholder, how it works, engineering,
+Status: first homepage pass (yellow hero, showcase placeholder, why it exists, how it works, engineering,
 OS-aware download cards, questions, open source) and the manual's thirteen pages (getting started, requirements,
 installation, everyday use, settings, accessibility options, troubleshooting, FAQ); see the
 roadmap.
@@ -28,7 +28,7 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 |---|---|---|---|
 | 1 | Hero | What it is, that it uses an ordinary webcam, free and open source; primary download, link to the showcase | built (draft copy) |
 | 2 | Showcase (`#showcase`) | A real recording of the app in use | placeholder |
-| 3 | Why it exists | The classic Camera Mouse's legacy and why a maintained open-source successor is useful | Phase 3 |
+| 3 | Why it exists (`#why-it-exists`) | Three short paragraphs: the classic Camera Mouse (Boston College, Gips and Betke, EagleEyes), its free release in 2007 and reach, then Open Camera Mouse as an independent successor with a non-affiliation line; a numbered "Sources" list (`originSources` in `index.astro`) | built |
 | 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
 | 6 | Engineering (`#engineering`) | Four notes: independent Rust implementation, tracking and stability, privacy (on-device), testing (incl. that Windows/Linux haven't run on a device); link to `ARCHITECTURE.md`. Copy only from README, PRODUCT, ARCHITECTURE, TESTING | built (before Features, which waits for screenshots) |
@@ -45,6 +45,14 @@ the discontinued classic distribution from any later research or implementations
 plainly that the project is not affiliated with or endorsed by the original authors; be
 respectful, no marketing superlatives. Never use decompiled or proprietary material
 (`AGENTS.md`).
+
+Built (2026-11-21) from three sources, listed under the section: Betke, Gips & Fleming,
+IEEE TNSRE 10(1), 2002 (DOI 10.1109/TNSRE.2002.1021581); Boston College News, 25 August
+2016 (free since June 2007, over three million downloads, users); Boston College News, In
+Memoriam James Gips, 12 June 2018. The section claims nothing about the classic program's
+current availability, licence or platforms: `cameramouse.org` refused connections on
+2026-11-21 and only third-party download sites list Camera Mouse 2018, so neither is cited.
+A new sentence needs a source in that list.
 
 ## Manual
 

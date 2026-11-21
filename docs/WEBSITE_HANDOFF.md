@@ -4,25 +4,27 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, tenth): engineering and open source sections
+## Latest session (2026-11-21, eleventh): origin story
 
-- **Engineering** (`#engineering`, between How it works and Download): four notes in a
-  2-column grid (`border-t-4 border-text`, like the steps): independent Rust implementation
-  (no OpenCV, starts from Camera Mouse 2018, new behaviour opt-in), tracking and stability
-  (pyramidal LK, appearance check so a hand in front ends tracking, smoothing + steady zone),
-  private by design (nothing leaves the computer, no accounts/cloud/telemetry, settings a
-  text file), tested without a camera (synthetic seeded video with ground truth, CI on three
-  OSes, Windows/Linux not yet on a device). Link "Architecture on GitHub →". Copy only from
-  README/PRODUCT/ARCHITECTURE/TESTING/ADR-0018; data array at the top of `index.astro`.
-  Wording and content get the user's review in one final pass, not per session.
-- **Open source** expanded: licence line, then "Get involved" (source, issues, README
-  `#develop`, `AGENTS.md`) and "Documentation" (manual, PRODUCT, TESTING, ADR folder) lists.
-  Docs links point at `main` (`blob/main/docs/…`, `tree/main/…` for the ADR folder). There
-  is no CONTRIBUTING file; "pull requests welcome" was not written because no doc says it.
-- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); headless screenshots of
-  the home page at 1280 (Carbon and Paper) and the engineering section at 320.
-- Preview servers: start your own on another port, and stop it by the `node … astro preview`
-  pid from `lsof -iTCP:<port>` (the `bunx` wrapper pid exits early). Never touch `:4321`.
+- **Why it exists** (`#why-it-exists`, between the showcase and How it works): three
+  paragraphs (classic Camera Mouse at Boston College by Gips and Betke from EagleEyes; free
+  download since June 2007, 3M+ downloads by 2016, who used it, Gips died 2018; Open Camera
+  Mouse as an independent from-scratch successor, not affiliated with or endorsed by BC or
+  the authors), then a numbered "Sources" list (`originSources` in `index.astro`): the 2002
+  IEEE TNSRE paper (DOI), BC News 2016, BC News In Memoriam 2018. Details and what was
+  deliberately left out (current availability, licence, platforms of the classic program:
+  `cameramouse.org` refused connections, only third-party mirrors list Camera Mouse 2018) are
+  in `WEBSITE.md` "Origin story". Wording goes into the user's final copy pass.
+- Verified: check 0/0/0, 34 tests, build + path check (672 URLs); headless screenshots at
+  1280 Carbon and 320 Paper.
+- Preview: Astro 7's `astro preview` reuses an already-running preview server (one was on
+  `:4330`) and exits instead of starting a second; use that one (`astro preview status`).
+
+### Tenth session (2026-11-21): engineering and open source sections
+
+- Engineering (`#engineering`, four notes) and the expanded Open source section (licence,
+  "Get involved" and "Documentation" link lists; docs links point at `main`). No
+  CONTRIBUTING file, so no "pull requests welcome".
 
 ### Ninth session (2026-11-21): footer, squirrel redraw
 
@@ -57,8 +59,7 @@ night/day switch, hero copy. Third: OS-aware downloads with release data at buil
 ## Next
 
 Phase 5 slice 4 and the Features section need the user's screenshots; without them: the
-origin story (research with sources first), or the squirrel ear/cheek tweak if the user
-wants it. README shortening waits for the deployment.
+squirrel ear/cheek tweak if the user wants it, or hero geometry/section accents (Phase 2). README shortening waits for the deployment.
 Release-triggered rebuild still only verifiable after merge.
 
 ## Waiting on the user
@@ -68,6 +69,8 @@ demo recording and screenshots.
 
 ## Not yet checked by hand
 
+Why it exists: keyboard walk-through of the source links, VoiceOver, 200% zoom, 768px;
+the three source URLs from a normal browser (checked by fetch only).
 Engineering and Open source sections: keyboard walk-through, VoiceOver (the two `h3` link
 lists), 200% zoom, 768px.
 Squirrel redraw with a real pointer (tilt/pupils/tail with the new shapes).
