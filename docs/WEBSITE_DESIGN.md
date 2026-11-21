@@ -158,7 +158,8 @@ Hero contents (copy from the user, 2026-11-20): the h1 "Computing without barrie
 heavy uppercase (CSS `uppercase`, sentence case in the source so screen readers don't spell
 it out), three lines below `lg`, two from `lg` up ("Computing without" / "barriers", a
 smaller `text-6xl`, to keep the hero short; user's call, 2026-11-21); "Control your computer using head movements and an ordinary webcam. Free and open
-source."; the primary action (black button, yellow text) and a secondary outlined one; then
+source."; the primary action (black button, yellow text) and a secondary outlined one (stacked below `sm`, so the longer
+"Download for …" label set by script can't wrap the second button and shift the page); then
 one short download line, `v0.4.0 · Apple Silicon · Other platforms` (see "Downloads"). No
 eyebrow line above the headline. Inside the yellow, text and the focus outline are black.
 

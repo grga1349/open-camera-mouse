@@ -36,7 +36,9 @@ const links = Object.fromEntries(direct.map((d) => [d.platform.id, { url: d.url,
       <p class="animate-rise-in mt-6 max-w-[36rem] text-lg [animation-delay:160ms] sm:text-xl">
         Control your computer using head movements and an ordinary webcam. Free and open source.
       </p>
-      <ul class="animate-rise-in mt-8 flex flex-wrap gap-4 [animation-delay:240ms]">
+      <ul
+        class="animate-rise-in mt-8 flex flex-col items-start gap-4 [animation-delay:240ms] sm:flex-row sm:flex-wrap"
+      >
         <li>
           <a
             id="hero-download"

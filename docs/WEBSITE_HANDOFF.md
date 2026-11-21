@@ -12,6 +12,16 @@ Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
   button returns. Without JS: native controls as before.
 - Verified: check 0/0/0, 50 tests, build + path check; headless screenshots in both themes.
   Not checked by hand: clicking it in a real browser, keyboard, VoiceOver, 320px.
+  Committed and pushed (`82b2a45`).
+- Audit re-run (tooling in the scratchpad, as before): Lighthouse 100 ×4 on every page,
+  mobile and desktop; axe 0 violations, 0 incomplete, all pages × themes × widths. Found a
+  small layout shift on the home page on mobile (CLS 0.008, from before this session): the hero
+  button's "Download for macOS" label wrapped "See it working" to a new row. Fixed (user
+  chose this option): the two hero buttons stack below `sm` (`flex-col items-start`,
+  `sm:flex-row sm:flex-wrap`). Lighthouse mobile CLS is now 0. A puppeteer check (JS off vs
+  on, mac/win/linux/iPhone UAs, 320–1280px) still shows a 16–40px shift where the line under
+  the buttons gets longer after detection and wraps (macOS at 320–360px, iPhone at all
+  widths). Not fixed; would need the variants to reserve the same height.
 
 ## Previous session (2026-11-21, thirteenth): decisions, hero, demo video, copy pass
 
@@ -85,8 +95,7 @@ build time.
 
 ## Next
 
-1. Re-run Lighthouse and axe now that the video is in. The tooling isn't in the repo:
-   reinstall it in the scratchpad.
+1. Optional: the remaining small shift of the line under the hero buttons (latest session).
 2. Merge prep (Phase 6):
    - delete this file and the references to it (`WEBSITE_ROADMAP.md`, `AGENTS.md`),
    - mark ADR-0023 Accepted,

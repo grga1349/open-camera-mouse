@@ -152,9 +152,12 @@ of the built site.
 Audits (not in CI, no dependency committed): install Lighthouse in a scratch folder outside
 the repo (it bundles `axe-core` and `puppeteer-core`), then run Lighthouse against `bun run
 preview` and the full axe rule set (`wcag2a`…`wcag22aa`, `best-practice`) on every page in
-both themes at 320/768/1280px. Last run 2026-11-21: Lighthouse 100 in all four categories
-(mobile and desktop, 11–17 KiB per page, CLS 0); axe 0 violations, the only "incomplete"
-items are the `aria-hidden` `→` arrows; no horizontal scroll at any width.
+both themes at 320/768/1280px. Last run 2026-11-21 (after the demo video and its play button): Lighthouse 100 in all four
+categories on every page (mobile and desktop; manual pages 12–14 KiB, home 119 KiB with the
+video poster); axe 0 violations and no "incomplete" items on all 16 pages, both themes,
+320/768/1280px; no horizontal scroll at any width. CLS 0 everywhere,
+after the hero's two buttons were stacked below `sm` (a longer "Download for macOS" label used
+to wrap "See it working" onto a new row on phones: CLS 0.008).
 
 ## Conventions
 
