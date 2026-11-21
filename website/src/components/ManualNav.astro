@@ -13,7 +13,7 @@ const { pages, current } = Astro.props;
 const href = (id: string) => url(`manual/${id}/`);
 const linkClass = (id: string) => [
   "flex min-h-11 items-center border-l-4 pl-3 no-underline",
-  id === current ? "border-text font-semibold" : "border-transparent hover:underline",
+  id === current ? "border-accent font-semibold" : "border-transparent hover:underline",
 ];
 ---
 

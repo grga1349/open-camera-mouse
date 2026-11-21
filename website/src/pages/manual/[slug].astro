@@ -23,7 +23,7 @@ const { prev, next } = neighbours(pages, page.id);
   <div class="md:grid md:grid-cols-[13rem_minmax(0,1fr)] md:gap-12">
     <ManualNav pages={pages} current={page.id} />
     <article class="min-w-0">
-      <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{page.data.title}</h1>
+      <h1 class="heading-accent text-3xl font-semibold tracking-tight sm:text-4xl">{page.data.title}</h1>
       <p class="mt-4 max-w-prose text-lg text-muted">{page.data.description}</p>
 
       {

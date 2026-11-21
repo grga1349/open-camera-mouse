@@ -24,8 +24,10 @@ Component/build mechanics → `astro-development`. Contrast, focus, motion → `
   `border-line-strong`, `text-text`, `text-muted`). Two accents: `marker` (`#00ff00`) only
   for the target-ring motif; `yellow` as the fill of the one primary call to action per
   view (with `text-on-yellow`), and the fixed `brand` yellow as the hero surface
-  (`.on-brand`, black content, black focus outline). No other hues, gradients or tinted
-  greys.
+  (`.on-brand`, black content, black focus outline); `accent` (yellow on Carbon, text colour
+  on Paper) for headings, the rules above notes, list markers and small labels, and `mark`
+  (Paper's yellow highlighter under page and section headings). Links are never yellow.
+  No other hues, gradients or tinted greys.
 - **Shape and motion:** calm, shallow angles (the hero's V, `.angular-bottom`, point at `--apex` 30% from the left),
   decorative only; no stacked slivers or wedges. Motion per `WEBSITE_DESIGN.md` "Motion": one-time CSS entrances and small hover
   lifts, nothing looping, nothing that moves a control under the pointer; the one exception is the hero squirrel that watches the pointer (`HeroSquirrel.astro`). Colour photos/screenshots of the app are fine (the app's preview is in

@@ -105,7 +105,7 @@ const steps = [
         affiliated with or endorsed by Boston College or the original authors.
       </p>
     </div>
-    <h3 class="mt-10 text-sm tracking-wide uppercase">Sources</h3>
+    <h3 class="mt-10 text-sm tracking-wide text-accent uppercase">Sources</h3>
     <ol class="mt-2 max-w-prose list-decimal space-y-2 pl-6 text-sm text-muted">
       {
         originSources.map((s) => (
@@ -121,7 +121,7 @@ const steps = [
     <ol class="grid gap-8 md:grid-cols-3">
       {
         steps.map((step, i) => (
-          <li class="border-t-4 border-text pt-4">
+          <li class="border-t-4 border-accent pt-4">
             <p class="text-sm text-muted" aria-hidden="true">
               {String(i + 1).padStart(2, "0")}
             </p>
@@ -145,7 +145,7 @@ const steps = [
     <ul class="grid gap-x-12 gap-y-10 md:grid-cols-2">
       {
         engineering.map((item) => (
-          <li class="border-t-4 border-text pt-4">
+          <li class="border-t-4 border-accent pt-4">
             <h3 class="text-xl font-semibold">{item.title}</h3>
             <p class="mt-2">{item.body}</p>
           </li>
@@ -166,7 +166,7 @@ const steps = [
       ? `Version ${release.version} for macOS, Windows and Linux.`
       : "The latest release for macOS, Windows and Linux."}
   >
-    <p data-detect="unsupported" hidden class="mb-8 max-w-prose border-l-4 border-text pl-4">
+    <p data-detect="unsupported" hidden class="mb-8 max-w-prose border-l-4 border-accent pl-4">
       Open Camera Mouse runs on macOS, Windows and Linux computers, not on this device. Download
       it on the computer you want to use it with.
     </p>
@@ -176,7 +176,7 @@ const steps = [
           const files = release?.downloads[p.id] ?? [];
           return (
             <li class="flex flex-col rounded-frame border border-line bg-surface p-6">
-              <p data-detect={p.id} hidden class="mb-2 text-sm tracking-wide uppercase">
+              <p data-detect={p.id} hidden class="mb-2 text-sm tracking-wide text-accent uppercase">
                 Your system
               </p>
               <h3 class="text-xl font-semibold">{p.name}</h3>
@@ -259,7 +259,7 @@ const steps = [
     </p>
     <div class="mt-8 grid gap-x-12 gap-y-8 md:grid-cols-2">
       <div>
-        <h3 class="text-sm tracking-wide uppercase">Get involved</h3>
+        <h3 class="text-sm tracking-wide text-accent uppercase">Get involved</h3>
         <ul class="mt-2">
           <li><a href={REPO_URL} class="inline-flex min-h-11 items-center">Source code</a></li>
           <li>
@@ -271,7 +271,7 @@ const steps = [
         </ul>
       </div>
       <div>
-        <h3 class="text-sm tracking-wide uppercase">Documentation</h3>
+        <h3 class="text-sm tracking-wide text-accent uppercase">Documentation</h3>
         <ul class="mt-2">
           <li><a href={url("manual/")} class="inline-flex min-h-11 items-center">User manual</a></li>
           <li>

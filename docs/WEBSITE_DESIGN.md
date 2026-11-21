@@ -23,7 +23,14 @@ visual direction needs the user's OK, as for the app.
 - **Accents:** the app's two. Neon green `#00ff00` only for the thin target-ring motif.
   Yellow as the fill of the primary call to action (`#111111` text) and, on the website
   only, as the **brand surface** of the hero band (`#ffd60a` with black, both themes;
-  approved 2026-11-20). Everything else is the grey scale below.
+  approved 2026-11-20). On the website, yellow is also the **accent** (user's call,
+  2026-11-21, to make the monochrome text easier on the eye): on Carbon it colours page and
+  section headings (including the manual's `h2`), the thick rules above the home page's
+  steps and engineering notes, the manual sidebar's current-page bar, list markers and the
+  small uppercase labels (`accent` token). Paper can't carry yellow text (1.4:1), so there
+  `accent` is the text colour and headings get a yellow highlighter stroke underneath
+  (`mark` token; `.heading-accent` and `.manual-prose h2` in `global.css`). Links keep
+  text-coloured underlines in both themes. Everything else is the grey scale below.
 
 ## Design tokens
 
@@ -37,7 +44,9 @@ picks one with the header switch (see "Theme switch").
 | `bg-bg` | bg | `#000000` | `#ececec` | page background |
 | `bg-surface` / `bg-surface-2` | surface / surface-2 | `#0a0a0a` / `#151515` | `#f8f8f8` / `#ffffff` | panels, cards, code |
 | `border-line` / `border-line-strong` | line / line-strong | `#262626` / `#3f3f3f` | `#d6d6d6` / `#a8a8a8` | separators / decorative outlines |
-| `text-text` / `text-muted` | text / muted | `#fafafa` / `#8f8f8f` | `#111111` / `#5a5a5a` | body / help text |
+| `text-text` / `text-muted` | text / muted | `#e6e6e6` / `#8f8f8f` | `#111111` / `#5a5a5a` | body / help text (Carbon text is dimmer than the app's `#fafafa`: less glare for long monospace text; user's call, 2026-11-21) |
+| `text-accent` / `border-accent` | accent | `#ffd60a` | `#111111` | headings, rules above notes, list markers, small labels, current manual page |
+| `mark` | mark | `transparent` | `#f5c518` | highlighter stroke under page and section headings (Paper only) |
 | `*-marker` | marker | `#00ff00` | `#00ff00` | target-ring motif only |
 | `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action |
 | `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | header, hero band and footer; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
@@ -52,7 +61,8 @@ uses Tailwind's 4px scale.
 
 | Pair | Carbon | Paper | Meets |
 |---|---|---|---|
-| text on bg | 20.1:1 | 16.0:1 | AAA text |
+| text on bg | 16.8:1 | 16.0:1 | AAA text |
+| accent on bg | 14.9:1 | 16.0:1 | AAA text |
 | muted on bg | 6.5:1 | 5.8:1 | AA text |
 | muted on surface-2 | 5.6:1 | 6.9:1 | AA text |
 | on-yellow on yellow | 13.4:1 | 11.6:1 | AA text |
@@ -145,7 +155,8 @@ other way; it eases back to looking ahead when the pointer leaves the window. Po
 below `lg`. Being a drawing, it uses curves; the "Angular language" applies to layout shapes.
 
 Header contents: logo and wordmark (home link), then a "Manual" text link (uppercase,
-underlined while on a manual page, `aria-current="page"` on `/manual/`), the GitHub mark
+`aria-current="page"` on `/manual/`; no underline or bar on manual pages, since it is the
+header's only link: user's call, 2026-11-21), the GitHub mark
 (inline Octicons SVG, link named "Source code on GitHub") and the theme switch; no
 "Download" link (the hero has it). Below `sm` it stays one row: the wordmark shows "OCM" (link name "OCM Open
 Camera Mouse") and "Manual" becomes an outline book icon (inline SVG, `title` and

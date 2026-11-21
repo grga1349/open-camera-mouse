@@ -26,6 +26,14 @@ Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
   before, left alone). Puppeteer JS-off-vs-on check: no shift at any width/UA. axe lists
   `video-caption` as "needs review" (no captions: user's call).
 
+- **Yellow accent** (user's request: monochrome text was hard to read, especially on
+  Carbon): `accent` token (yellow on Carbon, text colour on Paper) on page/section headings,
+  manual `h2`, the rules above steps/engineering notes, the manual sidebar's current bar,
+  list markers and small uppercase labels. Paper: yellow highlighter stroke under headings
+  (`mark` token, user: "looks cool"). Yellow link underlines were tried and dropped.
+  Carbon body text dimmed `#fafafa` → `#e6e6e6` (website only; the app keeps `#fafafa`).
+- Header: "Manual" is no longer underlined (and the icon has no bar) on manual pages.
+
 ## Previous session (2026-11-21, thirteenth): decisions, hero, demo video, copy pass
 
 All committed and pushed (`ec2dcb0`, `1345554`, `c129875`, `6818d7e`).

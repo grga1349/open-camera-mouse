@@ -10,7 +10,6 @@ import { url, REPO_URL } from "../lib/url";
 import Logo from "../assets/logo.svg";
 
 const manualPath = url("manual/");
-const inManual = Astro.url.pathname.startsWith(manualPath);
 const isManualHome = Astro.url.pathname === manualPath;
 ---
 
@@ -39,16 +38,11 @@ const isManualHome = Astro.url.pathname === manualPath;
               href={url("manual/")}
               aria-current={isManualHome ? "page" : undefined}
               title="Manual"
-              class:list={[
-                "inline-flex min-h-11 min-w-11 items-center justify-center font-semibold tracking-wide uppercase sm:px-2",
-                inManual ? "underline decoration-2" : "no-underline hover:underline",
-              ]}
+              class="inline-flex min-h-11 min-w-11 items-center justify-center font-semibold tracking-wide uppercase no-underline hover:underline sm:px-2"
             >
-              <!-- Below sm: a book icon (a bar under it on manual pages); the text stays for screen readers. -->
-              <span
-                aria-hidden="true"
-                class:list={["inline-flex border-b-2 pb-0.5 sm:hidden", inManual ? "border-on-brand" : "border-transparent"]}
-              >
+              <!-- Below sm: a book icon; the text stays for screen readers. No "you are here" mark
+                   on manual pages: it's the header's only link (user's call). -->
+              <span aria-hidden="true" class="inline-flex sm:hidden">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
                   <path d="M12 6.5C10 5 7 4.5 3 4.5v14c4 0 7 .5 9 2 2-1.5 5-2 9-2v-14c-4 0-7 .5-9 2z"></path>
                   <path d="M12 6.5v14"></path>

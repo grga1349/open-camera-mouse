@@ -38,7 +38,8 @@ Desktop app accessibility → `egui-development` and `docs/PRODUCT.md`.
 - **Contrast:** text 4.5:1 (3:1 for ≥ 24px or ≥ 18.66px bold); focus indicators, control
   borders and meaningful icons 3:1 against neighbours (1.4.11). The token pairs in
   `docs/WEBSITE_DESIGN.md` are precomputed; recompute any new pair. `muted` is for help
-  text only. `yellow` is a fill under `on-yellow` text, never text on `bg`. `marker` green
+  text only. `yellow` is a fill under `on-yellow` text, never text on `bg`; yellow text only through
+  `accent`, which is the text colour on Paper. `marker` green
   is decorative, never the only carrier of information.
 - **Not colour alone:** links in running text are underlined; status uses text or an icon
   plus text, as in the app.
