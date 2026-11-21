@@ -88,6 +88,7 @@ which waits for the deployment.
 ## Phase 6 — Showcase and launch
 
 - [x] Real demonstration recording (23 s screen recording on macOS by the user, trimmed where tracking stops; no simulated tracking), poster, `controls`, no autoplay, no captions (no sound; dropped at the user's request, the figcaption describes the video) — not a diagnostic recording; only the user is shown (2026-11-21). The figcaption wording goes into the final copy pass
+- [x] Big centred play button over the video (progressive enhancement: hidden native controls until the first play, back after the end; focus moves to the video) (2026-11-21)
 - [ ] ~~Application screenshots~~ dropped (user's call, 2026-11-21)
 - [~] Mobile pass; accessibility audit: automated part done 2026-11-21 (Lighthouse, axe on all pages × both themes × 320/768/1280, no overflow; one empty table header fixed, now tested). By hand still open: keyboard, VoiceOver/NVDA, 200% zoom, real reduced-motion setting, a real phone
 - [x] Performance check: Lighthouse 100 mobile and desktop, 11–17 KiB per page, CLS 0 (2026-11-21; re-run after the showcase video lands)

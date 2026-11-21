@@ -41,6 +41,7 @@ picks one with the header switch (see "Theme switch").
 | `*-marker` | marker | `#00ff00` | `#00ff00` | target-ring motif only |
 | `bg-yellow` + `text-on-yellow` | yellow / on-yellow | `#ffd60a` / `#111111` | `#f5c518` / `#111111` | primary call to action |
 | `.on-brand` (`brand` / `on-brand`) | brand / on-brand | `#ffd60a` / `#000000` | same | header, hero band and footer; also inverted (`bg-on-brand text-brand`) for the hero's primary button |
+| `bg-scrim/50` + `text-on-scrim` | scrim / on-scrim | `#000000` / `#ffffff` | same | the dark overlay and white play ring over the demo video before it plays (white on scrim/50 over a white pixel: 3.9:1) |
 | `rounded-frame` / `rounded-widget` | radius | 8px / 6px | same | panels, images / buttons, inputs |
 | `font-mono` (page default) / `font-sans` | font | system monospace stack / system UI stack | same | no web fonts; mono is the typewriter face for all text |
 

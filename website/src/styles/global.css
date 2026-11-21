@@ -69,6 +69,10 @@
   /* Brand surface for the hero band: the same in both themes (WEBSITE_DESIGN.md "Hero"). */
   --color-brand: #ffd60a;
   --color-on-brand: #000000;
+  /* Overlay on the demo video (Showcase.astro): the same in both themes, since it sits on
+     the video, not the page. White on scrim/50 over the video's brightest pixel is 3.9:1. */
+  --color-scrim: #000000;
+  --color-on-scrim: #ffffff;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Ubuntu, sans-serif;
   /* Typewriter face for all text (the html default); system monospace, no web font. */

@@ -27,7 +27,7 @@ Planned sections, in order. Built ones are marked; the rest wait for their roadm
 | # | Section | Purpose | Status |
 |---|---|---|---|
 | 1 | Hero | What it is, that it uses an ordinary webcam, free and open source; primary download, link to the showcase | built (draft copy) |
-| 2 | Showcase (`#showcase`) | A real recording of the app in use: `public/showcase/` (`demo.mp4` 23 s, H.264, no audio, ~1.6 MB; `poster.jpg`), no autoplay, no captions (no sound; the user dropped them), the figcaption (screen readers only, `sr-only`) is the text alternative | built |
+| 2 | Showcase (`#showcase`) | A real recording of the app in use: `public/showcase/` (`demo.mp4` 23 s, H.264, no audio, ~1.6 MB; `poster.jpg`), no autoplay; with JavaScript a dark scrim with a white play ring covers the poster until the first play and after the end (native controls without JS), no captions (no sound; the user dropped them), the figcaption (screen readers only, `sr-only`) is the text alternative | built |
 | 3 | Why it exists (`#why-it-exists`) | Three short paragraphs: the classic Camera Mouse (Boston College, Gips and Betke), its free release in 2007 and reach, then Open Camera Mouse carrying the idea forward with a non-affiliation line; a short numbered "Sources" list (`originSources` in `index.astro`) | built |
 | 4 | How it works (`#how-it-works`) | Three steps: pick a spot, move your head, click by holding still | built |
 | 5 | Features | Real features, each with a real screenshot | Phase 3 |
@@ -107,7 +107,7 @@ website/
     components/Hero.astro      yellow angular hero
     components/HeroSquirrel.astro   decorative squirrel that watches the pointer beside the hero text (lg+)
     components/Section.astro   homepage section: column, anchor id, h2
-    components/Showcase.astro    the demo video (`<video controls preload="metadata">`)
+    components/Showcase.astro    the demo video (`<video controls preload="metadata">`) + play-button overlay
     components/DownloadEnhancer.astro      client script: OS detection → hero button, "Your system"
     components/ManualNav.astro   manual contents: <details> on small screens, sidebar from md
     pages/index.astro, 404.astro   routes (file = URL)

@@ -4,7 +4,16 @@ Session-to-session handoff for the website story on `feature/website`. Rewrite i
 of every website session. **Delete this file before merging to `main`** (roadmap Phase 6).
 Plan and status: [`WEBSITE_ROADMAP.md`](WEBSITE_ROADMAP.md).
 
-## Latest session (2026-11-21, thirteenth): decisions, hero, demo video, copy pass
+## Latest session (2026-11-21, fourteenth): video play button
+
+- `Showcase.astro`: a dark scrim over the video with a white play ring (circle outline + triangle) in the centre (the first yellow version was rejected by the user; tokens `scrim`/`on-scrim` added). The `<button>` covers
+  the whole video (large dwell target) and ships `hidden`; its script hides the native
+  controls and shows it. Click: controls back, focus to the video, `play()`. On `ended` the
+  button returns. Without JS: native controls as before.
+- Verified: check 0/0/0, 50 tests, build + path check; headless screenshots in both themes.
+  Not checked by hand: clicking it in a real browser, keyboard, VoiceOver, 320px.
+
+## Previous session (2026-11-21, thirteenth): decisions, hero, demo video, copy pass
 
 All committed and pushed (`ec2dcb0`, `1345554`, `c129875`, `6818d7e`).
 
