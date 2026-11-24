@@ -925,6 +925,66 @@ mod tests {
         assert!(!near_edge_moving_out(p(50.0, 40.0), p(55.0, 40.0), w, h, m));
     }
 
+    /// v0.4.1 slice 2, the camera-side boundaries: with the product tracker (recovery off), a
+    /// point carried out through any frame edge at 1 px/frame is tracked to within 2 px of
+    /// that edge, then `Held(NearEdgeMovingOut)`. It is never `Lost`, even once the LK window
+    /// (`half_window` past the edge) is out of the frame too. The screen edge comes long
+    /// before this at the default gain (app-core `every_screen_edge_and_corner_is_reached…`).
+    #[test]
+    fn a_point_leaving_the_frame_is_tracked_to_the_edge_then_held_never_lost() {
+        let (w, h) = (640u32, 480u32);
+        let (wf, hf) = (w as f32, h as f32);
+        for (name, dir) in [
+            ("left", Point2::new(-1.0, 0.0)),
+            ("right", Point2::new(1.0, 0.0)),
+            ("top", Point2::new(0.0, -1.0)),
+            ("bottom", Point2::new(0.0, 1.0)),
+        ] {
+            let mut t = LkTracker::new(LkParams {
+                redetect: None,
+                ..LkParams::recommended()
+            });
+            let start = Point2::new(320.0, 240.0);
+            t.select(&frame(w, h, Point2::default()), start).unwrap();
+            let edge_gap = |p: Point2| p.x.min(wf - 1.0 - p.x).min(p.y).min(hf - 1.0 - p.y);
+            let mut first_hold = None;
+            // 360 px: past every edge by more than the window's half width.
+            for s in 1..=360 {
+                let shift = Point2::new(dir.x * s as f32, dir.y * s as f32);
+                let out = t.step(&frame(w, h, shift)).unwrap();
+                let truth = Point2::new(start.x + shift.x, start.y + shift.y);
+                assert!(
+                    !matches!(out.status, TrackStatus::Lost(_)),
+                    "{name}: lost at shift {s}: {out:?}"
+                );
+                if first_hold.is_none() {
+                    if out.status == TrackStatus::Tracking {
+                        // Sub-pixel while the coarse levels' windows are inside the frame;
+                        // once they overhang the edge (clamped samples, from ~20 px) the
+                        // estimate lags the truth, by up to ~2.3 px just past the edge.
+                        let tol = if edge_gap(truth) >= 20.0 { 0.5 } else { 2.5 };
+                        assert!(
+                            (out.position.x - truth.x).hypot(out.position.y - truth.y) < tol,
+                            "{name}: off target at shift {s}: {out:?}"
+                        );
+                    } else {
+                        assert_eq!(
+                            out.status,
+                            TrackStatus::Held(HoldReason::NearEdgeMovingOut),
+                            "{name} shift {s}"
+                        );
+                        first_hold = Some(out.position);
+                    }
+                }
+            }
+            let held = first_hold.unwrap_or_else(|| panic!("{name}: never held"));
+            assert!(
+                edge_gap(held) < 2.0,
+                "{name}: held {held:?} short of the edge"
+            );
+        }
+    }
+
     #[test]
     fn forward_backward_off_by_default_and_passes_clean_translation() {
         assert_eq!(LkParams::default().fb_max_error, None);

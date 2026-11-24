@@ -9,6 +9,9 @@ How the Rust rewrite got here (v0.4.0, 2026-11-20): ADRs 0001–0022 and git his
 1. **Windows and Linux on a device:** pointer (`SendInput`, UIPI P8, mixed DPI P9), primary
    monitor, camera (P3), hotkeys, installer / AppImage; Manual QA in `docs/TESTING.md`.
    Windows is being tested by the user for v0.4.1; Linux has had no device run yet.
+   Still to organise after v0.4.1: a structured `OCM_PERF` session on Windows (loss
+   reasons, re-detection, edges at 1920×1080, `docs/TESTING.md` Diagnostics), like the
+   macOS runs that drove the v0.4.1 tracking fix.
 2. **External webcams** (P1): at least one USB webcam per OS; panics must stay caught.
 3. **Reduced motion:** the Searching animation ignores the OS setting (Manual QA row 21).
 4. **Re-measure on recordings:** re-detection arming, the R-P4 jump bound (0.05 × shorter

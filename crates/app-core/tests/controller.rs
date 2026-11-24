@@ -1006,6 +1006,74 @@ fn a_slow_move_onto_an_edge_does_not_jump() {
     );
 }
 
+/// v0.4.1 slice 2, the screen-side boundary at 1920×1080 with every setting at its default
+/// (gain 20, smoothing, 1€, steady zone, no limits): a head move a few camera px past each
+/// edge and each corner puts the cursor exactly on that edge's last pixel (corner: both),
+/// with the tracker `Tracking` on every frame. The screen edge sits ≈ 16 camera px (x) and
+/// ≈ 12 (y) from the selected spot, far inside the frame, where the camera-side boundaries
+/// are (tracking-core `a_point_leaving_the_frame_is_tracked_to_the_edge_then_held_never_lost`):
+/// at the default gain an edge or corner can't be out of reach for camera-space reasons
+/// unless the spot was selected within ~20 px of the frame edge.
+#[test]
+fn every_screen_edge_and_corner_is_reached_while_the_camera_point_stays_inside() {
+    let sx = gain() * DESK.width / W as f32;
+    let sy = gain() * DESK.height / H as f32;
+    // Head offset (camera px) that puts the cursor on the right/bottom edge.
+    let ex = (DESK.width - 1.0 - CENTER.x) / sx;
+    let ey = (DESK.height - 1.0 - CENTER.y) / sy;
+    assert!(ex < 20.0 && ey < 20.0, "{ex} {ey}");
+    let push = 3.0; // camera px past the edge
+    let (right, bottom) = (DESK.width - 1.0, DESK.height - 1.0);
+    for (ux, uy) in [
+        (1.0, 0.0),
+        (-1.0, 0.0),
+        (0.0, 1.0),
+        (0.0, -1.0),
+        (1.0, 1.0),
+        (-1.0, 1.0),
+        (1.0, -1.0),
+        (-1.0, -1.0),
+    ] {
+        let mut r = Rig::tracking();
+        let to = Point2::new(ux * (ex + push), uy * (ey + push));
+        // 1 camera px per frame (≈ 60 screen px per frame, 30 fps), then held 1.5 s.
+        let n = to.x.abs().max(to.y.abs()).ceil() as usize;
+        let mut path = Vec::new();
+        for i in 1..=n + 45 {
+            let k = (i as f32 / n as f32).min(1.0);
+            let s = r.frame(to.x * k, to.y * k, SCENE);
+            path.extend(moves(&s));
+            let t = r.c.track().unwrap();
+            assert_eq!(t.status, TrackStatus::Tracking, "{to:?} frame {i}");
+            let cam = t.position;
+            let gap = cam
+                .x
+                .min(W as f32 - 1.0 - cam.x)
+                .min(cam.y)
+                .min(H as f32 - 1.0 - cam.y);
+            assert!(gap > 200.0, "{to:?}: camera point {cam:?}");
+        }
+        let last = *path.last().unwrap();
+        let want_x = [0.0, CENTER.x, right][(ux + 1.0) as usize];
+        let want_y = [0.0, CENTER.y, bottom][(uy + 1.0) as usize];
+        if ux == 0.0 {
+            assert!((last.x - want_x).abs() < 2.0, "{to:?}: {last:?}");
+        } else {
+            assert_eq!(last.x, want_x, "{to:?}: {last:?}");
+        }
+        if uy == 0.0 {
+            assert!((last.y - want_y).abs() < 2.0, "{to:?}: {last:?}");
+        } else {
+            assert_eq!(last.y, want_y, "{to:?}: {last:?}");
+        }
+        assert!(
+            path.iter()
+                .all(|p| (0.0..=right).contains(&p.x) && (0.0..=bottom).contains(&p.y)),
+            "{to:?}: off the desktop"
+        );
+    }
+}
+
 fn with_dwell() -> Settings {
     Settings {
         dwell: DwellSettings {
