@@ -395,6 +395,9 @@ fn general(ui: &mut Ui, s: &mut Settings, facts: &Facts<'_>) {
         "Show diagnostics",
         Some("Frame rate, tracker score and status on the preview"),
     );
+    space(ui);
+    // From the crate, so the release version bump updates it.
+    help(ui, concat!("Version ", env!("CARGO_PKG_VERSION")));
 }
 
 #[cfg(test)]

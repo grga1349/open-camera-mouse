@@ -835,6 +835,8 @@ fn general_tab_controls() {
     h.run_steps(4);
     assert!(settings(&h).show_diagnostics);
     assert_text(&h, &test_lines()[0]);
+    // The crate version, so the release bump needs no UI change.
+    assert_text(&h, &format!("Version {}", env!("CARGO_PKG_VERSION")));
 }
 
 #[test]

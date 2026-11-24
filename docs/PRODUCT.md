@@ -54,6 +54,7 @@ every state). Rules:
 
 - **Two fixed-size windows:** Tracking (560×620: preview, status line, Start/Pause, Recenter,
   Options) and Options (400×620; tabs Pointer · Clicking · Camera · Screen · General).
+  General ends with the app version in muted help text.
 - **Monochrome chrome, colour preview.** Exactly two accent hues: the neon-green `#00ff00`
   thin ring marking the target (grey when lost) and yellow primary buttons. Nowhere else.
 - **Themes:** Carbon (dark, default) and Paper (light), switched in Options; "Larger
