@@ -19,6 +19,7 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 | `docs/TESTING.md` | Gates, where tests live, manual QA, diagnostics |
 | `docs/ROADMAP.md` | Open items and what was deferred |
 | `docs/architecture/decisions/` | ADRs: why things are the way they are |
+| `docs/COMMANDS.md` | Shortcut commands (`rhmo`, `h`, `cp`, …) |
 | `docs/design-lab.html` | Approved visual reference (open in a browser) |
 | `docs/WEBSITE.md` | Website: scope, content rules, pages, design and tokens, stack, CI and Pages deployment |
 | `docs/V0.4.1_HANDOFF.md`, `docs/V0.4.1_ROADMAP.md` | v0.4.1 release: temporary, on `fix/v0.4.1-stabilization` only. Read the handoff first, rewrite it at the end of each session; both deleted before merge |
@@ -26,6 +27,8 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 ## Workflow: one prompt = one task
 
 Tasks arrive as prompts from the user; there are no task files or session logs.
+A prompt that is only a shortcut word (`rhmo`, `h`, `hcp`, `cp`, `v`, `r`) is a command:
+resolve it through `docs/COMMANDS.md` first.
 
 1. **Understand.** `git status` and `git log -5`; read the docs and ADRs for the area; read
    the code. Don't guess architecture; if a doc and the code disagree, the code wins, fix the
