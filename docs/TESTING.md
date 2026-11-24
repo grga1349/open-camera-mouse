@@ -16,8 +16,8 @@ cargo deny check                         # licences and bans (CI runs it)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of them on macOS, Windows and Linux for every push
-to `main` and `rewrite/rust` and for PRs, except website-only changes (website gates:
-`docs/WEBSITE.md`). A failing test is surfaced as a job annotation,
+to any branch and for PRs into `main` from forks (a PR from a branch here is covered by its
+push run, so the PR's jobs show as skipped), except website-only changes (website gates: `docs/WEBSITE.md`). A failing test is surfaced as a job annotation,
 readable without auth:
 `https://api.github.com/repos/grga1349/open-camera-mouse/check-runs/<job id>/annotations`.
 

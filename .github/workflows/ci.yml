@@ -1,20 +1,27 @@
 name: CI
 
 # Website-only changes don't compile Rust; they have their own workflow (website.yml, ADR-0023).
+# Every branch push runs (tags don't: release.yml owns them). A PR from a branch of this
+# repository is already covered by its push run, so its jobs skip; PRs from forks run.
 on:
   push:
-    branches: [main, rewrite/rust]
+    branches: ['**']
     paths-ignore:
       - 'website/**'
       - '.github/workflows/website.yml'
       - 'docs/WEBSITE*.md'
   pull_request:
-    branches: [main, rewrite/rust]
+    branches: [main]
     paths-ignore:
       - 'website/**'
       - '.github/workflows/website.yml'
       - 'docs/WEBSITE*.md'
   workflow_dispatch:
+
+# A newer push to the same branch or PR supersedes a running check; main always finishes.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,6 +30,7 @@ env:
 jobs:
   test:
     name: test (${{ matrix.os }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +79,7 @@ jobs:
 
   deny:
     name: licenses and bans
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
