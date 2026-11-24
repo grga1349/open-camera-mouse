@@ -34,6 +34,9 @@ pub enum HoldReason {
     NearEdgeMovingOut,
     /// The estimate exceeded the configured motion bound (outlier guard).
     MotionOutlier,
+    /// LK anchored gate (ADR-0018 amendment, v0.4.1): the window just missed the lag check
+    /// while the selection floor held. Held for a few frames at most, then `Lost`.
+    AppearanceDegraded,
 }
 
 /// Why this frame has no valid estimate. Whether the reference survives is per-algorithm and

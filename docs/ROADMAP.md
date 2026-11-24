@@ -11,7 +11,9 @@ How the Rust rewrite got here (v0.4.0, 2026-11-20): ADRs 0001–0022 and git his
    Windows is being tested by the user for v0.4.1; Linux has had no device run yet.
    Still to organise after v0.4.1: a structured `OCM_PERF` session on Windows (loss
    reasons, re-detection, edges at 1920×1080, `docs/TESTING.md` Diagnostics), like the
-   macOS runs that drove the v0.4.1 tracking fix.
+   macOS runs that drove the v0.4.1 tracking fix. Check the v0.4.1 borderline hold
+   (ADR-0018 amendment 2026-11-24): fewer losses on hard moves, the `held look` count, and
+   whether users see the point skew onto a nearby spot (the anchored gate's known limit).
 2. **External webcams** (P1): at least one USB webcam per OS; panics must stay caught.
 3. **Reduced motion:** the Searching animation ignores the OS setting (Manual QA row 21).
 4. **Re-measure on recordings:** re-detection arming, the R-P4 jump bound (0.05 × shorter

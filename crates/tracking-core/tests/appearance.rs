@@ -11,8 +11,9 @@
 
 mod support;
 
-use support::{Metrics, appearance_corpus, metrics, run, scene};
+use support::{Metrics, Step, appearance_corpus, metrics, run, scene};
 use tracking_core::lk::{LkParams, LkTracker};
+use tracking_core::{HoldReason, LossReason, TrackStatus};
 
 fn measure_with(params: LkParams, name: &str, (w, h): (u32, u32)) -> Metrics {
     let seq = scene(name).render(w, h);
@@ -117,6 +118,108 @@ fn plain_gate_baseline_loses_the_extreme_turn() {
     let m = measure_with(plain_gate(), "turn_extreme", (640, 480));
     assert_eq!(m.wrong_lock, 0, "{m:?}");
     assert!((m.tracked_ok - 31.0 / 90.0).abs() < 1e-9, "{m:?}");
+}
+
+// ---------------------------------------------------------------------------------------
+// v0.4.1 slice 1 (ADR-0018 amendment 2026-11-24, D4): keep tracking through a borderline
+// appearance drop, but still lose the point when things clearly go wrong, so re-detection
+// runs. The three scenes rebuild the three loss groups of a macOS `OCM_PERF` session.
+
+/// The recommended tracker without the borderline hold (ADR-0018 as of 2026-11-16).
+fn without_degraded_hold() -> LkParams {
+    let mut p = LkParams::recommended();
+    if let Some(a) = p.anchored.as_mut() {
+        a.degraded_ref_zncc = None;
+    }
+    p
+}
+
+fn steps_with(params: LkParams, name: &str) -> (Metrics, Vec<Step>) {
+    let seq = scene(name).render(640, 480);
+    let steps = run(&mut LkTracker::new(params), &seq);
+    (metrics(&seq, &steps), steps)
+}
+
+const DEGRADED: TrackStatus = TrackStatus::Held(HoldReason::AppearanceDegraded);
+
+#[test]
+fn a_borderline_lag_drop_is_held_briefly_then_tracked_never_lost() {
+    let (m, steps) = steps_with(LkParams::recommended(), "turn_borderline");
+    let lost = steps
+        .iter()
+        .filter(|s| matches!(s.status, TrackStatus::Lost(_)))
+        .count();
+    let held = steps.iter().filter(|s| s.status == DEGRADED).count();
+    assert_eq!(lost, 0, "{m:?}");
+    // Measured 2026-11-24: 4 held frames in two short runs, 94 % tracked within 2 %.
+    assert!((1..=6).contains(&held), "held {held}: {m:?}");
+    assert_eq!(m.wrong_lock, 0, "{m:?}");
+    assert!(m.tracked_ok >= 0.9, "{m:?}");
+    assert!(m.final_epe.is_some_and(|e| e < 0.5), "{m:?}");
+    // Before the hold, the same turn was lost at the dip and stayed lost for 20 frames.
+    let (before, _) = steps_with(without_degraded_hold(), "turn_borderline");
+    assert!(before.tracked_ok < 0.75, "{before:?}");
+}
+
+#[test]
+fn a_borderline_drop_that_persists_is_lost_after_the_hold_budget() {
+    let budget = LkParams::recommended()
+        .anchored
+        .expect("anchored gate")
+        .max_degraded_frames as usize;
+    let (m, steps) = steps_with(LkParams::recommended(), "turn_borderline_long");
+    let first = steps
+        .iter()
+        .position(|s| s.status != TrackStatus::Tracking)
+        .expect("the dip is noticed");
+    let held = steps[first..]
+        .iter()
+        .take_while(|s| s.status == DEGRADED)
+        .count();
+    assert_eq!(held, budget, "{m:?}");
+    assert_eq!(
+        steps[first + held].status,
+        TrackStatus::Lost(LossReason::AppearanceChanged),
+        "{m:?}"
+    );
+    assert_eq!(m.wrong_lock, 0, "{m:?}");
+}
+
+#[test]
+fn a_violent_slip_is_lost_at_once_never_held_and_recovered() {
+    let (m, steps) = steps_with(LkParams::recommended(), "violent_slip");
+    let first = steps
+        .iter()
+        .find(|s| s.status != TrackStatus::Tracking)
+        .expect("the slip is not followed");
+    assert_eq!(
+        first.status,
+        TrackStatus::Lost(LossReason::AppearanceChanged),
+        "{m:?}"
+    );
+    assert!(steps.iter().all(|s| s.status != DEGRADED), "{m:?}");
+    assert_eq!(m.wrong_lock, 0, "{m:?}");
+    // Re-detection (on in the recommended tracker) finds it again where it stopped.
+    assert!(m.final_epe.is_some_and(|e| e < 0.5), "{m:?}");
+}
+
+/// D4 "don't overdo it": the selection floor (0.3) is unchanged. A turn so far that the
+/// patch no longer resembles the selection is lost, even though each step looked like the
+/// last one, so re-detection takes over (slice 3 decides how well it recovers).
+#[test]
+fn a_far_smooth_turn_past_the_selection_floor_is_still_lost() {
+    let (m, steps) = steps_with(LkParams::recommended(), "turn_far");
+    let first = steps
+        .iter()
+        .position(|s| s.status != TrackStatus::Tracking)
+        .expect("the floor stops the turn");
+    assert_eq!(
+        steps[first].status,
+        TrackStatus::Lost(LossReason::AppearanceChanged),
+        "{m:?}"
+    );
+    assert!(steps.iter().all(|s| s.status != DEGRADED), "{m:?}");
+    assert_eq!(m.wrong_lock, 0, "{m:?}");
 }
 
 #[test]

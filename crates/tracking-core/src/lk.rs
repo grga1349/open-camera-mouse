@@ -142,6 +142,13 @@ pub struct AnchoredUpdate {
     pub lag_frames: usize,
     /// ZNCC floor against the selection window.
     pub min_selection_zncc: f32,
+    /// Borderline band of the lag check (v0.4.1, D4): a step whose lag ZNCC is below
+    /// `min_ref_zncc` but at least this, with the selection floor met, is reported
+    /// `Held(AppearanceDegraded)` instead of lost. The tracker keeps following LK's estimate
+    /// and records the window; the reported position stays the last tracked one. `None` = off.
+    pub degraded_ref_zncc: Option<f32>,
+    /// Consecutive degraded holds allowed; the next borderline step is lost.
+    pub max_degraded_frames: u32,
 }
 
 impl Default for AnchoredUpdate {
@@ -154,6 +161,8 @@ impl Default for AnchoredUpdate {
         Self {
             lag_frames: 10,
             min_selection_zncc: 0.3,
+            degraded_ref_zncc: Some(0.6),
+            max_degraded_frames: 3,
         }
     }
 }
@@ -421,6 +430,9 @@ pub fn near_edge_moving_out(a: Point2, b: Point2, width: f32, height: f32, margi
 /// Statuses: `Tracking`; `Held(MotionOutlier)` when the step exceeds the motion bound (point
 /// kept); `Held(NearEdgeMovingOut)` when LK fails (or, with `fb_max_error` set, fails the
 /// forward-backward check or, with `min_ref_zncc` set, the appearance gate) while leaving through an edge (point kept, 2018 default);
+/// `Held(AppearanceDegraded)` when the anchored gate's lag check only just failed (see
+/// [`AnchoredUpdate::degraded_ref_zncc`]; the tracker keeps following LK, the last tracked
+/// position is reported);
 /// `Lost(_)` otherwise — the reference is dropped and the next steps report
 /// `Lost(NoSelection)` until `select` is called again (2018 invalidates the track point).
 /// With `redetect` set and armed (ADR-0010), a `Lost` keeps the reference instead: the frame
@@ -455,6 +467,8 @@ pub struct LkTracker {
     /// Re-detection finds not yet confirmed: the latest position and how many consecutive
     /// frames found it ([`RedetectParams::confirm_frames`]).
     pending: Option<(Point2, u32)>,
+    /// Consecutive `Held(AppearanceDegraded)` steps ([`AnchoredUpdate::max_degraded_frames`]).
+    degraded: u32,
 }
 
 /// Fills `out` with the `(2·hw + 1)²` bilinear window around `c`, zero-mean and unit-norm.
@@ -567,6 +581,24 @@ impl LkTracker {
             // NaN also rejects.
             _ => z.is_nan() || z < min,
         }
+    }
+
+    /// Whether a step the anchored gate rejected is only borderline (v0.4.1, D4): the lag
+    /// score fell into the degraded band, the selection floor held, and the hold budget isn't
+    /// spent. Call after [`Self::appearance_rejects`], which records both scores.
+    fn degraded_holds(&self, diagnostics: &Diagnostics) -> bool {
+        let Some(a) = self.params.anchored else {
+            return false;
+        };
+        let (Some(band), Some(zr), Some(z)) = (
+            a.degraded_ref_zncc,
+            diagnostics.anchor_score,
+            diagnostics.score,
+        ) else {
+            return false;
+        };
+        // NaN fails both comparisons.
+        self.degraded < a.max_degraded_frames && zr >= band && z >= a.min_selection_zncc
     }
 
     /// Anchored update: after an accepted step, the window at `b` replaces the oldest recent
@@ -698,6 +730,7 @@ impl LkTracker {
             SearchResult::Found { position, score } => {
                 self.searching = false;
                 self.point = Some(position);
+                self.degraded = 0;
                 self.reset_recent();
                 TrackOutput {
                     position,
@@ -731,6 +764,7 @@ impl Tracker for LkTracker {
         self.size = (frame.width(), frame.height());
         self.searching = false;
         self.pending = None;
+        self.degraded = 0;
         self.searcher.clear();
         if let Some(rp) = self.params.redetect {
             self.searcher
@@ -811,8 +845,28 @@ impl Tracker for LkTracker {
                 } else if self.fb_rejects(a, b, &mut diagnostics) {
                     self.reject(a, b, w, h, LossReason::Inconsistent, diagnostics)
                 } else if self.appearance_rejects(b, &mut diagnostics) {
-                    self.reject(a, b, w, h, LossReason::AppearanceChanged, diagnostics)
+                    if self.degraded_holds(&diagnostics) {
+                        // Borderline (v0.4.1, D4): keep following LK and record the window
+                        // as usual, but report a hold, so a slow occluder is never `Tracking`
+                        // (`occluder_slide` crosses the band on its first covered frame).
+                        // Recording matters: without it a turn keeps comparing with an ever
+                        // older window and the hold only delays the loss. A budget over 3
+                        // let `occluder_creep` into the ring at 320 (7 frames of false
+                        // tracking), so the budget stays short.
+                        self.degraded += 1;
+                        self.point = Some(b);
+                        self.accept_appearance(b);
+                        TrackOutput {
+                            position: a,
+                            status: TrackStatus::Held(HoldReason::AppearanceDegraded),
+                            diagnostics,
+                        }
+                    } else {
+                        self.degraded = 0;
+                        self.reject(a, b, w, h, LossReason::AppearanceChanged, diagnostics)
+                    }
                 } else {
+                    self.degraded = 0;
                     self.point = Some(b);
                     self.accept_appearance(b);
                     TrackOutput {
@@ -834,6 +888,7 @@ impl Tracker for LkTracker {
         self.point = None;
         self.searching = false;
         self.pending = None;
+        self.degraded = 0;
     }
 }
 

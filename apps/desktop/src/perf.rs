@@ -152,6 +152,8 @@ pub struct TrackLog {
     tracking: u64,
     held_edge: u64,
     held_fast: u64,
+    /// `Held(AppearanceDegraded)`: a borderline appearance check (ADR-0018 amendment).
+    held_look: u64,
     lost: u64,
     no_target: u64,
     /// Losses since start (numbered in the lines).
@@ -171,6 +173,7 @@ impl TrackLog {
             Some(TrackStatus::Tracking) => self.tracking += 1,
             Some(TrackStatus::Held(HoldReason::NearEdgeMovingOut)) => self.held_edge += 1,
             Some(TrackStatus::Held(HoldReason::MotionOutlier)) => self.held_fast += 1,
+            Some(TrackStatus::Held(HoldReason::AppearanceDegraded)) => self.held_look += 1,
             Some(TrackStatus::Lost(_)) => self.lost += 1,
             None => self.no_target += 1,
         }
@@ -234,17 +237,24 @@ impl TrackLog {
     /// Frame counts since the last report, then reset.
     pub fn report(&mut self) -> String {
         let s = format!(
-            "frames tracking {} | held edge {} | held fast {} | lost {} | no target {} | \
-             losses {}",
-            self.tracking, self.held_edge, self.held_fast, self.lost, self.no_target, self.losses
+            "frames tracking {} | held edge {} | held fast {} | held look {} | lost {} | \
+             no target {} | losses {}",
+            self.tracking,
+            self.held_edge,
+            self.held_fast,
+            self.held_look,
+            self.lost,
+            self.no_target,
+            self.losses
         );
         (
             self.tracking,
             self.held_edge,
             self.held_fast,
+            self.held_look,
             self.lost,
             self.no_target,
-        ) = (0, 0, 0, 0, 0);
+        ) = (0, 0, 0, 0, 0, 0);
         s
     }
 }
@@ -305,13 +315,16 @@ mod tests {
         );
         log.frame(2.0, out(TrackStatus::Held(HoldReason::NearEdgeMovingOut)));
         log.frame(2.1, out(TrackStatus::Held(HoldReason::MotionOutlier)));
+        log.frame(2.2, out(TrackStatus::Held(HoldReason::AppearanceDegraded)));
         assert_eq!(
             log.report(),
-            "frames tracking 2 | held edge 1 | held fast 1 | lost 2 | no target 0 | losses 1"
+            "frames tracking 2 | held edge 1 | held fast 1 | held look 1 | lost 2 | \
+             no target 0 | losses 1"
         );
         assert_eq!(
             log.report(),
-            "frames tracking 0 | held edge 0 | held fast 0 | lost 0 | no target 0 | losses 1"
+            "frames tracking 0 | held edge 0 | held fast 0 | held look 0 | lost 0 | \
+             no target 0 | losses 1"
         );
     }
 

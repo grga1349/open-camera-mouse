@@ -74,3 +74,39 @@ losses are the lag check at the deepest point of a turn, not the floor.
   a very slow hand creeping over the nose. Re-measure on Phase 8 recordings.
 - Re-detection (E4) is unchanged: it still searches for the selection templates.
 - Departure from 2018 (ADR-0006): 2018 had no appearance gate at all.
+
+## Amendment 2026-11-24 (v0.4.1 slice 1) — a short hold for borderline drops
+
+Decision D4 (user): keep tracking through borderline appearance drops, but still declare a
+loss when things clearly go wrong, so re-detection runs.
+
+Evidence (macOS `OCM_PERF`, diagnosis only, not committed): every loss was
+`AppearanceChanged` from this gate, in three groups. (1) Most: the lag check just under
+0.7 while the selection score and the residual looked healthy. (2) Violent moves: both
+scores low, high residual (real slips). (3) Rare: the selection floor on a far, smooth
+turn. Rebuilt synthetically in `tests/support` `loss_groups()` (640×480).
+
+Change: `AnchoredUpdate` gains `degraded_ref_zncc` = **0.6** and `max_degraded_frames` =
+**3**. A step the anchored gate rejects with lag ZNCC ≥ 0.6 and the selection floor met is
+`Held(AppearanceDegraded)` instead of `Lost`, for at most 3 consecutive steps; the next one
+is lost. During the hold the tracker keeps following LK's estimate and records its window
+as usual; the reported position stays the last tracked one. The floor (0.3) is unchanged, so
+group 3 is still lost.
+
+Measured first (synthetic):
+
+- A hold, not `Tracking`: `occluder_slide` crosses the band (lag ZNCC 0.61) on its first
+  covered frame; reporting it as tracking would be false tracking.
+- Holding the old point (as the other holds do) fails on a quick turn: LK then has to cover
+  two frames of motion and slips. Not recording the window only delays the loss.
+- Budget: 3 is the largest without regressions. 5 or more let `occluder_creep` into the lag
+  ring at 320 (7 frames of false tracking). A band of 0.55 or 0.65 gained nothing over 0.6.
+- Result: `turn_borderline` 71 % → 94 % tracked (no loss, 4 held frames);
+  `turn_borderline_long` is held 3 frames, then lost; `violent_slip` is lost at once and
+  re-detected; `turn_far` is lost at the floor. Every corpus and appearance scene at 320,
+  640 and 1280 is unchanged, with 0 wrong locks and 0 false tracking.
+
+Consequences: the cursor stops for up to 3 frames (≈ 0.1 s at 30 fps) on such a dip, then
+catches up through the smoother, instead of losing the point until re-detection. Dwell resets
+on a hold (R-K2 treats every hold alike). The desktop status line shows "Tracking" for this
+hold (it is too short to read); `OCM_PERF` counts it as `held look`.

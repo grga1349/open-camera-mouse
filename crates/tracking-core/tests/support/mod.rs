@@ -813,10 +813,77 @@ pub fn appearance_corpus() -> Vec<Scene> {
     ]
 }
 
+// ---------------------------------------------------------------------------------------
+// Loss groups (v0.4.1 slice 1, ADR-0018 amendment): the three kinds of `AppearanceChanged`
+// loss a macOS `OCM_PERF` session showed, rebuilt synthetically (no recording data). 640×480,
+// pinned in `tests/appearance.rs`.
+
+/// [`turn`] at strength `k`, out and back over `n` frames after 20 still frames (so the
+/// anchored gate's lag ring holds real past windows, not only the selection's).
+fn turn_after_rest(t: usize, k: f64, n: usize) -> Pose {
+    let s = if t < 20 || t >= 20 + n {
+        0.0
+    } else {
+        there_and_back(t - 20, n)
+    };
+    Pose {
+        scale: 1.0 - 0.12 * k * s,
+        angle_rad: (6.0 * k).to_radians() * s,
+        illum_grad: (0.003 * k * s, 0.0),
+        warp: (4.0 * k * s, 25.0),
+        ..Pose::at((C0.0 + 90.0 * s, C0.1 + 10.0 * s))
+    }
+}
+
+pub fn loss_groups() -> Vec<Scene> {
+    vec![
+        // Group 1: the lag check dips just under its threshold for a few frames while LK
+        // stays on the point. Must keep tracking (D4).
+        base(
+            "turn_borderline",
+            "quick turn at 2.5× strength over 28 frames after 20 still: lag ZNCC just under 0.7",
+            68,
+            |t| turn_after_rest(t, 2.5, 28),
+        ),
+        // Group 1, persisting: the dip outlasts the hold budget, so the loss is declared and
+        // re-detection runs instead of the hold going on.
+        base(
+            "turn_borderline_long",
+            "quick turn at 3× strength over 36 frames after 20 still: lag ZNCC under 0.7 too long",
+            76,
+            |t| turn_after_rest(t, 3.0, 36),
+        ),
+        // Group 2: a violent move. The patch at LK's estimate matches neither the selection
+        // nor the lag window. Must be lost at once, so re-detection runs.
+        base(
+            "violent_slip",
+            "still, then 30 ref px/frame for 3 frames (no blur), then still again",
+            40,
+            |t| {
+                let x = match t {
+                    0..20 => 0.0,
+                    20..23 => 30.0 * (t - 19) as f64,
+                    _ => 90.0,
+                };
+                Pose::at((C0.0 + x, C0.1))
+            },
+        ),
+        // Group 3: a far, smooth turn. Each step looks like the last one, but the patch
+        // drifts below the selection floor (0.3). Lost by design (floor unchanged, D4).
+        base(
+            "turn_far",
+            "head-turn stand-in at 4× strength (shrink 48 %, roll 24°, warp 16, gradient 0.012)",
+            90,
+            |t| turn(t, 4.0),
+        ),
+    ]
+}
+
 pub fn scene(name: &str) -> Scene {
     corpus()
         .into_iter()
         .chain(appearance_corpus())
+        .chain(loss_groups())
         .find(|s| s.name == name)
         .unwrap_or_else(|| panic!("no scene {name}"))
 }
