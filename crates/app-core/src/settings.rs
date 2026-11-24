@@ -4,7 +4,8 @@
 //! `platform::settings_store` (ADR-0012), outside this pure crate.
 //!
 //! Defaults follow ADR-0006 (2018) and the approved design lab (task 0007). Improvements on
-//! 2018 are opt-in and off by default (`loss_recovery`, `dwell.enabled`).
+//! 2018 are opt-in and off by default (`dwell.enabled`) until the user approves them as a
+//! default (`loss_recovery`, v0.4.1).
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -123,8 +124,9 @@ pub struct Settings {
     pub camera: Option<String>,
     /// Mirror at ingest (ADR-0008), default on: head right moves the pointer right.
     pub mirror: bool,
-    /// "Find the target again" (ADR-0010, ADR-0011 amendment): re-detection after a loss.
-    /// Off by default (2018: a loss waits for re-selection or recenter).
+    /// "Find the target again" (ADR-0010, ADR-0011 amendments): re-detection after a loss.
+    /// On by default since v0.4.1 (D3, amendment 2026-11-25); off = 2018 (a loss waits for
+    /// re-selection or recenter). Saved files keep their value; Restore defaults turns it on.
     pub loss_recovery: bool,
     pub theme: Theme,
     pub show_diagnostics: bool,
@@ -144,7 +146,7 @@ impl Default for Settings {
             dwell: DwellSettings::default(),
             camera: None,
             mirror: true,
-            loss_recovery: false,
+            loss_recovery: true,
             theme: Theme::Carbon,
             show_diagnostics: false,
             larger_controls: false,
@@ -283,7 +285,8 @@ mod tests {
         // desktop), smoothing 0.20 (2018 Damping 0.95 = 0.05).
         assert_eq!((s.gain_x, s.gain_y), (20.0, 20.0));
         assert!((s.smoothing - 0.20).abs() < 1e-6);
-        assert!(!s.loss_recovery, "Find the target again is off by default");
+        // v0.4.1 (D3, ADR-0011 amendment 2026-11-25): re-detection on by default.
+        assert!(s.loss_recovery, "Find the target again is on by default");
         assert!(!s.dwell.enabled);
         assert!(s.mirror);
         assert_eq!(s.theme, Theme::Carbon);

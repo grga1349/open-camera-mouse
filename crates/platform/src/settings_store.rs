@@ -309,7 +309,7 @@ mod tests {
             gain_y: 4.0,
             smoothing: 0.3,
             camera: Some("FaceTime HD Camera".into()),
-            loss_recovery: true,
+            loss_recovery: false,
             theme: Theme::Paper,
             ..Settings::default()
         }
@@ -370,6 +370,21 @@ mod tests {
         assert!(loaded.settings.dwell.enabled);
         assert_eq!(loaded.settings.dwell.dwell_s, 1.0);
         assert_eq!(loaded.settings.gain_x, 20.0);
+    }
+
+    /// v0.4.1 turns "Find the target again" on by default (D3) without a schema change: a
+    /// v0.4.0 file that says off keeps it off (the user's choice or the old default, the file
+    /// can't tell; Restore defaults turns it on), a file without the field gets it on.
+    #[test]
+    fn find_again_keeps_a_saved_off_and_defaults_to_on() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = store(&dir);
+        write(&s, "schema_version = 1\nloss_recovery = false\n");
+        let loaded = s.load();
+        assert_eq!(loaded.notice, None);
+        assert!(!loaded.settings.loss_recovery);
+        write(&s, "schema_version = 1\ntheme = \"paper\"\n");
+        assert!(s.load().settings.loss_recovery);
     }
 
     #[test]

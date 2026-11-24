@@ -49,7 +49,7 @@ Configuration and its relation to 2018 (ADR-0006 reasons):
 | Texture test `λ_min/|W| ≥ 1.0` | on | deviates | (a), ADR-0009 |
 | E2 appearance gate, ZNCC ≥ 0.7 vs selection window | on | deviates | (a): 2018 silently follows occluders/background; R-T2 forbids silent errors |
 | E3 gain/bias compensation | on | deviates | (a): brightness constancy gave a silent 6.4 px offset on a gain step (finding 5) |
-| E4 re-detection, τ 0.9 / δ 0.1 / K 16 / level 2 / r 0.25 w | on in `recommended()`; **product default off** (amended 2026-11-12) | deviates | (a), ADR-0010; amendment below |
+| E4 re-detection, τ 0.9 / δ 0.1 / K 16 / level 2 / r 0.25 w | on in `recommended()`; product default off 2026-11-12, **on since v0.4.1** (amended 2026-11-25) | deviates | (a), ADR-0010; amendments below |
 | E1 forward-backward | off | — | redundant (measured) |
 
 **Latency** (Apple M1, divan, medians over 100 samples, `lk_recommended_step` /
@@ -110,3 +110,26 @@ flapped Lost ↔ Tracking every few frames. The pin test and
 the window accepted 10 steps earlier (≥ 0.7) and with the selection (≥ 0.3) instead of only
 the selection (≥ 0.7). Head turns no longer trip it, and occluders still do. `turn_extreme` is
 now 90/90 (was 31/90).
+
+## Amendment 2026-11-25 (v0.4.1, user decision D3)
+
+"Find the target again" (`loss_recovery`) is now **on by default**, reversing the 2026-11-12
+amendment. Reason: in the user's v0.4.1 macOS sessions with the diagnostics on, re-detection
+resumed every loss of the clean run without a wrong lock. `recommended()` and
+every threshold are unchanged. Off still gives the 2018 policy.
+
+- **Saved settings:** no schema change. A settings file keeps its saved value, so a v0.4.0 file
+  saved with `loss_recovery = false` stays off. The file can't tell the user's choice from the
+  old default. **Restore defaults** turns it on (user, 2026-11-25). A file without the field
+  gets the new default.
+- **Measured before the change** (synthetic, `tests/appearance.rs`
+  `a_turn_lost_mid_way_is_recovered_on_the_way_back_never_onto_the_lookalike`): a turn lost
+  mid-way (`turn_far`, `turn_borderline_long`) is found again on the way back as soon as the
+  patch scores ≥ 0.9 against the selection with context ≥ 0.7. While the patch is turned it
+  scores −0.05 to 0.5, so no template search can find it, and a lookalike elsewhere scores
+  0.90–0.92 the whole time. Only the context check (0.42–0.44 < 0.7) keeps re-detection off
+  the lookalike: without it, both scenes lock onto it (mutation check in the same test). The
+  spatial prior (0.25 · width) didn't limit recovery in either scene; it kept a farther
+  lookalike out of the margin test. The confirmation radius (0.01 · width) delays the resume
+  while the head is still moving back faster than 6.4 px/frame (6 frames on
+  `turn_borderline_long`). Nothing was widened.

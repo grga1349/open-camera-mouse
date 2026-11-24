@@ -205,7 +205,7 @@ fn a_violent_slip_is_lost_at_once_never_held_and_recovered() {
 
 /// D4 "don't overdo it": the selection floor (0.3) is unchanged. A turn so far that the
 /// patch no longer resembles the selection is lost, even though each step looked like the
-/// last one, so re-detection takes over (slice 3 decides how well it recovers).
+/// last one, so re-detection takes over (how it recovers: the slice 3 test below).
 #[test]
 fn a_far_smooth_turn_past_the_selection_floor_is_still_lost() {
     let (m, steps) = steps_with(LkParams::recommended(), "turn_far");
@@ -220,6 +220,55 @@ fn a_far_smooth_turn_past_the_selection_floor_is_still_lost() {
     );
     assert!(steps.iter().all(|s| s.status != DEGRADED), "{m:?}");
     assert_eq!(m.wrong_lock, 0, "{m:?}");
+}
+
+// ---------------------------------------------------------------------------------------
+// v0.4.1 slice 3 (measured 2026-11-25, 640×480): what re-detection does after a turn is lost
+// mid-way. While the patch is turned it scores −0.05–0.5 against the selection template, so
+// no template search can find it; a lookalike elsewhere in the scene scores 0.90–0.92 the
+// whole time and only the context check (0.42–0.44 < 0.7) keeps re-detection off it. On the
+// way back the point is found once it scores ≥ 0.9 with context ≥ 0.7, and resumes after
+// three finds within `CONFIRM_RADIUS_FRAC` (6.4 px) of each other: on `turn_borderline_long`
+// the head still moves 7–8 px/frame then, so that costs 6 frames (found at 52, resumed at 58).
+
+/// The recommended tracker without the re-detection context check.
+fn without_context_check() -> LkParams {
+    let mut p = LkParams::recommended();
+    if let Some(r) = p.redetect.as_mut() {
+        r.min_context_zncc = None;
+    }
+    p
+}
+
+#[test]
+fn a_turn_lost_mid_way_is_recovered_on_the_way_back_never_onto_the_lookalike() {
+    // (scene, frame the loss is declared, frame tracking resumes), measured 2026-11-25.
+    for (name, lost_at, back_at) in [("turn_far", 41, 85), ("turn_borderline_long", 33, 58)] {
+        let (m, steps) = steps_with(LkParams::recommended(), name);
+        let lost = steps
+            .iter()
+            .position(|s| matches!(s.status, TrackStatus::Lost(_)))
+            .expect("the turn is lost");
+        let back = lost
+            + steps[lost..]
+                .iter()
+                .position(|s| s.status == TrackStatus::Tracking)
+                .expect("re-detection resumes before the scene ends");
+        assert_eq!((lost, back), (lost_at, back_at), "{name}: {m:?}");
+        assert!(
+            steps[lost + 1..back]
+                .iter()
+                .all(|s| s.status == TrackStatus::Lost(LossReason::Searching)),
+            "{name}: every lost frame says a search is running"
+        );
+        assert_eq!(m.wrong_lock, 0, "{name}: {m:?}");
+        assert!(m.final_epe.is_some_and(|e| e < 0.5), "{name}: {m:?}");
+
+        // Wrong-feature reacquisition: without the context check the lookalike is confirmed
+        // while the patch is turned, and tracking resumes on the wrong spot.
+        let (bad, _) = steps_with(without_context_check(), name);
+        assert!(bad.wrong_lock > 0, "{name}: {bad:?}");
+    }
 }
 
 #[test]

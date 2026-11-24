@@ -35,7 +35,7 @@ recenter.
 | Camera | Colour preview, mirrored; capture 640×480 @ 30 fps (nearest the device offers) | first camera, mirror on |
 | Target | Click a point in the preview; recenter picks the frame centre after a 5-4-3-2-1 countdown | — |
 | Tracker | Pyramidal Lucas–Kanade, 2018 preset plus an anchored appearance gate (ADR-0011, ADR-0018) | — |
-| Loss | Lost target hands control back to the mouse; "Find the target again" re-detects it automatically | re-detection off |
+| Loss | Lost target hands control back to the mouse; "Find the target again" re-detects it automatically | re-detection on (since v0.4.1; saved settings keep their value) |
 | Pointer | Absolute mapping with per-axis gain 1–60, 1€ smoothing, automatic steady zone (0.2 camera px), screen limits with offset drift | gain 20 / 20 linked, smoothing 0.20 |
 | Main monitor | Where recenter and pause put the cursor; every display stays reachable | OS primary |
 | Handover | Moving the physical mouse takes over at once; the camera takes back over after 4 s still | on |

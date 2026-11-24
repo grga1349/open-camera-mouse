@@ -235,7 +235,13 @@ fn status_text_per_state() {
         ),
         (started(), "Select a target"),
         (tracking(), "Tracking"),
-        (lost_with(Settings::default()), "Target lost"),
+        (
+            lost_with(Settings {
+                loss_recovery: false,
+                ..Settings::default()
+            }),
+            "Target lost",
+        ),
         (
             {
                 let mut s = started();
@@ -822,12 +828,12 @@ fn camera_tab_controls() {
     let find = h.get_by_label("Find the target again");
     assert_eq!(
         find.accesskit_node().toggled(),
-        Some(egui::accesskit::Toggled::False),
-        "off by default"
+        Some(egui::accesskit::Toggled::True),
+        "on by default (v0.4.1, D3)"
     );
     find.click();
     h.run_steps(4);
-    assert!(settings(&h).loss_recovery);
+    assert!(!settings(&h).loss_recovery);
 }
 
 #[test]
@@ -913,7 +919,8 @@ fn diagnostics_overlay_lines() {
     // The anchored gate's lag-window score (ADR-0018), next to the selection score.
     assert!(lines[2].starts_with("anchor   "), "{lines:?}");
     assert_eq!(lines[4], "status   Tracking");
-    assert_eq!(lines[5], "redetect off");
+    // Find the target again is on by default (v0.4.1, D3) and the test scene is textured.
+    assert_eq!(lines[5], "redetect armed");
 }
 
 // ---- persistence (criterion 8) ----
@@ -958,11 +965,12 @@ fn closing_options_saves_at_once() {
     );
     sh.tab = Tab::Camera;
     let mut h = options_window(sh);
+    // On by default: switching it off must be what persists.
     h.get_by_label("Find the target again").click();
     h.run_steps(4);
     h.get_by_label("Close").click();
     h.run_steps(4);
-    assert!(SettingsStore::at(&path).load().settings.loss_recovery);
+    assert!(!SettingsStore::at(&path).load().settings.loss_recovery);
 }
 
 #[test]

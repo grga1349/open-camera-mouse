@@ -411,12 +411,13 @@ mod tests {
             camera: Some("cam-2".into()),
             theme: Theme::Paper,
             larger_controls: true,
-            loss_recovery: true,
+            loss_recovery: false,
             ..Settings::default()
         };
         let r = restored(&s);
         assert_eq!(r.gain_x, 20.0);
-        assert!(!r.loss_recovery);
+        // How a v0.4.0 file saved with it off gets the v0.4.1 default (D3).
+        assert!(r.loss_recovery);
         assert_eq!(r.camera.as_deref(), Some("cam-2"));
         assert_eq!(r.theme, Theme::Paper);
         assert!(r.larger_controls);

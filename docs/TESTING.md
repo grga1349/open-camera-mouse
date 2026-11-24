@@ -62,7 +62,7 @@ terminal.
 | 8 | F12 with another app focused | Recenter circle + 5-4-3-2-1; at 0 tracks the frame centre |
 | 9 | Start/pause key with another app focused | Pauses (cursor to centre); again → resumes through the recenter |
 | 10 | Laptop keyboard: do the F-keys need `Fn`? | Note which; the window's key chips match what works |
-| 11 | Cover the camera with a hand | Lost (grey ring + X), mouse has control; waits for a click or Recenter (re-detection off) |
+| 11 | Cover the camera with a hand, then take it away | "Looking for the target…", mouse has control; hand away → tracking resumes at the same spot. With "Find the target again" off: Lost (grey ring + X), waits for a click or Recenter |
 | 12 | Dwell on; hold still over a button in another app | One click after the dwell time; no repeat until moved away or refractory passed |
 | 13 | Minimise the Tracking window while tracking | Cursor keeps following at full rate |
 | 14 | Unplug the camera while tracking | "Camera disconnected", last frame frozen; Start works once plugged back |

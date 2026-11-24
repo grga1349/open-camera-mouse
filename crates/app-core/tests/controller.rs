@@ -600,7 +600,7 @@ fn toggle_during_recenter_pauses() {
 
 #[test]
 fn loss_without_recovery_waits_for_reselection() {
-    let mut r = Rig::tracking();
+    let mut r = Rig::tracking_with(without_recovery());
     let s = r.occlude();
     assert_eq!(
         state_changes(&s),
@@ -632,9 +632,18 @@ fn loss_without_recovery_waits_for_reselection() {
     assert_eq!(r.c.pointer_owner(), PointerOwner::Handover);
 }
 
+/// On by default since v0.4.1 (D3); spelled out so these tests don't depend on the default.
 fn with_recovery() -> Settings {
     Settings {
         loss_recovery: true,
+        ..Settings::default()
+    }
+}
+
+/// The 2018 loss policy: a loss waits for re-selection or recenter.
+fn without_recovery() -> Settings {
+    Settings {
+        loss_recovery: false,
         ..Settings::default()
     }
 }
@@ -795,7 +804,7 @@ fn changing_mirroring_drops_the_target() {
 
 #[test]
 fn toggling_recovery_rebuilds_the_tracker_and_keeps_tracking() {
-    let mut r = Rig::tracking();
+    let mut r = Rig::tracking_with(without_recovery());
     assert!(!r.c.view(r.now).redetect_armed);
     let s = r.c.update_settings(with_recovery(), r.now).unwrap();
     assert!(state_changes(&s).is_empty());
@@ -804,7 +813,7 @@ fn toggling_recovery_rebuilds_the_tracker_and_keeps_tracking() {
     // Beyond the steady zone (`STEADY_ZONE_CAM_PX`), so the cursor follows.
     let s = r.hold(500_000, 2.0, SCENE);
     assert!(s.pointer_target().unwrap().x > CENTER.x);
-    let s = r.c.update_settings(Settings::default(), r.now).unwrap();
+    let s = r.c.update_settings(without_recovery(), r.now).unwrap();
     assert!(state_changes(&s).is_empty());
     assert!(!r.c.view(r.now).redetect_armed);
 }

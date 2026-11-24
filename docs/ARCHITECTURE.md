@@ -40,7 +40,8 @@ camera worker ──newest-wins slot──▶ engine thread ──Arc<Snapshot>�
 
 - Tracker: `LkParams::recommended()` = 2018 LK preset + eigenvalue floor 0.25 / ratio 0.05 +
   anchored appearance gate (≥ 0.7 against the window accepted 10 steps earlier, selection
-  floor 0.3, ADR-0018). Re-detection is opt-in ("Find the target again", ADR-0010/-0011).
+  floor 0.3, ADR-0018). Re-detection is an option, on by default since v0.4.1 ("Find the target again",
+  ADR-0010/-0011).
 - Pointer: camera-space 1€ filter → steady zone of `STEADY_ZONE_CAM_PX` = 0.2 camera px,
   scaled through gain and the Main monitor (ADR-0015, ADR-0017) → absolute map → limits with
   offset drift capped at the head's overshoot → snap to the nearest display. Handover and
