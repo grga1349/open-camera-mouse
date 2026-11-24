@@ -114,6 +114,7 @@ does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005).
 | `egui-development` | eframe/egui patterns, `egui_kittest` tests |
 | `platform-integration` | Camera / cursor / hotkey / permission adapters per OS |
 | `code-review` | Independent review: correctness, failure modes, evidence |
+| `release` | Version bump (SemVer patch/minor/major), gates, commit, tag, draft release |
 | `astro-development` | Website: Astro components, Tailwind v4, base-path URLs, zero-JS, build gates |
 | `website-design` | Website: brand, tokens, typography, responsive layout, content rules |
 | `web-accessibility` | Website: WCAG 2.2 AA, keyboard, focus, screen readers, contrast, motion |

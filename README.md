@@ -88,7 +88,10 @@ Windows: NSIS installer, Linux: AppImage), with `THIRD_PARTY_LICENSES.html` insi
 
 ### Release
 
-1. Set the version in the root `Cargo.toml` (`[workspace.package] version`) and commit.
+1. Set the version in the root `Cargo.toml` (`[workspace.package] version`, the only
+   place it lives; the app shows it in Options → General), refresh `Cargo.lock`
+   (`cargo update --workspace`) and commit. AI agents: follow the `release` skill
+   (`.agents/skills/release/SKILL.md`).
 2. Tag `vX.Y.Z` (must equal that version) on `main` and push the tag.
 3. `.github/workflows/release.yml` builds all three platforms and creates a **draft**
    GitHub Release with `SHA256SUMS`. Check it, then publish.
