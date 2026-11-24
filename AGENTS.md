@@ -21,6 +21,7 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 | `docs/architecture/decisions/` | ADRs: why things are the way they are |
 | `docs/design-lab.html` | Approved visual reference (open in a browser) |
 | `docs/WEBSITE.md` | Website: scope, content rules, pages, design and tokens, stack, CI and Pages deployment |
+| `docs/V0.4.1_HANDOFF.md`, `docs/V0.4.1_ROADMAP.md` | v0.4.1 release: temporary, on `fix/v0.4.1-stabilization` only. Read the handoff first, rewrite it at the end of each session; both deleted before merge |
 
 ## Workflow: one prompt = one task
 
