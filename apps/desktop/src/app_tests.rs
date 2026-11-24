@@ -893,8 +893,10 @@ fn diagnostics_overlay_lines() {
     let view = sh.view();
     let lines = diagnostics_lines(&view, Some(30.0));
     assert_eq!(lines[0], "fps      30.0");
-    assert_eq!(lines[3], "status   Tracking");
-    assert_eq!(lines[4], "redetect off");
+    // The anchored gate's lag-window score (ADR-0018), next to the selection score.
+    assert!(lines[2].starts_with("anchor   "), "{lines:?}");
+    assert_eq!(lines[4], "status   Tracking");
+    assert_eq!(lines[5], "redetect off");
 }
 
 // ---- persistence (criterion 8) ----

@@ -408,6 +408,14 @@ impl Controller {
         self.state
     }
 
+    /// The last tracker output while a target exists (Tracking or Lost), as [`View::track`]
+    /// shows it: while searching, the status keeps the reason of the loss itself. Cheap, for
+    /// per-frame diagnostics.
+    pub fn track(&self) -> Option<TrackOutput> {
+        let has_target = matches!(self.state, AppState::Tracking | AppState::Lost);
+        self.track.filter(|_| has_target)
+    }
+
     pub fn settings(&self) -> &Settings {
         &self.settings
     }
@@ -561,8 +569,7 @@ impl Controller {
 
     /// Render data at `now_us`.
     pub fn view(&self, now_us: u64) -> View {
-        let has_target = matches!(self.state, AppState::Tracking | AppState::Lost);
-        let track = self.track.filter(|_| has_target);
+        let track = self.track();
         let marker = track.map(|t| Marker {
             position: t.position,
             kind: match t.status {

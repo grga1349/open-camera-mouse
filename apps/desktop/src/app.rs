@@ -344,6 +344,7 @@ fn diagnostics_lines(view: &app_core::View, fps: Option<f32>) -> Vec<String> {
     vec![
         format!("fps      {}", opt(fps, 1)),
         format!("zncc     {}", opt(view.diagnostics.score, 2)),
+        format!("anchor   {}", opt(view.diagnostics.anchor_score, 2)),
         format!("residual {}", opt(view.diagnostics.residual, 2)),
         format!("status   {status}"),
         format!("redetect {redetect}"),

@@ -81,8 +81,13 @@ Windows and Linux: never run on a device.
 ## Diagnostics
 
 - `OCM_PERF=1`: the engine prints frame-path timing every few seconds (fps, `in`, `track`,
-  `age` capture → cursor move, `ui`, `replaced`), p50 / p95 / max ms. See
-  `apps/desktop/src/perf.rs`.
+  `age` capture → cursor move, `ui`, `replaced`), p50 / p95 / max ms, and a `frames` line
+  counting frames per tracker status (tracking, held at an edge, held after a fast move,
+  lost, no target). Each loss prints a `track` line at once: the reason, `zncc` (against the
+  selection), `anchor` (against the lag window, ADR-0018: below 0.7 = the lag check
+  rejected, `zncc` below 0.3 = the floor did), the residual and the position in frame px; its
+  end prints how many frames it lasted and whether re-detection or a re-selection ended
+  it. See `apps/desktop/src/perf.rs`. "Show diagnostics" shows the same two scores live.
 - `OCM_RECORD=<folder>`: records raw luma frames (`frame_NNNNNN.pgm`), `frames.csv`,
   `events.csv`, `desktop.csv` and `settings.toml` (≈ 9 MB/s). See
   `apps/desktop/src/recorder.rs`.

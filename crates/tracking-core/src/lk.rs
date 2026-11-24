@@ -366,6 +366,7 @@ pub fn track_point(
                     min_eigen: Some(min_eig),
                     iterations: Some(iterations),
                     score: None,
+                    anchor_score: None,
                     fb_error: None,
                 },
             };
@@ -559,6 +560,7 @@ impl LkTracker {
         match self.params.anchored {
             Some(a) if !self.recent.is_empty() => {
                 let zr = zncc_against(img, b, hw, &self.recent[self.recent_head]);
+                diagnostics.anchor_score = Some(zr);
                 // NaN also rejects.
                 !(zr >= min && z >= a.min_selection_zncc)
             }
@@ -1059,6 +1061,32 @@ mod tests {
             TrackStatus::Lost(LossReason::AppearanceChanged),
             "{out:?}"
         );
+        // Both gate scores are reported, so a loss can be told apart: lag check vs floor.
+        let lag = out.diagnostics.anchor_score.expect("lag check ran");
+        assert!(lag < 0.7, "{out:?}");
+        assert!(out.diagnostics.score.is_some(), "{out:?}");
+    }
+
+    #[test]
+    fn anchor_score_only_with_the_anchored_gate() {
+        let a = frame(320, 240, Point2::default());
+        let p = Point2::new(160.0, 120.0);
+        let mut plain = LkTracker::new(LkParams {
+            min_ref_zncc: Some(0.7),
+            ..LkParams::default()
+        });
+        plain.select(&a, p).unwrap();
+        let out = plain.step(&a).unwrap();
+        assert!(out.diagnostics.score.is_some());
+        assert_eq!(out.diagnostics.anchor_score, None);
+        let mut anch = LkTracker::new(anchored());
+        anch.select(&a, p).unwrap();
+        let out = anch.step(&a).unwrap();
+        assert_eq!(out.status, TrackStatus::Tracking);
+        assert!(
+            out.diagnostics.anchor_score.is_some_and(|z| z > 0.99),
+            "{out:?}"
+        );
     }
 
     /// A slow change of the surface under the point (a head turn as the 2D window sees it):
@@ -1086,6 +1114,9 @@ mod tests {
         assert_eq!(out.status, TrackStatus::Lost(LossReason::AppearanceChanged));
         let z = out.diagnostics.score.expect("gate ran");
         assert!(z < 0.3, "lost above the floor: zncc {z} at {i_anch}");
+        // A slow change: the lag check itself still passes at the floor.
+        let lag = out.diagnostics.anchor_score.expect("lag check ran");
+        assert!(lag >= 0.7, "lag {lag} at {i_anch}");
         assert!(i_anch > i_plain + 20, "{i_anch} vs plain {i_plain}");
     }
 

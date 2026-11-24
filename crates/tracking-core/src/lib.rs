@@ -66,8 +66,12 @@ pub enum TrackStatus {
 pub struct Diagnostics {
     /// Photometric residual (e.g. LK mean absolute error).
     pub residual: Option<f32>,
-    /// Match score (NCC correlation in [−1, 1]).
+    /// Match score (NCC correlation in [−1, 1]). For LK with the appearance gate: the ZNCC
+    /// against the selection window.
     pub score: Option<f32>,
+    /// LK anchored gate only (ADR-0018): the ZNCC against the window accepted `lag_frames`
+    /// steps earlier. With `score`, it tells which check rejected a step.
+    pub anchor_score: Option<f32>,
     /// Window texture: LK `λ_min(G) / |W|` (intensity² per px²).
     pub min_eigen: Option<f32>,
     /// Solver iterations used, if iterative.

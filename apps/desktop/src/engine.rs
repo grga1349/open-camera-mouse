@@ -38,7 +38,9 @@ use app_core::ports::{
     CameraError, CameraFrame, CameraSource, CaptureFormat, CaptureRequest, Desktop, PointerError,
     PointerSink,
 };
-use app_core::{Controller, DesktopRect, Effect, Input, PointerAccess, Settings, Step, View};
+use app_core::{
+    Controller, DesktopRect, Effect, Event, Input, PointerAccess, Settings, Step, View,
+};
 use eframe::egui::ColorImage;
 
 use crate::perf::SharedPerf;
@@ -553,12 +555,14 @@ impl<C: CameraLink> Engine<C> {
         let t1 = Instant::now();
         self.perform(step);
         if let Some(p) = &self.perf {
-            p.lock().unwrap_or_else(PoisonError::into_inner).frame(
+            let mut p = p.lock().unwrap_or_else(PoisonError::into_inner);
+            p.frame(
                 received.saturating_sub(captured),
                 t1 - t0,
                 t1.elapsed(),
                 self.clock.now_us().saturating_sub(captured),
             );
+            p.track(self.controller.track());
         }
     }
 
@@ -606,6 +610,14 @@ impl<C: CameraLink> Engine<C> {
         for _ in 0..MAX_EFFECT_ROUNDS {
             if let Some(r) = &mut self.recorder {
                 r.events(self.t_us, &step.events);
+            }
+            if let Some(p) = &self.perf
+                && step
+                    .events
+                    .iter()
+                    .any(|e| matches!(e, Event::TargetSelected { .. }))
+            {
+                p.lock().unwrap_or_else(PoisonError::into_inner).selected();
             }
             if step.effects.is_empty() {
                 return;

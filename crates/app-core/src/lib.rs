@@ -18,4 +18,4 @@ pub use controller::{
 pub use pointer_core::DesktopRect;
 pub use settings::{DwellSettings, MainMonitor, ScreenLimits, Settings, SettingsError, Theme};
 /// Tracker types that appear in [`View`], so the UI needn't depend on `tracking-core`.
-pub use tracking_core::{Diagnostics, HoldReason, LossReason, TrackStatus};
+pub use tracking_core::{Diagnostics, HoldReason, LossReason, TrackOutput, TrackStatus};

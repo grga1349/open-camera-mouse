@@ -45,7 +45,8 @@ when both hold:
   `select` and on a re-detection resume.
 - ZNCC(new window, selection window) ≥ `min_selection_zncc` = **0.3** (backstop).
 
-`Diagnostics::score` still reports the selection ZNCC. Cost per frame: one more 21×21 ZNCC and
+`Diagnostics::score` still reports the selection ZNCC; `Diagnostics::anchor_score` (added
+v0.4.1) reports the lag-window ZNCC, so a loss shows which check rejected it. Cost per frame: one more 21×21 ZNCC and
 one normalised window copy, no allocation after `select`.
 
 Lag sweep 5 / 10 / 15 on the appearance corpus and the fixture corpus (320 and 640): 5 lets the
