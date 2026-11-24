@@ -280,8 +280,8 @@ fn clicking(ui: &mut Ui, s: &mut Settings) {
             "Dwell time",
             &mut d.dwell_s,
             ranges::DWELL_S,
-            0.1,
-            |v| format!("{v:.1} s"),
+            0.05,
+            |v| format!("{v:.2} s"),
             None,
         );
         space(ui);

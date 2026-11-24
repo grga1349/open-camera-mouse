@@ -778,6 +778,23 @@ fn clicking_tab_controls() {
 }
 
 #[test]
+fn dwell_time_selects_exactly_a_quarter_second() {
+    let mut s = Settings::default();
+    s.dwell.enabled = true;
+    let mut sh = stopped_with(s);
+    sh.tab = Tab::Clicking;
+    let mut h = options_window(sh);
+    h.get_by_label("Dwell time").set_value_accesskit(0.25);
+    h.run_steps(4);
+    assert_eq!(settings(&h).dwell.dwell_s, 0.25);
+    assert!(h.query_by_label("0.25 s").is_some(), "two-decimal display");
+    // The slider stops on 0.05 steps, so 0.35 is reachable but 0.33 is not.
+    h.get_by_label("Dwell time").set_value_accesskit(0.33);
+    h.run_steps(4);
+    assert!((settings(&h).dwell.dwell_s - 0.35).abs() < 1e-6);
+}
+
+#[test]
 fn camera_tab_controls() {
     let mut sh = stopped();
     sh.cameras = vec![

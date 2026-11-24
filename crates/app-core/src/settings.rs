@@ -168,7 +168,7 @@ pub mod ranges {
     pub const GAIN: RangeInclusive<f32> = 1.0..=60.0;
     pub const SMOOTHING: RangeInclusive<f32> = 0.0..=0.95;
     pub const LIMIT_PX: RangeInclusive<u32> = 0..=1000;
-    pub const DWELL_S: RangeInclusive<f32> = 0.3..=3.0;
+    pub const DWELL_S: RangeInclusive<f32> = 0.25..=3.0;
     pub const REFRACTORY_S: RangeInclusive<f32> = 0.5..=5.0;
     pub const DWELL_RADIUS_FRAC: RangeInclusive<f32> = 0.01..=0.15;
 }
@@ -363,6 +363,21 @@ mod tests {
             let err = s.validated().expect_err(field);
             assert_eq!(err.field, field);
         }
+    }
+
+    #[test]
+    fn dwell_time_goes_down_to_a_quarter_second() {
+        // v0.4.1 brief: exactly 0.25 s must be selectable; nothing shorter.
+        let with = |dwell_s| Settings {
+            dwell: DwellSettings {
+                dwell_s,
+                ..DwellSettings::default()
+            },
+            ..Settings::default()
+        };
+        assert_eq!(with(0.25).validated().unwrap().dwell.dwell_s, 0.25);
+        assert_eq!(with(0.24).validated().unwrap_err().field, "dwell.dwell_s");
+        assert_eq!(*ranges::DWELL_S.end(), 3.0, "upper bound unchanged");
     }
 
     #[test]

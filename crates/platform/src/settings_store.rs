@@ -372,6 +372,16 @@ mod tests {
         assert_eq!(loaded.settings.gain_x, 20.0);
     }
 
+    #[test]
+    fn quarter_second_dwell_loads_without_repair() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = store(&dir);
+        write(&s, "schema_version = 1\n[dwell]\ndwell_s = 0.25\n");
+        let loaded = s.load();
+        assert_eq!(loaded.notice, None);
+        assert_eq!(loaded.settings.dwell.dwell_s, 0.25);
+    }
+
     // #14: "Main monitor" is saved as "primary" / "all" / an index; files from before #14
     // (no value) read as the primary monitor.
     #[test]
