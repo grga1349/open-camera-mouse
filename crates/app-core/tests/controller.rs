@@ -1084,12 +1084,37 @@ fn a_slow_move_onto_an_edge_does_not_jump() {
 /// unless the spot was selected within ~20 px of the frame edge.
 #[test]
 fn every_screen_edge_and_corner_is_reached_while_the_camera_point_stays_inside() {
-    let sx = gain() * DESK.width / W as f32;
-    let sy = gain() * DESK.height / H as f32;
+    let (ex, ey) = assert_every_edge_and_corner_is_reached(Settings::default());
+    assert!(ex < 20.0 && ey < 20.0, "{ex} {ey}");
+}
+
+/// The same at the user's low-gain test values (v0.4.1 D2: gain 7, smoothing 0.6). The edge
+/// is ≈ 46 camera px (x) and ≈ 34 (y) from the selected spot: a bigger head move, still far
+/// inside the frame, and the heavier smoothing still settles exactly on the edge pixel.
+#[test]
+fn every_screen_edge_and_corner_is_reached_at_low_gain_and_heavy_smoothing() {
+    let (ex, ey) = assert_every_edge_and_corner_is_reached(Settings {
+        gain_x: 7.0,
+        gain_y: 7.0,
+        smoothing: 0.6,
+        ..Settings::default()
+    });
+    assert!(
+        (40.0..50.0).contains(&ex) && (30.0..40.0).contains(&ey),
+        "{ex} {ey}"
+    );
+}
+
+/// Moves the head a few camera px past each screen edge and corner (1 camera px per frame,
+/// then held 1.5 s) and asserts the cursor ends exactly on that edge's last pixel, stays on
+/// the desktop, and the tracker reports `Tracking` with the point far inside the frame on
+/// every frame. Returns the head offset (camera px) of the right / bottom edge.
+fn assert_every_edge_and_corner_is_reached(settings: Settings) -> (f32, f32) {
+    let sx = settings.gain_x * DESK.width / W as f32;
+    let sy = settings.gain_y * DESK.height / H as f32;
     // Head offset (camera px) that puts the cursor on the right/bottom edge.
     let ex = (DESK.width - 1.0 - CENTER.x) / sx;
     let ey = (DESK.height - 1.0 - CENTER.y) / sy;
-    assert!(ex < 20.0 && ey < 20.0, "{ex} {ey}");
     let push = 3.0; // camera px past the edge
     let (right, bottom) = (DESK.width - 1.0, DESK.height - 1.0);
     for (ux, uy) in [
@@ -1102,9 +1127,8 @@ fn every_screen_edge_and_corner_is_reached_while_the_camera_point_stays_inside()
         (1.0, -1.0),
         (-1.0, -1.0),
     ] {
-        let mut r = Rig::tracking();
+        let mut r = Rig::tracking_with(settings.clone());
         let to = Point2::new(ux * (ex + push), uy * (ey + push));
-        // 1 camera px per frame (≈ 60 screen px per frame, 30 fps), then held 1.5 s.
         let n = to.x.abs().max(to.y.abs()).ceil() as usize;
         let mut path = Vec::new();
         for i in 1..=n + 45 {
@@ -1119,7 +1143,7 @@ fn every_screen_edge_and_corner_is_reached_while_the_camera_point_stays_inside()
                 .min(W as f32 - 1.0 - cam.x)
                 .min(cam.y)
                 .min(H as f32 - 1.0 - cam.y);
-            assert!(gap > 200.0, "{to:?}: camera point {cam:?}");
+            assert!(gap > 150.0, "{to:?}: camera point {cam:?}");
         }
         let last = *path.last().unwrap();
         let want_x = [0.0, CENTER.x, right][(ux + 1.0) as usize];
@@ -1140,6 +1164,7 @@ fn every_screen_edge_and_corner_is_reached_while_the_camera_point_stays_inside()
             "{to:?}: off the desktop"
         );
     }
+    (ex, ey)
 }
 
 fn with_dwell() -> Settings {
