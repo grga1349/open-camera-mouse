@@ -53,7 +53,9 @@ main-context (`mc`) modes are defined there (ADR-0024).
    device-only behaviour, say exactly what the user should check by hand.
 6. **Finish:** update the docs the change made stale (the active roadmap's statuses, and
    `docs/ROADMAP.md` if the user moved something there (`.agents/PLANNING.md`)), report what was verified and what wasn't, then **ask whether to commit**
-   (and separately whether to push).
+   (and separately whether to push). At each subtask checkpoint, offer a commit and push even
+   if checks failed or work is unfinished; record their actual status. A checkpoint does not
+   waive the verification or release gates.
 
 Larger work: plan it with the `engineering-planning` skill; do one item (or a slice the user
 names) per session; multi-session initiatives per `.agents/PLANNING.md`.
