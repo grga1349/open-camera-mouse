@@ -19,7 +19,8 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 | `docs/TESTING.md` | Gates, where tests live, manual QA, diagnostics |
 | `docs/ROADMAP.md` | Open items and what was deferred |
 | `docs/architecture/decisions/` | ADRs: why things are the way they are |
-| `docs/COMMANDS.md` | Shortcut commands (`rhmo`, `h`, `cp`, …) |
+| `docs/COMMANDS.md` | Shortcut commands (`rhmo`, `h`, `cp`, `mc`, …) |
+| `.agents/WORKFLOW.md`, `.agents/MODELS.md` | Orchestration: roles, delegation, modes, checkpoints; model per role and runtime |
 | `docs/design-lab.html` | Approved visual reference (open in a browser) |
 | `docs/WEBSITE.md` | Website: scope, content rules, pages, design and tokens, stack, CI and Pages deployment |
 | `docs/V0.4.1_HANDOFF.md`, `docs/V0.4.1_ROADMAP.md` | v0.4.1 release: temporary, on `fix/v0.4.1-stabilization` only. Read the handoff first, rewrite it at the end of each session; both deleted before merge |
@@ -27,8 +28,13 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 ## Workflow: one prompt = one task
 
 Tasks arrive as prompts from the user; there are no task files or session logs.
-A prompt that is only a shortcut word (`rhmo`, `h`, `hcp`, `cp`, `v`, `r`) is a command:
-resolve it through `docs/COMMANDS.md` first.
+A prompt that is only a shortcut word (`rhmo`, `h`, `hcp`, `cp`, `v`, `r`, `mc`, `resume`)
+is a command: resolve it through `docs/COMMANDS.md` first.
+
+**Orchestration:** you are the main agent (accountable lead). Read `.agents/WORKFLOW.md` at
+the start of every session and run the steps below through it: delegate bounded work to
+subagents with the models in `.agents/MODELS.md`, independent review included; spike and
+main-context (`mc`) modes are defined there (ADR-0024).
 
 1. **Understand.** `git status` and `git log -5`; read the docs and ADRs for the area; read
    the code. Don't guess architecture; if a doc and the code disagree, the code wins, fix the
@@ -125,7 +131,8 @@ does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005).
 ## Instruction files
 
 `CLAUDE.md` is a plain file (not a symlink, ADR-0002) that imports this one with
-`@AGENTS.md`; Codex reads `AGENTS.md` directly.
+`@AGENTS.md`; Codex reads `AGENTS.md` directly. Orchestration lives only in `.agents/`
+(`WORKFLOW.md`, `MODELS.md`); no `.claude/agents/` or `.codex/agents/` copies (ADR-0024).
 
 ## Never
 

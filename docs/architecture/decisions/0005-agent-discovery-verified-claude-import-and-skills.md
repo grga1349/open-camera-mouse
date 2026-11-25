@@ -1,6 +1,6 @@
 # ADR-0005: `CLAUDE.md` imports `AGENTS.md`; skills stay in `.agents/skills/` only
 
-Status: Accepted; workflow amended by ADR-0022 (no agent/ or tasks/ files; `agent-handoff` skill removed)
+Status: Accepted; workflow amended by ADR-0022 (no agent/ or tasks/ files; `agent-handoff` skill removed) and ADR-0024 (orchestration in `.agents/WORKFLOW.md`, `MODELS.md`)
 Date: 2026-11-11
 Amends: ADR-0002 (keeps its no-symlink decision, changes how the pointer works)
 

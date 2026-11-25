@@ -13,12 +13,17 @@ If there are none, the command says so and stops; it never creates them.
 
 | Command | Does |
 |---|---|
-| `rhmo` | Read the active handoff, then its roadmap, and do the step under "Resume here": one slice or item, by the normal workflow. If that step waits on the user (a decision, a device check), say so and take the next unblocked item it names; if none is unblocked, ask. |
-| `h` | Rewrite the active handoff for the next session: update "Resume here" and add this session's entry (what changed, tests, gates run, what wasn't verified, open decisions). Tick finished roadmap items. No commit. |
+| `rhmo` | Read the active handoff, then its roadmap, and do the step under "Resume here": one slice or item, by the normal workflow, in the mode the handoff records (standard orchestration unless it says main context or spike). If that step waits on the user (a decision, a device check), say so and take the next unblocked item it names; if none is unblocked, ask. |
+| `h` | Rewrite the active handoff for the next session: update "Resume here" and add this session's entry (what changed, tests, gates run, what wasn't verified, open decisions, roles and models used). Record the mode if it isn't standard (main context, spike). Tick finished roadmap items. No commit. |
 | `hcp` | `h`, then `cp`. |
 | `cp` | Commit and push the current task's changes. The command is the user's yes for this one commit and push (nothing else: no merge, tag, release or force-push). |
 | `v` | Run the gates for what changed (Rust and/or website, scoped, one heavy command at a time) and report each result with its output summary, plus what can only be checked by hand. |
-| `r` | Review the uncommitted changes (or the branch against `main` if the tree is clean) with the `code-review` skill: correctness, regressions, missing tests, ADR-0007 boundaries and other ADRs. Report findings by severity; change nothing. |
+| `r` | Review the uncommitted changes (or the branch against `main` if the tree is clean) with the `code-review` skill: correctness, regressions, missing tests, ADR-0007 boundaries and other ADRs. Report findings by severity; change nothing. Prefer an independent reviewer subagent (strong tier, `.agents/MODELS.md`); the main agent checks its findings before reporting, and says so if the review was done in its own context instead. |
+| `mc` | Main context mode (`.agents/WORKFLOW.md`): start no delegations, stop or wind down running ones and report what they changed, check `git status`, drop assumptions about the previous plan, and ask what we are investigating or correcting. The main agent then works directly until `resume` or the end of the task. |
+| `resume` | Leave main context mode: back to standard orchestration for the current task. Not a resume of the handoff (that is `rhmo`). |
+
+`h`, `hcp`, `cp` and `v` are always run by the main agent; a subagent may run gate commands
+for `v`, but the main agent reads their output and reports it.
 
 ## `cp` details
 
