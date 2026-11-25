@@ -459,8 +459,14 @@ pub struct LkTracker {
     searcher: Searcher,
     /// Lost with a kept reference: later steps search instead of tracking.
     searching: bool,
-    /// Last reported position while searching.
+    /// Where the point was lost: the reported position while searching, and the centre of
+    /// the spatial prior.
     last: Point2,
+    /// The selection frame's pyramid and point, kept for every selection so re-detection can
+    /// be armed later ([`LkTracker::set_redetect`], ADR-0010 amendment 2026-11-25). The point
+    /// is `None` before a selection and after [`Tracker::reset`].
+    selection: Pyramid,
+    selected: Option<Point2>,
     /// Zero-mean, unit-norm level-0 window of twice the half size around the selection
     /// (only with [`RedetectParams::min_context_zncc`]). Empty = no context check.
     context: Vec<f32>,
@@ -649,11 +655,11 @@ impl LkTracker {
             TrackStatus::Held(HoldReason::NearEdgeMovingOut)
         } else {
             self.point = None;
+            self.last = a;
             if self.searcher.is_ready() {
                 // E4: keep the reference and search this frame right away.
                 self.searching = true;
                 self.pending = None;
-                self.last = a;
                 return self.redetect_step(reason, diagnostics);
             }
             TrackStatus::Lost(reason)
@@ -671,6 +677,53 @@ impl LkTracker {
     /// selection window is textured, and the selection frame holds no lookalike.
     pub fn redetect_armed(&self) -> bool {
         self.searcher.is_ready()
+    }
+
+    /// Switches loss recovery on or off without dropping the selection (ADR-0010 amendment
+    /// 2026-11-25). On: re-detection is armed from the kept selection frame exactly as
+    /// [`Tracker::select`] arms it, and a point lost without a search starts searching around
+    /// where it was lost. Off: the search stops; a lost point then waits for a re-selection
+    /// (2018). The track, the appearance reference and the lag ring are left as they are.
+    pub fn set_redetect(&mut self, redetect: Option<RedetectParams>) {
+        self.params.redetect = redetect;
+        self.pending = None;
+        self.arm();
+        if !self.searcher.is_ready() {
+            self.searching = false;
+        } else if self.point.is_none() && self.selected.is_some() {
+            self.searching = true;
+        }
+    }
+
+    /// Prepares the re-detection templates and the context window from the kept selection
+    /// frame, then the self-test: the selection frame must re-detect its own point,
+    /// unambiguously. Leaves the searcher not ready without `redetect` or a selection.
+    fn arm(&mut self) {
+        self.searcher.clear();
+        self.context.clear();
+        let (Some(rp), Some(point)) = (self.params.redetect, self.selected) else {
+            return;
+        };
+        self.searcher
+            .prepare(&self.selection, point, self.params.half_window, &rp);
+        let own = matches!(
+            self.searcher.search(&self.selection, &rp, None),
+            SearchResult::Found { position, .. }
+                if (position.x - point.x).hypot(position.y - point.y) <= 1.0
+        );
+        if !own {
+            self.searcher.clear();
+        }
+        if rp.min_context_zncc.is_some()
+            && !normalized_window(
+                &self.selection.level(0).img,
+                point,
+                2 * self.params.half_window,
+                &mut self.context,
+            )
+        {
+            self.context.clear();
+        }
     }
 
     /// E4 search on `self.prev` (the current frame, after the swap). On a match, tracking
@@ -765,31 +818,10 @@ impl Tracker for LkTracker {
         self.searching = false;
         self.pending = None;
         self.degraded = 0;
-        self.searcher.clear();
-        if let Some(rp) = self.params.redetect {
-            self.searcher
-                .prepare(&self.prev, point, self.params.half_window, &rp);
-            // Self-test: the selection frame must re-detect its own point, unambiguously.
-            let own = matches!(
-                self.searcher.search(&self.prev, &rp, None),
-                SearchResult::Found { position, .. }
-                    if (position.x - point.x).hypot(position.y - point.y) <= 1.0
-            );
-            if !own {
-                self.searcher.clear();
-            }
-            self.context.clear();
-            if rp.min_context_zncc.is_some()
-                && !normalized_window(
-                    &self.prev.level(0).img,
-                    point,
-                    2 * self.params.half_window,
-                    &mut self.context,
-                )
-            {
-                self.context.clear();
-            }
-        }
+        // Kept for re-arming later (`set_redetect`); the same frame as `prev` here.
+        self.selection.build(frame, self.params.max_level);
+        self.selected = Some(point);
+        self.arm();
         if self.params.min_ref_zncc.is_some()
             && !normalized_window(
                 &self.prev.level(0).img,
@@ -886,6 +918,7 @@ impl Tracker for LkTracker {
 
     fn reset(&mut self) {
         self.point = None;
+        self.selected = None;
         self.searching = false;
         self.pending = None;
         self.degraded = 0;
@@ -1453,6 +1486,73 @@ mod tests {
             out.status,
             TrackStatus::Tracking,
             "LK resumes from the match"
+        );
+    }
+
+    /// ADR-0010 amendment 2026-11-25: re-detection switched on after a loss searches for the
+    /// spot selected before it (from the kept selection frame), around the loss point;
+    /// switched off while searching, the 2018 policy applies; switched while tracking, the
+    /// track goes on.
+    #[test]
+    fn redetect_switched_on_after_a_loss_searches_for_the_selection() {
+        let n = crate::redetect::tests::noise;
+        let sel = Point2::new(160.0, 120.0);
+        let mut off = e4();
+        off.redetect = None;
+        let mut t = LkTracker::new(off);
+        t.select(&noise_frame(320, 240, n), sel).unwrap();
+        assert!(!t.redetect_armed());
+
+        // On and off while tracking: armed, then not, the track unchanged.
+        t.set_redetect(e4().redetect);
+        assert!(t.redetect_armed());
+        t.set_redetect(None);
+        assert!(!t.redetect_armed());
+        assert_eq!(
+            t.step(&noise_frame(320, 240, n)).unwrap().status,
+            TrackStatus::Tracking
+        );
+
+        assert_ne!(lose(&mut t), LossReason::Searching);
+        t.set_redetect(e4().redetect);
+        assert!(t.redetect_armed());
+        let flat = GrayFrame::filled(320, 240, 100).unwrap();
+        let out = t.step(&flat).unwrap();
+        assert_eq!(out.status, TrackStatus::Lost(LossReason::Searching));
+        assert_eq!(out.position, sel, "searches around the loss point");
+        let (dx, dy) = (30.0f32, -20.0f32);
+        let moved = noise_frame(320, 240, |x, y| n(x - dx, y - dy));
+        let out = t.step(&moved).unwrap();
+        assert_eq!(out.status, TrackStatus::Tracking);
+        let err = (out.position.x - sel.x - dx).hypot(out.position.y - sel.y - dy);
+        assert!(err < 0.5, "re-detected {err} px off");
+
+        // Lost again while searching, then off: no search, re-select.
+        lose(&mut t);
+        t.set_redetect(None);
+        assert!(!t.redetect_armed());
+        assert_eq!(
+            t.step(&moved).unwrap().status,
+            TrackStatus::Lost(LossReason::NoSelection)
+        );
+    }
+
+    /// Nothing selected (or the target dropped): switching re-detection on arms nothing.
+    #[test]
+    fn redetect_switched_on_without_a_selection_stays_unarmed() {
+        let n = crate::redetect::tests::noise;
+        let mut t = LkTracker::new(LkParams::default());
+        t.set_redetect(e4().redetect);
+        assert!(!t.redetect_armed());
+        t.select(&noise_frame(320, 240, n), Point2::new(160.0, 120.0))
+            .unwrap();
+        assert!(t.redetect_armed());
+        t.reset();
+        t.set_redetect(e4().redetect);
+        assert!(!t.redetect_armed());
+        assert_eq!(
+            t.step(&noise_frame(320, 240, n)).unwrap().status,
+            TrackStatus::Lost(LossReason::NoSelection)
         );
     }
 

@@ -551,7 +551,10 @@ impl Controller {
             }
         }
         if old.loss_recovery != self.settings.loss_recovery {
-            self.rebuild_tracker(&mut step);
+            // In place: the selection is kept, so a loss is searched for once it's on
+            // (ADR-0010 amendment 2026-11-25).
+            self.tracker
+                .set_redetect(tracker_params(&self.settings).redetect);
         }
         if old.dwell != self.settings.dwell {
             self.dwell.reset();
@@ -814,21 +817,6 @@ impl Controller {
             }
             Err(_) => step.events.push(Event::SelectionRejected { at: p }),
         }
-    }
-
-    fn rebuild_tracker(&mut self, step: &mut Step) {
-        self.tracker = LkTracker::new(tracker_params(&self.settings));
-        if self.state == AppState::Tracking
-            && let (Some(frame), Some(t)) = (&self.frame, self.track)
-            && self.tracker.select(frame, t.position).is_ok()
-        {
-            return;
-        }
-        if self.state == AppState::Tracking {
-            self.drop_target();
-            self.set_state(AppState::NoTarget, step);
-        }
-        // Lost stays Lost; the new tracker isn't searching, so the user re-selects.
     }
 
     fn track_step(&mut self, now_us: u64, step: &mut Step) {

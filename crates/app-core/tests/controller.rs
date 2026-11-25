@@ -802,8 +802,67 @@ fn changing_mirroring_drops_the_target() {
     );
 }
 
+/// v0.4.1 slice 3 (ADR-0010 amendment 2026-11-25): lost with recovery off, then turned on,
+/// the search starts for the spot selected before the loss. Before, the rebuilt tracker had
+/// no selection, nothing searched, and the status blamed the spot ("too little detail").
 #[test]
-fn toggling_recovery_rebuilds_the_tracker_and_keeps_tracking() {
+fn turning_recovery_on_while_lost_searches_for_the_selected_spot() {
+    let mut r = Rig::tracking_with(without_recovery());
+    let before = r.frame(0.0, 0.0, SCENE).pointer_target().unwrap();
+    r.occlude();
+    r.frame(0.0, 0.0, OCCLUDER);
+    assert!(!r.c.view(r.now).redetect_armed);
+
+    let s = r.c.update_settings(with_recovery(), r.now).unwrap();
+    assert!(state_changes(&s).is_empty());
+    let v = r.c.view(r.now);
+    assert_eq!(r.c.state(), AppState::Lost);
+    assert!(v.redetect_armed, "the selected spot is searched for");
+    assert_eq!(v.marker.unwrap().kind, MarkerKind::Searching);
+
+    // Still hidden: keeps searching. Back where it was: three finds resume it, no jump.
+    r.frame(0.0, 0.0, OCCLUDER);
+    assert_eq!(r.c.state(), AppState::Lost);
+    for _ in 0..2 {
+        r.frame(0.0, 0.0, SCENE);
+        assert_eq!(r.c.state(), AppState::Lost, "not confirmed yet");
+    }
+    let s = r.frame(0.0, 0.0, SCENE);
+    assert_eq!(
+        state_changes(&s),
+        vec![(AppState::Lost, AppState::Tracking)]
+    );
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+    let p = s.pointer_target().unwrap();
+    assert!(dist(p, before) < 5.0, "{p:?} vs {before:?}");
+}
+
+/// The other way round: searching, then turned off, the 2018 policy applies (no search, the
+/// loss reason stays on show, re-select or recenter).
+#[test]
+fn turning_recovery_off_while_searching_stops_the_search() {
+    let mut r = Rig::tracking_with(with_recovery());
+    r.occlude();
+    let reason = match r.c.view(r.now).track {
+        Some(TrackStatus::Lost(reason)) => reason,
+        other => panic!("{other:?}"),
+    };
+    assert!(r.c.view(r.now).redetect_armed);
+
+    let s = r.c.update_settings(without_recovery(), r.now).unwrap();
+    assert!(state_changes(&s).is_empty());
+    let v = r.c.view(r.now);
+    assert!(!v.redetect_armed);
+    assert_eq!(v.marker.unwrap().kind, MarkerKind::Lost);
+
+    let s = r.hold(1_000_000, 0.0, SCENE);
+    assert!(state_changes(&s).is_empty());
+    assert_eq!(r.c.state(), AppState::Lost);
+    assert_eq!(r.c.view(r.now).track, Some(TrackStatus::Lost(reason)));
+}
+
+#[test]
+fn toggling_recovery_while_tracking_keeps_tracking() {
     let mut r = Rig::tracking_with(without_recovery());
     assert!(!r.c.view(r.now).redetect_armed);
     let s = r.c.update_settings(with_recovery(), r.now).unwrap();

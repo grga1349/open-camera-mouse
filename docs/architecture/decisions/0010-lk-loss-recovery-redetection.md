@@ -91,3 +91,23 @@ has 0 wrong-lock and 0 false-track frames, and no gate-scene regression. A searc
   pyramid.
 - The search runs every frame while lost, so it must fit the §8 budget (step p95 < 2 ms at
   640) on its own.
+
+## Amendment 2026-11-25 (v0.4.1 slice 3: switching re-detection on and off)
+
+Before, `app-core` rebuilt the tracker when "Find the target again" changed. If that happened while
+tracking, it re-selected the current position. If it happened while lost, the new tracker had no
+selection. So turning the option on after a loss never searched, and the status blamed the spot
+("too little detail"). User decision 2026-11-25: re-arm the search instead.
+
+- `LkTracker` keeps the selection frame's pyramid for every selection (about 1.6 MB at 640×480),
+  whatever `redetect` is. `LkTracker::set_redetect` swaps the re-detection parameters in place.
+  Turning them on prepares the templates, the context window and the self-test from the kept
+  selection frame, exactly as `select` does. Turning them off disarms the search. The
+  selection, the appearance reference and the lag ring stay as they are.
+- Lost without a search (re-detection was off at the loss) and then switched on: the tracker
+  starts searching around the loss point under the usual spatial prior and confirmation. Lost
+  while searching and then switched off: the search stops, and the 2018 policy applies
+  (re-select or recenter).
+- Switching while tracking no longer re-selects. The track and its selection reference go on
+  unchanged.
+- `app-core` calls `set_redetect` instead of rebuilding the tracker.
