@@ -39,7 +39,7 @@ Applied to the current open items (BEHAVIOR_SPEC section refs):
 | 35 px outlier guard | Adopt as the LK preset | Units/resolution still open (Q-R1) |
 | First frame after selection | **Not** copied: initialise from the selection frame (R-T3) | (a) |
 | Tracking algorithm (ADR-0004) | Pyramidal LK with the 2018 preset is the presumptive baseline; NCC stays a measured comparator; Phase 3 measurements can still overturn this | — |
-| Dwell clicking (R-K1, Q-R4) | Off by default; dwell 1 s; 2 s refractory after a click; radius 0.05 | (b): radius unit and the exact `MouseClicker` state machine are UNRESOLVED. Provisionally treat radius as a fraction of screen size and re-arm after refractory *or* leaving the radius, until resolved |
+| Dwell clicking (R-K1, Q-R4) | Off by default; dwell 1 s; ~~2 s refractory after a click~~; radius 0.05 | (b): radius unit and the exact `MouseClicker` state machine are UNRESOLVED. Provisionally treat radius as a fraction of screen size and re-arm after refractory *or* leaving the radius, until resolved. *Amended 2026-11-25 (v0.4.1, user decision): one setting, Dwell time. Held still, it clicks again every dwell time; no separate refractory ("Pause after a click" removed). The click lands where the cursor is, not where the dwell started* |
 | 5-4-3-2-1 / CenterDetect recenter | Keep legacy's guided countdown → pick frame centre | (b): CenterDetect body UNRESOLVED |
 | Periodic auto-recenter (Auto54321) | ~~Offer it, default off, interval 3 min~~ **Amended 2026-11-12: not offered in the initial rewrite** | (d) user decision 2026-11-12 (task 0007); revisit after v1 |
 | Pause | Adopt: release control, invalidate tracking, cursor to desktop centre | — |

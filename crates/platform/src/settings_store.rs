@@ -397,6 +397,22 @@ mod tests {
         assert_eq!(loaded.settings.dwell.dwell_s, 0.25);
     }
 
+    /// v0.4.0 files carry the removed "Pause after a click" (ADR-0006 amendment 2026-11-25):
+    /// they load as before, without a notice, and the value is dropped.
+    #[test]
+    fn a_v040_pause_after_a_click_is_ignored_on_load() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = store(&dir);
+        write(
+            &s,
+            "schema_version = 1\n[dwell]\nenabled = true\ndwell_s = 1.5\nrefractory_s = 3.0\n",
+        );
+        let loaded = s.load();
+        assert_eq!(loaded.notice, None);
+        assert!(loaded.settings.dwell.enabled);
+        assert_eq!(loaded.settings.dwell.dwell_s, 1.5);
+    }
+
     // #14: "Main monitor" is saved as "primary" / "all" / an index; files from before #14
     // (no value) read as the primary monitor.
     #[test]

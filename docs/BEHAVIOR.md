@@ -37,8 +37,9 @@ that owns it.
 
 ## Clicking
 
-- **R-K1** Dwell fires once, then re-arms after leaving the radius or after the refractory
-  time.
+- **R-K1** Dwell fires where the cursor is after the dwell time inside the radius; held still,
+  it fires again every dwell time; leaving the radius starts a new dwell (ADR-0006
+  amendment 2026-11-25).
 - **R-K2** No dwell click while the target is lost or the camera doesn't own the pointer.
 
 ## Lifecycle (`app-core`)

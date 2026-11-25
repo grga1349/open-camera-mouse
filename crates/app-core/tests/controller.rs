@@ -1184,9 +1184,10 @@ fn dwell_is_off_by_default() {
     assert_eq!(r.c.view(r.now).dwell_progress, None);
 }
 
-/// R-K1: one click after 1 s still, then nothing during the 2 s refractory.
+/// R-K1: a click after 1 s still, and held still another every 1 s (ADR-0006 amendment
+/// 2026-11-25: one setting, no pause after a click).
 #[test]
-fn dwell_fires_once_when_enabled() {
+fn dwell_clicks_every_dwell_time_while_held_still() {
     let mut r = Rig::tracking_with(with_dwell());
     let s = r.hold(500_000, 0.0, SCENE);
     assert!(clicks(&s).is_empty());
@@ -1194,8 +1195,8 @@ fn dwell_fires_once_when_enabled() {
     assert!((0.3..0.6).contains(&p), "{p}");
     let s = r.hold(2_000_000, 0.0, SCENE);
     let c = clicks(&s);
-    assert_eq!(c.len(), 1, "{c:?}");
-    assert!(dist(c[0], CENTER) < 3.0, "{c:?}");
+    assert_eq!(c.len(), 2, "{c:?}");
+    assert!(c.iter().all(|&p| dist(p, CENTER) < 3.0), "{c:?}");
     // The click follows the move in the same step.
     let idx = s
         .effects
@@ -1203,6 +1204,38 @@ fn dwell_fires_once_when_enabled() {
         .position(|e| matches!(e, Effect::Click(_)))
         .unwrap();
     assert!(matches!(s.effects[idx - 1], Effect::MovePointer(_)));
+}
+
+/// A dwell click lands where the cursor is, not on the dwell anchor (the spot where the dwell
+/// started, up to the dwell radius away): clicking there jumped the cursor to the anchor and
+/// back, missed small targets such as a slider, and the next cursor reading looked like the
+/// user grabbing the mouse, which handed control over for 4 s (macOS device check and
+/// `OCM_INPUT` log, 2026-11-25).
+#[test]
+fn a_dwell_click_lands_on_the_cursor_and_keeps_the_camera_in_control() {
+    let mut r = Rig::tracking_with(with_dwell());
+    // Half a camera pixel of head motion: ≈ 30 screen px at the default gain, inside the 5 %
+    // dwell radius (54 px here), so the dwell started at the centre keeps running while the
+    // cursor drifts away from it.
+    let mut clicked = None;
+    for _ in 0..60 {
+        let s = r.frame(0.5, 0.0, SCENE);
+        if let Some(&at) = clicks(&s).first() {
+            clicked = Some((at, s.pointer_target().unwrap()));
+            break;
+        }
+    }
+    let (at, cursor) = clicked.expect("a dwell click within 2 s");
+    assert!(
+        dist(cursor, CENTER) > 10.0,
+        "the test needs a cursor away from the anchor: {cursor:?}"
+    );
+    assert_eq!(at, cursor, "the click lands where the cursor is");
+    // The engine reads the cursor before the next frame: it rests where the click put it.
+    r.input(Input::PointerObserved(Some(at)));
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+    r.frame(0.5, 0.0, SCENE);
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
 }
 
 /// R-K2: no click while the mouse has control or the target is lost.

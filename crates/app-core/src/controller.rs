@@ -336,7 +336,6 @@ fn dwell_params(settings: &Settings) -> DwellParams {
     let us = |s: f32| (f64::from(s) * 1e6).round() as u64;
     DwellParams {
         dwell_us: us(d.dwell_s),
-        refractory_us: us(d.refractory_s),
         radius_frac: d.radius_frac,
     }
 }
@@ -1023,15 +1022,19 @@ impl Controller {
             return;
         }
         let params = dwell_params(&self.settings);
-        if let Some(at) = self
+        // The click lands where the cursor is, not on the dwell's anchor (up to the dwell
+        // radius away): clicking there jumped the cursor and back, missed small targets and
+        // read as the user grabbing the mouse (v0.4.1 device check).
+        if self
             .dwell
             .update(cursor, now_us, true, &params, self.desktop)
+            .is_some()
             && !matches!(
                 self.access,
                 PointerAccess::Denied | PointerAccess::Unsupported
             )
         {
-            step.effects.push(Effect::Click(at));
+            step.effects.push(Effect::Click(cursor));
         }
     }
 

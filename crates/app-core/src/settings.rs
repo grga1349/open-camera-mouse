@@ -35,10 +35,9 @@ pub struct ScreenLimits {
 #[serde(default)]
 pub struct DwellSettings {
     pub enabled: bool,
-    /// Hold still this long to click.
+    /// Hold still this long to click; held still, it clicks again every `dwell_s` (ADR-0006
+    /// amendment 2026-11-25). Files from v0.4.0 also hold `refractory_s`, ignored on load.
     pub dwell_s: f32,
-    /// No second click until the pointer leaves the radius or this time passes.
-    pub refractory_s: f32,
     /// "Hold-still area" as a fraction of the screen size.
     pub radius_frac: f32,
 }
@@ -48,7 +47,6 @@ impl Default for DwellSettings {
         Self {
             enabled: false,
             dwell_s: 1.0,
-            refractory_s: 2.0,
             radius_frac: 0.05,
         }
     }
@@ -171,7 +169,6 @@ pub mod ranges {
     pub const SMOOTHING: RangeInclusive<f32> = 0.0..=0.95;
     pub const LIMIT_PX: RangeInclusive<u32> = 0..=1000;
     pub const DWELL_S: RangeInclusive<f32> = 0.25..=3.0;
-    pub const REFRACTORY_S: RangeInclusive<f32> = 0.5..=5.0;
     pub const DWELL_RADIUS_FRAC: RangeInclusive<f32> = 0.01..=0.15;
 }
 
@@ -231,7 +228,6 @@ impl Settings {
         check_u32("limits.bottom", l.bottom, ranges::LIMIT_PX)?;
         let d = self.dwell;
         check_f32("dwell.dwell_s", d.dwell_s, ranges::DWELL_S)?;
-        check_f32("dwell.refractory_s", d.refractory_s, ranges::REFRACTORY_S)?;
         check_f32(
             "dwell.radius_frac",
             d.radius_frac,
@@ -265,7 +261,6 @@ impl Settings {
                 "limits.top" => s.limits.top = d.limits.top,
                 "limits.bottom" => s.limits.bottom = d.limits.bottom,
                 "dwell.dwell_s" => s.dwell.dwell_s = d.dwell.dwell_s,
-                "dwell.refractory_s" => s.dwell.refractory_s = d.dwell.refractory_s,
                 "dwell.radius_frac" => s.dwell.radius_frac = d.dwell.radius_frac,
                 // A field `validated` checks but this list forgot: don't loop, start over.
                 _ => return (d, reset),
@@ -433,13 +428,12 @@ mod tests {
             dwell: DwellSettings {
                 enabled: true,
                 dwell_s: 0.0,
-                refractory_s: 0.0,
                 radius_frac: 0.0,
             },
             ..Settings::default()
         };
         let (fixed, reset) = s.repaired();
-        assert_eq!(reset.len(), 10, "{reset:?}");
+        assert_eq!(reset.len(), 9, "{reset:?}");
         assert!(!fixed.link_gain, "a valid field survives a full repair");
         assert!(fixed.dwell.enabled);
     }

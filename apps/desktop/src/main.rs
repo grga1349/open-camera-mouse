@@ -8,6 +8,7 @@
 mod app;
 mod engine;
 mod icons;
+mod input_log;
 mod options;
 mod perf;
 mod preview;
@@ -187,6 +188,7 @@ impl DesktopApp {
         egui::CentralPanel::default()
             .frame(margin)
             .show(ui, |ui| tracking_ui(ui, &mut self.shell));
+        input_log::log(&ctx, "tracking", gains(&self.shell));
 
         if self.shell.options_open {
             let next_to = ctx.input(|i| i.viewport().outer_rect);
@@ -205,12 +207,19 @@ impl DesktopApp {
                     egui::CentralPanel::default()
                         .frame(frame)
                         .show(ui, |ui| options_ui(ui, shell));
+                    input_log::log(ui.ctx(), "options", gains(shell));
                 },
             );
         }
         // Clicks in this pass (Check again, …): serve them now, not a frame later.
         self.platform_actions();
     }
+}
+
+/// Gain x/y for `OCM_INPUT` lines.
+fn gains(shell: &Shell) -> (f32, f32) {
+    let s = shell.settings();
+    (s.gain_x, s.gain_y)
 }
 
 impl Drop for DesktopApp {

@@ -81,11 +81,20 @@ impl SystemPointer {
     }
 
     fn post(&self, kind: CGEventType, at: Point2) -> Result<(), PointerError> {
+        self.post_with(kind, at, CGMouseButton::Left)
+    }
+
+    fn post_with(
+        &self,
+        kind: CGEventType,
+        at: Point2,
+        button: CGMouseButton,
+    ) -> Result<(), PointerError> {
         let event = CGEvent::new_mouse_event(
             Some(&self.source),
             kind,
             CGPoint::new(f64::from(at.x), f64::from(at.y)),
-            CGMouseButton::Left,
+            button,
         )
         .ok_or_else(|| PointerError::Backend("CGEventCreateMouseEvent failed".into()))?;
         CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&event));
@@ -101,10 +110,38 @@ impl SystemPointer {
         }
         let applied = snap(p, &self.displays);
         let before = Self::raw_position();
-        self.post(CGEventType::MouseMoved, applied)?;
+        let (kind, button) = move_event(held_buttons());
+        self.post_with(kind, applied, button)?;
         let now = self.now_us();
         self.echo.record(p, applied, before, now);
         Ok(applied)
+    }
+}
+
+/// Which mouse buttons are physically held (left, right, other), from the HID system state:
+/// a real button, e.g. a mouth switch, pressed while the camera drives the cursor.
+fn held_buttons() -> (bool, bool, bool) {
+    let held = |b| CGEventSource::button_state(CGEventSourceStateID::HIDSystemState, b);
+    (
+        held(CGMouseButton::Left),
+        held(CGMouseButton::Right),
+        held(CGMouseButton::Center),
+    )
+}
+
+/// The event a camera move is posted as. With a button held it must be that button's
+/// `…MouseDragged`: a plain `MouseMoved` tells the window server and apps the button is up,
+/// so a drag started with a physical button (slider, selection, CAD stroke) stops following
+/// or jumps (macOS device check, 2026-11-25). Left wins over right over other.
+fn move_event((left, right, other): (bool, bool, bool)) -> (CGEventType, CGMouseButton) {
+    if left {
+        (CGEventType::LeftMouseDragged, CGMouseButton::Left)
+    } else if right {
+        (CGEventType::RightMouseDragged, CGMouseButton::Right)
+    } else if other {
+        (CGEventType::OtherMouseDragged, CGMouseButton::Center)
+    } else {
+        (CGEventType::MouseMoved, CGMouseButton::Left)
     }
 }
 
@@ -208,4 +245,21 @@ fn active_displays() -> Result<(Vec<DesktopRect>, Option<usize>), PointerError> 
         })
         .collect();
     Ok((rects, ids.iter().position(|&id| id == main)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_held_button_turns_a_move_into_that_buttons_drag() {
+        let kind = |held| move_event(held).0;
+        assert_eq!(kind((false, false, false)), CGEventType::MouseMoved);
+        assert_eq!(kind((true, false, false)), CGEventType::LeftMouseDragged);
+        assert_eq!(kind((false, true, false)), CGEventType::RightMouseDragged);
+        assert_eq!(kind((false, false, true)), CGEventType::OtherMouseDragged);
+        assert_eq!(kind((true, true, true)), CGEventType::LeftMouseDragged);
+        assert_eq!(move_event((false, true, false)).1, CGMouseButton::Right);
+        assert_eq!(move_event((false, false, true)).1, CGMouseButton::Center);
+    }
 }

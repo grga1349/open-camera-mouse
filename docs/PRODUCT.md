@@ -39,7 +39,7 @@ recenter.
 | Pointer | Absolute mapping with per-axis gain 1–60, 1€ smoothing, automatic steady zone (0.2 camera px), screen limits with offset drift | gain 20 / 20 linked, smoothing 0.20 |
 | Main monitor | Where recenter and pause put the cursor; every display stays reachable | OS primary |
 | Handover | Moving the physical mouse takes over at once; the camera takes back over after 4 s still | on |
-| Dwell click | One click after holding still; re-arms after moving away or the refractory time | off; 1 s dwell, 2 s refractory, radius 0.05 of the screen |
+| Dwell click | Clicks where the cursor is after holding still for the dwell time; held still, clicks again every dwell time; moving away starts over (one setting, ADR-0006 amendment 2026-11-25) | off; 1 s dwell, radius 0.05 of the screen |
 | Hotkeys | Start/pause **F10 on macOS** (macOS reserves F11), **F11** on Windows/Linux; **F12** recenter. Global where the OS allows, always in the window | fixed |
 | Settings | Saved on change (TOML, schema-versioned); bad values reset per field with a notice | — |
 

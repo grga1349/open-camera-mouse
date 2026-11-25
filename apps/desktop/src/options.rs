@@ -282,17 +282,7 @@ fn clicking(ui: &mut Ui, s: &mut Settings) {
             ranges::DWELL_S,
             0.05,
             |v| format!("{v:.2} s"),
-            None,
-        );
-        space(ui);
-        slider_row(
-            ui,
-            "Pause after a click",
-            &mut d.refractory_s,
-            ranges::REFRACTORY_S,
-            0.1,
-            |v| format!("{v:.1} s"),
-            Some("No second click until you move away or this time passes."),
+            Some("Held still, it clicks again after this time."),
         );
         space(ui);
         let mut pct = (d.radius_frac * 100.0).round();

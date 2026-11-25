@@ -188,7 +188,6 @@ impl Shell {
         self.view().pointer
     }
 
-    #[cfg(test)]
     pub fn settings(&self) -> &Settings {
         &self.settings
     }

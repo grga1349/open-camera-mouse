@@ -773,13 +773,14 @@ fn clicking_tab_controls() {
     assert!(settings(&h).dwell.enabled);
     h.get_by_label("Dwell time").set_value_accesskit(2.0);
     h.run_steps(4);
-    h.get_by_label("Pause after a click")
-        .set_value_accesskit(3.0);
-    h.run_steps(4);
     h.get_by_label("Hold-still area").set_value_accesskit(10.0);
     h.run_steps(4);
     let d = settings(&h).dwell;
-    assert_eq!((d.dwell_s, d.refractory_s), (2.0, 3.0));
+    assert_eq!(d.dwell_s, 2.0);
+    assert!(
+        h.query_by_label("Pause after a click").is_none(),
+        "one dwell setting (ADR-0006 amendment 2026-11-25)"
+    );
     assert!((d.radius_frac - 0.10).abs() < 1e-6, "{}", d.radius_frac);
 }
 
@@ -1006,4 +1007,33 @@ fn the_embedded_app_icon_decodes_to_a_square_opaque_centre() {
     assert_eq!(icon.rgba.len(), (icon.width * icon.height * 4) as usize);
     let c = (icon.height / 2 * icon.width + icon.width / 2) as usize * 4;
     assert_eq!(icon.rgba[c + 3], 255, "icon centre must be opaque");
+}
+
+/// A dwell click is a press and a release posted together, so egui usually sees both in one
+/// pass; a slider must still jump to where it lands (the click itself is fine; on the device
+/// dwell clicks missed because they landed on the dwell anchor, not the cursor).
+#[test]
+fn a_click_on_a_slider_rail_sets_the_value_there_in_one_pass_or_two() {
+    for same_pass in [true, false] {
+        let mut h = options_window(stopped());
+        h.run_steps(2);
+        let rect = h.get_by_label("Horizontal speed").rect();
+        let at = egui::pos2(rect.min.x + rect.width() * 0.25, rect.center().y);
+        assert_eq!(settings(&h).gain_x, 20.0);
+        h.event(egui::Event::PointerMoved(at));
+        h.run_steps(2);
+        let button = |pressed| egui::Event::PointerButton {
+            pos: at,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        };
+        h.event(button(true));
+        if !same_pass {
+            h.run_steps(1);
+        }
+        h.event(button(false));
+        h.run_steps(3);
+        assert_eq!(settings(&h).gain_x, 15.0, "same pass: {same_pass}");
+    }
 }

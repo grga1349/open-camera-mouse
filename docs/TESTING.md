@@ -63,7 +63,7 @@ terminal.
 | 9 | Start/pause key with another app focused | Pauses (cursor to centre); again → resumes through the recenter |
 | 10 | Laptop keyboard: do the F-keys need `Fn`? | Note which; the window's key chips match what works |
 | 11 | Cover the camera with a hand, then take it away | "Looking for the target…", mouse has control; hand away → tracking resumes at the same spot. With "Find the target again" off: Lost (grey ring + X), waits for a click or Recenter; turning it on while lost shows "Looking for the target…" and resumes at the same spot |
-| 12 | Dwell on; hold still over a button in another app | One click after the dwell time; no repeat until moved away or refractory passed |
+| 12 | Dwell on; hold still over a button in another app | A click where the cursor is after the dwell time, no cursor jump, camera keeps control; held still, another click every dwell time |
 | 13 | Minimise the Tracking window while tracking | Cursor keeps following at full rate |
 | 14 | Unplug the camera while tracking | "Camera disconnected", last frame frozen; Start works once plugged back |
 | 15 | Switch camera in Options while running | Preview restarts on the chosen camera |
@@ -80,6 +80,9 @@ Windows and Linux: never run on a device.
 
 ## Diagnostics
 
+- `OCM_INPUT=1`: one stderr line per pointer move, button, leave or focus event as each
+  window (`tracking`, `options`) receives it from egui, in window points, with the gain
+  after that pass (`apps/desktop/src/input_log.rs`). For click and drag problems on a device.
 - `OCM_PERF=1`: the engine prints frame-path timing every few seconds (fps, `in`, `track`,
   `age` capture → cursor move, `ui`, `replaced`), p50 / p95 / max ms, and a `frames` line
   counting frames per tracker status (tracking, held at an edge, held after a fast move,
