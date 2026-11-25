@@ -1,6 +1,6 @@
 # ADR-0022: Post-rewrite cleanup — remove `legacy/` and the rewrite tooling
 
-Status: Accepted (user decisions 2026-11-19)
+Status: Accepted (user decisions 2026-11-19); workflow amended by ADR-0024 and ADR-0025
 Date: 2026-11-19
 Supersedes: the "keep `legacy/`" and "keep the seed archive" parts of ADR-0001 and the
 `AGENTS.md` "Never" rule that protected them. Amends ADR-0005 (agent workflow).

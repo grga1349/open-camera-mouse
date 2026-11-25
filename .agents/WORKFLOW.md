@@ -1,7 +1,8 @@
 # Agent workflow: orchestration
 
 How the main agent runs work with subagents (ADR-0024). Provider-neutral; model names are in
-[`MODELS.md`](MODELS.md). `AGENTS.md` stays the entry point and wins on any conflict; skills
+[`MODELS.md`](MODELS.md). Planning and tracking across sessions: [`PLANNING.md`](PLANNING.md). `AGENTS.md` stays the
+entry point and wins on any conflict; skills
 stay in `.agents/skills/` and are referenced, never copied into a delegation.
 
 This file is the user's standing request to delegate as described here: a runtime default
@@ -12,7 +13,7 @@ of "spawn subagents only when the user asks" is satisfied by it, except in main 
 | Role | Tier (`MODELS.md`) | Writes? | Does |
 |---|---|---|---|
 | Main agent | strongest | yes | Owns the conversation, the plan, decisions, integration, roadmap/handoff, git (on the user's yes) |
-| Planner / architect | strong | no | Only when a second design opinion is worth it; planning normally stays in the main context |
+| Planner / architect | strong | no | Only when a second design opinion or an independent plan review (`PLANNING.md`) is worth it; planning normally stays in the main context |
 | Implementer | coding | yes, assigned files | Implements an approved plan against acceptance criteria |
 | Test engineer | coding | yes, test files | Regression (fails before the fix), correct-behaviour, exploratory tests; names the ones that need real hardware |
 | Reviewer | strong | no | Independent review per the `code-review` skill; never the implementer |

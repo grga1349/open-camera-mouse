@@ -1,7 +1,8 @@
 # Roadmap
 
-Open items and deferred work, roughly by priority. New work arrives as prompts (see
-`AGENTS.md`); add an item here only when it is deferred, and remove it when it lands.
+Permanent backlog, roughly by priority: deferred work, known limitations, tech debt,
+investigations, platform work, outstanding verification, ideas not yet approved. Entries
+authorise nothing (`.agents/PLANNING.md`); remove an entry when it lands.
 How the Rust rewrite got here (v0.4.0, 2026-11-20): ADRs 0001–0022 and git history.
 
 ## App

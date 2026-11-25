@@ -20,15 +20,18 @@ separate static Astro site in `website/` (ADR-0023); see "Website tasks" below.
 | `docs/ROADMAP.md` | Open items and what was deferred |
 | `docs/architecture/decisions/` | ADRs: why things are the way they are |
 | `docs/COMMANDS.md` | Shortcut commands (`rhmo`, `h`, `cp`, `mc`, …) |
+| `.agents/PLANNING.md` | Planning and tracking: active roadmap + handoff, work items, statuses, leftovers, reconciliation |
 | `.agents/WORKFLOW.md`, `.agents/MODELS.md` | Orchestration: roles, delegation, modes, checkpoints; model per role and runtime |
 | `docs/design-lab.html` | Approved visual reference (open in a browser) |
 | `docs/WEBSITE.md` | Website: scope, content rules, pages, design and tokens, stack, CI and Pages deployment |
-| `docs/V0.4.1_HANDOFF.md`, `docs/V0.4.1_ROADMAP.md` | v0.4.1 release: temporary, on `fix/v0.4.1-stabilization` only. Read the handoff first, rewrite it at the end of each session; both deleted before merge |
+| `docs/V0.4.1_HANDOFF.md`, `docs/V0.4.1_ROADMAP.md` | v0.4.1 release: temporary, on `fix/v0.4.1-stabilization` only. Read the handoff first, keep it current per `.agents/PLANNING.md` "Handoff"; both deleted before merge |
 
 ## Workflow: one prompt = one task
 
-Tasks arrive as prompts from the user; there are no task files or session logs.
-A prompt that is only a shortcut word (`rhmo`, `h`, `hcp`, `cp`, `v`, `r`, `mc`, `resume`)
+Tasks arrive as prompts from the user. There are no task files or session logs; the only
+planning files are the temporary roadmap + handoff of a multi-session initiative the user
+approved (`.agents/PLANNING.md`, ADR-0025).
+A prompt that is only a shortcut word (`rhmo`, `h`, `hcp`, `cp`, `v`, `r`, `lr`, `mc`, `resume`)
 is a command: resolve it through `docs/COMMANDS.md` first.
 
 **Orchestration:** you are the main agent (accountable lead). Read `.agents/WORKFLOW.md` at
@@ -48,12 +51,12 @@ main-context (`mc`) modes are defined there (ADR-0024).
    changed default gets an amendment to the ADR that owns it.
 5. **Verify** with the gates below (scoped, one heavy command at a time) and, for
    device-only behaviour, say exactly what the user should check by hand.
-6. **Finish:** update the docs the change made stale (and `docs/ROADMAP.md` if something was
-   deferred), report what was verified and what wasn't, then **ask whether to commit**
+6. **Finish:** update the docs the change made stale (the active roadmap's statuses, and
+   `docs/ROADMAP.md` if the user moved something there (`.agents/PLANNING.md`)), report what was verified and what wasn't, then **ask whether to commit**
    (and separately whether to push).
 
-Larger work: propose a short plan of slices first, do one slice per session, and keep the
-plan in the conversation or the PR, not in new repo files.
+Larger work: plan it with the `engineering-planning` skill; do one item (or a slice the user
+names) per session; multi-session initiatives per `.agents/PLANNING.md`.
 
 ## Principles
 
@@ -110,18 +113,24 @@ as done or not done.
 ## Skills
 
 Project skills live in `.agents/skills/<name>/SKILL.md`. Codex discovers them; **Claude Code
-does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005).
+does not**, so `Read` the matching `SKILL.md` before starting (ADR-0005). Load only the
+skills the task needs, and a skill's `references/` files only when its `SKILL.md` says so;
+a delegation names the skills its subagent must read (`.agents/WORKFLOW.md`).
 
 | Skill | Use for |
 |---|---|
-| `rust-engineering` | Idiomatic Rust, error types, API design, lints |
+| `rust-engineering` | Idiomatic Rust: ownership, API/types, errors, allocation, hot paths, threads, unsafe/FFI (refs lazy) |
 | `rust-architecture` | Crate boundaries, dependency direction, ADRs |
+| `engineering-planning` | Plans: discovery, slicing, dependencies, risk-first order, acceptance criteria, verification, plan review |
+| `rust-refactoring` | Behaviour-preserving restructuring of existing code; read-only code-health audits (evidence first) |
 | `rust-testing` | Unit / integration / property / UI test design |
 | `computer-vision` | Pyramids, interpolation, optical flow maths |
 | `tracking-validation` | Synthetic fixtures, ground truth, tracker and pointer metrics |
 | `benchmarking` | Performance measurement, regressions |
-| `egui-development` | eframe/egui patterns, `egui_kittest` tests |
+| `egui-development` | eframe/egui 0.37: immediate mode, viewports, interaction/sliders, repaint, `egui_kittest`, AccessKit |
 | `platform-integration` | Camera / cursor / hotkey / permission adapters per OS |
+| `desktop-input` | OS input ↔ winit ↔ egui: synthetic vs physical events, drags, focus, feedback loops, coordinates |
+| `systematic-debugging` | Bugs: reproduce, hypotheses, evidence, root cause across layers, device-only failures |
 | `code-review` | Independent review: correctness, failure modes, evidence |
 | `release` | Version bump (SemVer patch/minor/major), gates, commit, tag, draft release |
 | `astro-development` | Website: Astro components, Tailwind v4, base-path URLs, zero-JS, build gates |
