@@ -53,6 +53,11 @@ impl OneEuro {
         self.state = None;
     }
 
+    /// The last filtered position, if any sample arrived since the last reset.
+    pub fn last(&self) -> Option<Point2> {
+        self.state.map(|(prev, ..)| prev)
+    }
+
     pub fn update(&mut self, p: Point2, now_us: u64, params: &OneEuroParams) -> Point2 {
         let Some((prev, prev_raw, speed, t)) = self.state else {
             self.state = Some((p, p, 0.0, now_us));

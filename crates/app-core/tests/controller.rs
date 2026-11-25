@@ -1269,6 +1269,210 @@ fn dwell_does_not_click_when_pointer_permission_is_denied() {
     assert!(clicks(&r.hold(2_000_000, 0.0, SCENE)).is_empty());
 }
 
+// ---- gain change under camera control (v0.4.1 F1) ----
+
+/// Settings for the gain tests: no smoothing, so the cursor settles quickly and exactly.
+fn gain_rig(gain: f32) -> Rig {
+    let mut r = Rig::tracking_with(Settings {
+        smoothing: 0.0,
+        gain_x: gain,
+        gain_y: gain,
+        ..Settings::default()
+    });
+    r.c.set_steady_zone_cam_px(0.0);
+    r
+}
+
+/// Frames of a still head at `(dx, dy)` for `us`; returns every cursor position commanded.
+fn hold_at(r: &mut Rig, us: u64, dx: f32, dy: f32) -> Vec<Point2> {
+    let end = r.now + us;
+    let mut all = Vec::new();
+    while r.now < end {
+        all.extend(moves(&r.frame(dx, dy, SCENE)));
+    }
+    all
+}
+
+/// The head moves to `(dx, dy)` in 1 px steps and rests there; returns the settled cursor.
+fn settle_at(r: &mut Rig, dx: f32, dy: f32) -> Point2 {
+    let (mut x, mut y) = (0.0f32, 0.0f32);
+    while (dx - x).abs() > 1e-3 || (dy - y).abs() > 1e-3 {
+        x += (dx - x).clamp(-1.0, 1.0);
+        y += (dy - y).clamp(-1.0, 1.0);
+        r.frame(x, y, SCENE);
+    }
+    *hold_at(r, 1_000_000, dx, dy).last().unwrap()
+}
+
+/// A gain change must not move the cursor: the offset is re-based so the point under the
+/// cursor stays put, at any head position (F1: the cursor jumped to `centre + distance × new / old`).
+#[test]
+fn a_gain_change_keeps_the_cursor_where_it_is() {
+    // (name, old gain, new gain_x, new gain_y, linked). Head at (4, 5) camera px: 240 px
+    // right and 225 px below the centre at gain 20.
+    let cases = [
+        ("x up", 20.0, 35.0, 20.0, false),
+        ("x down", 20.0, 1.0, 20.0, false),
+        ("y up", 20.0, 20.0, 35.0, false),
+        ("y down", 20.0, 20.0, 1.0, false),
+        ("both up, linked", 20.0, 35.0, 35.0, true),
+        ("both down, linked", 20.0, 1.0, 1.0, true),
+        ("linked 20 to 60", 20.0, 60.0, 60.0, true),
+    ];
+    for (name, old, nx, ny, linked) in cases {
+        let mut r = gain_rig(old);
+        let before = settle_at(&mut r, 4.0, 5.0);
+        assert!(
+            (before.x - CENTER.x).abs() >= 200.0 && (before.y - CENTER.y).abs() >= 200.0,
+            "{name}: the test needs a cursor away from the centre: {before:?}"
+        );
+        r.c.update_settings(
+            Settings {
+                gain_x: nx,
+                gain_y: ny,
+                link_gain: linked,
+                smoothing: 0.0,
+                ..Settings::default()
+            },
+            r.now,
+        )
+        .unwrap();
+        let after = hold_at(&mut r, 500_000, 4.0, 5.0);
+        let worst = after
+            .iter()
+            .map(|&p| dist(p, before))
+            .fold(0.0f32, f32::max);
+        assert!(
+            worst < 1.0,
+            "{name}: the cursor jumped {worst:.1} px (from {before:?}) on a gain change"
+        );
+        assert_eq!(r.c.pointer_owner(), PointerOwner::Camera, "{name}");
+    }
+}
+
+/// The same with the default smoothing and steady zone, right after head motion: the cursor
+/// rests up to the zone's radius behind the mapped point, and the radius scales with the
+/// gain, so keeping only the mapped point still pulled the cursor on a decrease (review of F1).
+#[test]
+fn a_gain_change_keeps_the_cursor_with_the_default_smoothing_and_steady_zone() {
+    for (old, new) in [(20.0f32, 1.0f32), (20.0, 10.0), (60.0, 1.0), (20.0, 60.0)] {
+        let mut r = Rig::tracking_with(Settings {
+            gain_x: old,
+            gain_y: old,
+            ..Settings::default()
+        });
+        hold_at(&mut r, 1_000_000, 0.0, 0.0);
+        // A small head step, then rest: the cursor ends up trailing inside the zone.
+        let before = *hold_at(&mut r, 1_000_000, 2.0, 1.0).last().unwrap();
+        r.c.update_settings(
+            Settings {
+                gain_x: new,
+                gain_y: new,
+                ..Settings::default()
+            },
+            r.now,
+        )
+        .unwrap();
+        let after = hold_at(&mut r, 1_000_000, 2.0, 1.0);
+        let worst = after
+            .iter()
+            .map(|&p| dist(p, before))
+            .fold(0.0f32, f32::max);
+        assert!(
+            worst < 1.0,
+            "{old} → {new}: the cursor moved {worst:.1} px (from {before:?})"
+        );
+        assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+    }
+}
+
+/// After the change, head motion uses the new gain: a 3 camera px step moves the cursor
+/// 3 × new gain × (1920 / 640) px.
+#[test]
+fn head_motion_after_a_gain_change_uses_the_new_gain() {
+    for new in [10.0f32, 40.0] {
+        let mut r = gain_rig(20.0);
+        settle_at(&mut r, 4.0, 0.0);
+        r.c.update_settings(
+            Settings {
+                gain_x: new,
+                gain_y: new,
+                smoothing: 0.0,
+                ..Settings::default()
+            },
+            r.now,
+        )
+        .unwrap();
+        // Measured from where the cursor rests after the change (the jump is the other test's).
+        let before = *hold_at(&mut r, 1_000_000, 4.0, 0.0).last().unwrap();
+        let rest = settle_at(&mut r, 7.0, 0.0);
+        let step = rest.x - before.x;
+        let want = 3.0 * new * 3.0;
+        assert!(
+            (step - want).abs() < 0.1 * want + 3.0,
+            "gain {new}: a 3 px head step moved the cursor {step:.1} px, wanted about {want:.1}"
+        );
+    }
+}
+
+/// Dragging a speed slider under camera control: the slider reads the cursor, the cursor
+/// follows the gain. With the head still this must settle, not swing between 1 and 60.
+#[test]
+fn a_speed_slider_driven_by_the_cursor_settles_instead_of_swinging() {
+    let mut r = gain_rig(20.0);
+    settle_at(&mut r, 4.0, 0.0);
+    // A slider rail from x = 400 (gain 1) to x = 1400 (gain 60), value clamped.
+    let slider = |x: f32| (1.0 + (x - 400.0) / 1000.0 * 59.0).clamp(1.0, 60.0);
+    let mut cursor = *hold_at(&mut r, 100_000, 4.0, 0.0).last().unwrap();
+    let mut gains = Vec::new();
+    let mut xs = Vec::new();
+    for _ in 0..90 {
+        let g = slider(cursor.x);
+        gains.push(g);
+        r.c.update_settings(
+            Settings {
+                gain_x: g,
+                gain_y: g,
+                smoothing: 0.0,
+                ..Settings::default()
+            },
+            r.now,
+        )
+        .unwrap();
+        cursor = moves(&r.frame(4.0, 0.0, SCENE)).pop().unwrap_or(cursor);
+        xs.push(cursor.x);
+    }
+    // The head is still, so the cursor must not move and the slider must keep its first value
+    // (the bug runs away from it to a rail end).
+    let (g0, drift) = (
+        gains[0],
+        gains
+            .iter()
+            .map(|g| (g - gains[0]).abs())
+            .fold(0.0f32, f32::max),
+    );
+    assert!(
+        drift < 1.0,
+        "the gain ran away from {g0:.1} by {drift:.1}; gains {gains:?}"
+    );
+    let tail = &gains[gains.len() - 30..];
+    let (lo, hi) = tail
+        .iter()
+        .fold((f32::MAX, f32::MIN), |(l, h), &g| (l.min(g), h.max(g)));
+    assert!(
+        hi - lo < 1.0,
+        "the gain keeps swinging: last 30 in {lo:.1}..{hi:.1}; gains {gains:?}"
+    );
+    let (xl, xh) = xs[xs.len() - 30..]
+        .iter()
+        .fold((f32::MAX, f32::MIN), |(l, h), &x| (l.min(x), h.max(x)));
+    assert!(
+        xh - xl < 5.0,
+        "the cursor keeps moving: x in {xl:.0}..{xh:.0}"
+    );
+    assert_eq!(r.c.pointer_owner(), PointerOwner::Camera);
+}
+
 // ---- colour preview (D3, ADR-0008 amendment) ----
 
 /// A raw 1280×720 frame whose colour encodes the raw column in red and the row in green.

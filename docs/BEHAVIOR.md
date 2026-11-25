@@ -30,7 +30,8 @@ that owns it.
   desktop-origin defect fixed.
 - **R-P2** Smoothing is time-based (FPS-independent); setting names match their polarity;
   invalid values can't be set.
-- **R-P3** Per-axis gain, linked by default.
+- **R-P3** Per-axis gain, linked by default. Changing it never moves the cursor: only later
+  head motion uses the new gain (v0.4.1).
 - **R-P4** Re-acquisition after a loss never jumps the pointer further than a bound
   (0.05 × the shorter desktop side); beyond it, control stays with the mouse.
 - **R-P5** Multi-monitor: map into the whole virtual desktop, with negative origins handled.

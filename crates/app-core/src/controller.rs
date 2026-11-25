@@ -37,7 +37,9 @@ use pointer_core::limits::{Limits, apply_limits, bounds, drift_offset};
 use pointer_core::one_euro::{OneEuro, OneEuroParams};
 use pointer_core::smoothing::Smoother;
 use pointer_core::steady::{SteadyZone, approach_edge};
-use pointer_core::{DesktopRect, FrameSize, Gain, map_raw_scaled, scale_reference};
+use pointer_core::{
+    DesktopRect, FrameSize, Gain, map_raw_scaled, offset_mapping_to, scale_reference,
+};
 use tracking_core::lk::{LkParams, LkTracker};
 use tracking_core::{
     Diagnostics, GrayFrame, LossReason, Point2, TrackError, TrackOutput, TrackStatus, Tracker,
@@ -558,6 +560,9 @@ impl Controller {
         if old.dwell != self.settings.dwell {
             self.dwell.reset();
         }
+        if (old.gain_x, old.gain_y) != (self.settings.gain_x, self.settings.gain_y) {
+            self.keep_cursor_on_gain_change(&old);
+        }
 
         let owner_after = self.pointer_owner();
         if owner_after != owner_before {
@@ -945,6 +950,45 @@ impl Controller {
         self.steady.reset_to(home);
         self.dwell.reset();
         self.move_pointer(home, step);
+    }
+
+    /// A gain change keeps the cursor where it is (v0.4.1 F1): the mapping is re-anchored so
+    /// the point it last saw (the filtered head position, else the tracked point) lands on the
+    /// cursor; only later head motion uses the new gain. Without it, dragging a speed slider
+    /// with the head fed each value's cursor jump back into the slider. Under camera control
+    /// the anchor is the cursor actually sent, not the mapped point: the cursor rests up to
+    /// the steady zone's radius behind that, and the radius scales with the gain, so a
+    /// decrease still pulled it (review of F1). The smoother and the zone restart there.
+    fn keep_cursor_on_gain_change(&mut self, old: &Settings) {
+        let Some(frame) = &self.frame else { return };
+        let Some(p) = self.one_euro.last().or(self.track.map(|t| t.position)) else {
+            return;
+        };
+        let gain = |s: &Settings| Gain {
+            x: s.gain_x,
+            y: s.gain_y,
+        };
+        let (size, reference) = (frame_size(frame), self.scale_reference());
+        let sent = match self.control {
+            Control::Camera => self.last_commanded,
+            Control::Mouse(_) => None,
+        };
+        let at = sent.unwrap_or_else(|| {
+            map_raw_scaled(p, self.offset, size, self.desktop, reference, gain(old))
+        });
+        self.offset = offset_mapping_to(
+            p,
+            at,
+            self.offset,
+            size,
+            self.desktop,
+            reference,
+            gain(&self.settings),
+        );
+        if let Some(cursor) = sent {
+            self.smoother.set_current(cursor);
+            self.steady.reset_to(cursor);
+        }
     }
 
     /// The steady-zone radius in screen px: [`STEADY_ZONE_CAM_PX`] of head movement times the

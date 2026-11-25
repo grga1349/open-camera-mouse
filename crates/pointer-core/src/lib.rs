@@ -132,6 +132,51 @@ pub fn map_absolute(
     desktop.clamp(map_raw(p, offset, frame, desktop, gain))
 }
 
+/// The offset with which [`map_raw_scaled`] maps `p` exactly onto `at`: its inverse in the
+/// offset, `img_center − p + (at − desk_center) / scale`. A gain change re-anchors the mapping
+/// with it so the cursor stays put (v0.4.1 F1): keeping the offset moved the cursor to
+/// `center + distance · new / old`, and a speed slider dragged by the head fed that jump back
+/// into its own value. An axis whose scale is not positive keeps `offset`.
+pub fn offset_mapping_to(
+    p: Point2,
+    at: Point2,
+    offset: Point2,
+    frame: FrameSize,
+    desktop: DesktopRect,
+    reference: DesktopRect,
+    gain: Gain,
+) -> Point2 {
+    let c = desktop.center();
+    let axis = |p: f32, at: f32, offset: f32, img: f32, desk: f32, gain: f32, r: f32| {
+        let s = gain * r / img;
+        if s > 0.0 {
+            img / 2.0 - p + (at - desk) / s
+        } else {
+            offset
+        }
+    };
+    Point2::new(
+        axis(
+            p.x,
+            at.x,
+            offset.x,
+            frame.width,
+            c.x,
+            gain.x,
+            reference.width,
+        ),
+        axis(
+            p.y,
+            at.y,
+            offset.y,
+            frame.height,
+            c.y,
+            gain.y,
+            reference.height,
+        ),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,6 +191,48 @@ mod tests {
         width: 1920.0,
         height: 1080.0,
     };
+
+    #[test]
+    fn the_offset_mapping_to_a_point_is_the_inverse_of_the_mapping() {
+        let p = Point2::new(400.0, 150.0);
+        let offset = Point2::new(-12.0, 7.5);
+        let reference = DesktopRect {
+            x: 0.0,
+            y: 0.0,
+            width: 1440.0,
+            height: 900.0,
+        };
+        let old = Gain { x: 20.0, y: 20.0 };
+        let at = map_raw_scaled(p, offset, FRAME, DESK, reference, old);
+        // Same gain: the same offset back.
+        let same = offset_mapping_to(p, at, offset, FRAME, DESK, reference, old);
+        assert!((same.x - offset.x).abs() < 1e-3 && (same.y - offset.y).abs() < 1e-3);
+        for new in [
+            Gain { x: 60.0, y: 20.0 },
+            Gain { x: 20.0, y: 1.0 },
+            Gain { x: 1.0, y: 60.0 },
+        ] {
+            for to in [at, Point2::new(at.x - 7.0, at.y + 3.0)] {
+                let o = offset_mapping_to(p, to, offset, FRAME, DESK, reference, new);
+                let now = map_raw_scaled(p, o, FRAME, DESK, reference, new);
+                assert!(
+                    (now.x - to.x).abs() < 1e-2 && (now.y - to.y).abs() < 1e-2,
+                    "{new:?} {to:?}: {now:?}"
+                );
+                // Head motion afterwards uses the new gain.
+                let moved =
+                    map_raw_scaled(Point2::new(p.x + 1.0, p.y), o, FRAME, DESK, reference, new);
+                let want = new.x * reference.width / FRAME.width;
+                assert!((moved.x - now.x - want).abs() < 1e-2, "{new:?}");
+            }
+        }
+        // A non-positive scale keeps the offset.
+        let zero = Gain { x: 0.0, y: 20.0 };
+        assert_eq!(
+            offset_mapping_to(p, at, offset, FRAME, DESK, reference, zero).x,
+            offset.x
+        );
+    }
 
     #[test]
     fn scale_reference_is_the_main_display_else_the_largest() {
