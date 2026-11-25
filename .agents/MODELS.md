@@ -1,8 +1,13 @@
 # Model routing
 
-Which model each role in [`WORKFLOW.md`](WORKFLOW.md) uses, per runtime. Use the cheapest
-tier that will do the task reliably; go up a tier when the task proves harder or a result
-can't be trusted. Model names change: when one here is no longer offered, use that
+Which model each role in [`WORKFLOW.md`](WORKFLOW.md) uses, per runtime, once delegation is
+justified (`WORKFLOW.md` "When to delegate"). The first choice is the existing main context;
+a new context, even on a cheaper model, re-reads instructions and code and is not
+automatically cheaper. When delegating, use the cheapest tier that will do the task
+reliably; go up a tier when the task proves harder or a result can't be trusted. Reserve
+extra strong-tier agents for work that needs independent deep reasoning (risk-triggered
+review, hard root-cause traces). Don't spawn a light-tier agent for what a few direct
+searches or reads answer. Model names change: when one here is no longer offered, use that
 runtime's current model of the same tier and update this file.
 
 ## Tiers

@@ -35,9 +35,11 @@ A prompt that is only a shortcut word (`rhmo`, `h`, `hcp`, `cp`, `v`, `r`, `lr`,
 is a command: resolve it through `docs/COMMANDS.md` first.
 
 **Orchestration:** you are the main agent (accountable lead). Read `.agents/WORKFLOW.md` at
-the start of every session and run the steps below through it: delegate bounded work to
-subagents with the models in `.agents/MODELS.md`, independent review included; spike and
-main-context (`mc`) modes are defined there (ADR-0024).
+the start of every session and run the steps below through it. Single-agent execution is the
+default: delegate (models in `.agents/MODELS.md`) only when it clearly pays, and get
+independent review when the risk warrants it; spike and main-context (`mc`) modes are
+defined there (ADR-0024). Use the fewest agents, the least context and the cheapest suitable
+model that deliver a correct, verified result.
 
 1. **Understand.** `git status` and `git log -5`; read the docs and ADRs for the area; read
    the code. Don't guess architecture; if a doc and the code disagree, the code wins, fix the

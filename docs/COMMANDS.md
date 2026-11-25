@@ -18,10 +18,10 @@ If there are none, the command says so and stops; it never creates them.
 | `hcp` | `h`, then `cp`. |
 | `cp` | Commit the current task's changes; the command is the user's yes for this one commit. Then ask separately whether to push. No merge, tag, release or force-push. |
 | `v` | Run the gates for what changed (Rust and/or website, scoped, one heavy command at a time) and report each result with its output summary, plus what can only be checked by hand. |
-| `r` | Review the uncommitted changes (or the branch against `main` if the tree is clean) with the `code-review` skill: correctness, regressions, missing tests, ADR-0007 boundaries and other ADRs. Report findings by severity; change nothing. Prefer an independent reviewer subagent (strong tier, `.agents/MODELS.md`); the main agent checks its findings before reporting, and says so if the review was done in its own context instead. |
+| `r` | Review the uncommitted changes (or the branch against `main` if the tree is clean) with the `code-review` skill: correctness, regressions, missing tests, ADR-0007 boundaries and other ADRs. Report findings by severity; change nothing. Use an independent reviewer subagent (strong tier, `.agents/MODELS.md`) when the change is risky per `.agents/WORKFLOW.md` "Review" or the user asks for one, otherwise review in the main context; the main agent checks a subagent's findings before reporting, and always says which kind of review it was. |
 | `lr` | Leftovers review: read the active roadmap; for every item not done and every Leftovers entry, report its state and blockers and one proposed disposition per `.agents/PLANNING.md` "Reconciliation", with the reason. Report only: no file changes, commit or push. |
 | `mc` | Main context mode (`.agents/WORKFLOW.md`): start no delegations, stop or wind down running ones and report what they changed, check `git status`, drop assumptions about the previous plan, and ask what we are investigating or correcting. The main agent then works directly until `resume` or the end of the task. |
-| `resume` | Leave main context mode: back to standard orchestration for the current task. Not a resume of the handoff (that is `rhmo`). |
+| `resume` | Leave main context mode: back to standard mode (selective delegation) for the current task. Not a resume of the handoff (that is `rhmo`). |
 
 `h`, `hcp`, `cp`, `v` and `lr` are always run by the main agent; a subagent may run gate commands
 for `v`, but the main agent reads their output and reports it.

@@ -53,3 +53,26 @@ Verified 2026-11-25:
 - Model names in `MODELS.md` will age; the tiers don't.
 - Untested here: Codex delegation, Claude `opus`/`sonnet` overrides and writer subagents.
   Revisit after the first sessions that use them.
+
+## Amendment 2026-11-26: selective delegation
+
+Status: Accepted (user request 2026-11-26)
+
+**Context.** In practice the delegation-first pipeline was expensive: two v0.4.1 subtasks
+used about a quarter of a five-hour usage window (user's report; the split between
+delegation and main-agent work was not measured). Every subagent re-reads instructions,
+skills and code, so routine work paid for several contexts.
+
+**Decision.** Single-agent execution is the default; delegation is an escalation used only
+for a concrete benefit (independent reasoning, context isolation, specialised investigation,
+parallelism, a net saving), scaled to complexity and risk (`WORKFLOW.md` "When to
+delegate"). Roles stay as capabilities, not pipeline stages. The same agent writes the
+failing test, implements, verifies and updates docs for routine work. Independent review is
+risk-triggered (algorithms, native input, unsafe/FFI, concurrency/lifecycle, architecture,
+high-risk regressions, accessibility) or consolidated at a phase/milestone boundary; routine
+changes get self-review, reported as such. Tiers, modes, commands, planning protocol, gates
+and release validation are unchanged.
+
+**Consequences.** Fewer contexts and less repeated reading per task. Routine changes lose
+the default second pair of eyes until a consolidated review; risky ones keep it. The
+Consequences above that say "independent review becomes the default" no longer hold.
