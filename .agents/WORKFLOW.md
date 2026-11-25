@@ -43,6 +43,8 @@ non-trivial code changes.
 6. **Independent review.** Reviewer gets the requirements, relevant ADRs/skills, the diff and
    the verification output, not the implementer's reasoning or conclusions.
 7. **Integrate.** Main agent weighs findings, delegates or makes corrections, re-verifies.
+   A correction that changes production logic goes back to the reviewer for a focused
+   re-review of that change (or is reported as not re-reviewed).
 8. **Checkpoint** (below) and stop at the work-item boundary.
 
 A request for a plan, investigation, review or handoff is not permission to implement.
