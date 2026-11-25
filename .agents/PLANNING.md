@@ -22,8 +22,8 @@ per-plan files, no task directories, no JSON/database state, no scripts.
 
 ## Levels
 
-Product backlog (`docs/ROADMAP.md`) → active initiative or release roadmap → slices
-(milestones, with a priority) → work items → delegated tasks. Delegated tasks never become
+Product backlog (`docs/ROADMAP.md`) → active initiative or release roadmap → phases
+(stretches of work in execution order) → work items (each with a priority) → delegated tasks. Delegated tasks never become
 roadmap entries unless they turn into independent work worth tracking. **No entry authorises
 work by itself:** an approved roadmap item is authorised only when the user asks for it (`rhmo`
 or an explicit request); never start the next item by yourself (`WORKFLOW.md`). A request to
@@ -34,9 +34,9 @@ plan or review a plan is not one.
 1. **Seed:** the user's brief; its items are symptoms and leads, not diagnoses.
 2. **Discovery:** read code, docs, ADRs; measure first; bounded investigations may be
    delegated. Record what is fact and what is hypothesis.
-3. **Planning** (main context, strongest model): scope and exclusions, slices with
-   priorities, items with acceptance criteria and verification, dependencies, the decisions
-   table for what only the user can answer.
+3. **Planning** (main context, strongest model): scope and exclusions, items with priorities,
+   acceptance criteria and verification, dependencies, phases in execution order, the
+   decisions table for what only the user can answer.
 4. **Plan review:** for substantial or risky plans, an independent reviewer (strong tier),
    per the skill's `references/plan-review.md`.
 5. **Approval:** the user approves the plan; only then create the roadmap, the handoff and
@@ -50,20 +50,42 @@ plan or review a plan is not one.
 
 ## Active roadmap layout
 
-Header (purpose, branch, source, "deleted before merge"), rules for this initiative,
-legend, decisions table (`D1`…: question, what it blocks, answer with who and when), slices
-in priority order, **Leftovers**. No session log: that is git's and the handoff's job.
+The document reads in the order the work is done: what is next is at the top of the plan, and
+reading it top to bottom is the critical path. Sections, in this order:
+
+1. Header (purpose, branch, source, "deleted before merge"), rules for this initiative,
+   legend.
+2. **Decisions** table (`Q1`…, never clashing with a Phase D item: question, what it
+   blocks, options and recommendation, answer with who and when). Every open question for the user is a row here, including scope
+   proposals ("F6 to Leftovers?"); there is no separate proposals section.
+3. **Plan:** phases in execution order (`## Phase A — …`), each a stretch of work that ends
+   at a checkpoint the user can see (a device run, a slice of fixes, the release). Inside a
+   phase, items appear in the order they will be done. Priority is per item, not per phase.
+   An `[i]` item sits in the phase where its owed check happens.
+4. **Done:** one line per `[x]`, `[-]` item (outcome, where the evidence lives: test name,
+   ADR, doc). Details live in tests, ADRs and git, not here.
+5. **Leftovers**, last.
+
+No session log (git's and the handoff's job), and no standing "proposed order": a reorder or
+plan the agent proposes is approved, changed or rejected with the user in the session it is
+raised, then the plan is rewritten to match. When the plan is rearranged, items are
+renumbered in plan order (phase letter + number: `A1`, `A2`, `B1`…) so the ids read in
+sequence; the handoff of that session lists old → new once, and the next rewrite drops it.
 
 ## Work items
 
-One checkbox line, `**id title**` stating the outcome, then indented fields **only where they
-add something**: `Priority` (default: the slice's), `Needs` (items, decisions), `Accept`
-(observable criteria), `Verify` (tests, gates, device checks and on which OS), `Blocks
-release` (if it differs from the priority), `Out of scope`, `Remaining`/`Open`. Outcomes, not
+One checkbox line, `**id title**` stating the outcome and its priority (`P0`…), then
+indented fields. Every open item has `Accept` (observable criteria) and `Verify` (tests,
+gates, device checks and on which OS); add the others only where they add something:
+`Needs` (items, decisions), `Blocks release` (if it differs from the priority), `Evidence`,
+`Out of scope`, `Remaining`/`Open`. A user device run that checks several items is an item
+of its own (`A6 macOS user run: …`) with the exact steps and the ids it closes, placed where it
+happens in the plan. Outcomes, not
 file lists; leads and file references are evidence, not the plan. An item is small enough
-for one session and testable on its own. Ids are stable: never renumbered or reused, kept
-when moved, split (`F1` → `F1a`, `F1b`) or deferred; existing styles (`S2`, `F5`, `D3`) are
-fine. Give an id to every item that is referenced anywhere else.
+for one session and testable on its own. Between rearrangements an id is kept when the item
+is split (`A3` → `A3a`, `A3b`), deferred or done, and never reused. Ids are temporary: code,
+tests, commit-independent docs and ADRs never cite them (describe the behaviour or name the
+release instead), so renumbering breaks nothing outside the roadmap and handoff.
 
 ## Status
 
@@ -73,7 +95,7 @@ The checkbox marker is the status; the text says why. No status anywhere else.
 |---|---|---|
 | `[ ]` | open (ready when its `Needs` are met) | — |
 | `[~]` | in progress | what is done and what remains |
-| `[?]` | blocked | on what: `D7`, `device: Windows`, `needs 4a-F1`, an external fact |
+| `[?]` | blocked | on what: `Q3`, `device: Windows`, `needs A7`, an external fact |
 | `[i]` | implemented, verification owed | what is verified and what is owed (`owed: macOS device`) |
 | `[x]` | done | — (all mandatory acceptance criteria met) |
 | `[>]` | deferred | where it went: `→ Leftovers`, `→ docs/ROADMAP.md App 1` |
@@ -87,14 +109,16 @@ Windows, Linux); **device** per OS (named); **input** (physical button vs. synth
 dwell); **camera** (built-in vs. external). Passing tests are not a device check, CI on
 Windows is not "verified on Windows", and a check the agent could not run is reported as not
 run. `[x]` needs every mandatory level; an optional level may be skipped only when the
-limitation is written on the item and the user accepted it. An item without a `Verify` field
-still needs CI green on all three OSes, plus a device check for device-only behaviour
-(`AGENTS.md` step 5).
+limitation is written on the item and the user accepted it. Whatever an item's `Verify`
+says, it also needs CI green on all three OSes, plus a device check for device-only
+behaviour (`AGENTS.md` step 5).
 
 ## Priorities and release blockers
 
 `P0` blocks the release; `P1` belongs in it but may move to Leftovers with the user's OK;
-`P2` is nice to have. A slice's priority applies to its items unless an item says otherwise.
+`P2` is nice to have. Priority is written on each item; execution order is the plan's order
+(risk first; a P1 may precede a P0 when it unblocks it, with the reason in the item, or
+when the user approved that order, noted in the phase).
 Only the user makes or unmakes a release blocker.
 
 ## Changing the plan
@@ -115,7 +139,7 @@ without ceremony:
 | "Do the important part now, the rest later" | split by id; the remainder to Leftovers |
 
 Ask only when the instruction is unclear or conflicts with a mandatory requirement (say
-which). Significant plan changes (scope, slice order, a dropped P0/P1) get an independent
+which). Significant plan changes (scope, phase order, a dropped P0/P1) get an independent
 plan review when the risk warrants it.
 
 ## Partial completion and unavailable verification
@@ -132,7 +156,7 @@ requirement, the item stays blocking until the user accepts the limitation.
 The last section of a substantial roadmap; not a separate file. For work that will not be
 done in the current plan: lower priority, unavailable device checks, non-critical bugs,
 optional optimisations, deferred investigations, partial remainders, work waiting on
-information, cost above value. Each entry keeps: original id and slice, reason, done so far,
+information, cost above value. Each entry keeps: original id and phase, reason, done so far,
 remaining, evidence and verification so far, dependencies, `blocks release: yes/no`, proposed
 disposition. Leftovers are not done, and evidence or decisions are never discarded silently.
 

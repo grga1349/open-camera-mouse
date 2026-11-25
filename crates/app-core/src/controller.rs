@@ -952,13 +952,13 @@ impl Controller {
         self.move_pointer(home, step);
     }
 
-    /// A gain change keeps the cursor where it is (v0.4.1 F1): the mapping is re-anchored so
+    /// A gain change keeps the cursor where it is (v0.4.1): the mapping is re-anchored so
     /// the point it last saw (the filtered head position, else the tracked point) lands on the
     /// cursor; only later head motion uses the new gain. Without it, dragging a speed slider
     /// with the head fed each value's cursor jump back into the slider. Under camera control
     /// the anchor is the cursor actually sent, not the mapped point: the cursor rests up to
     /// the steady zone's radius behind that, and the radius scales with the gain, so a
-    /// decrease still pulled it (review of F1). The smoother and the zone restart there.
+    /// decrease still pulled it (v0.4.1 review). The smoother and the zone restart there.
     fn keep_cursor_on_gain_change(&mut self, old: &Settings) {
         let Some(frame) = &self.frame else { return };
         let Some(p) = self.one_euro.last().or(self.track.map(|t| t.position)) else {

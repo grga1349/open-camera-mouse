@@ -58,7 +58,7 @@ cross-crate or device-dependent change needs this whole skill.
 
 ## Decisions
 
-- Product (default, hotkey, visual direction, behaviour change, release scope): a `D`-row in
+- Product (default, hotkey, visual direction, behaviour change, release scope): a `Q`-row in
   the roadmap with options and your recommendation; the dependent items are `[?]`.
 - Architecture (new crate or dependency, crate boundary, cross-layer change): an ADR before
   the code (`rust-architecture`); a changed default amends the ADR that owns it.
@@ -66,8 +66,10 @@ cross-crate or device-dependent change needs this whole skill.
 
 ## Multi-session organisation
 
-Slices in priority order, each closable on its own; front-load user questions so answers
-arrive before the dependent slice; a checkpoint at every item boundary (`WORKFLOW.md`).
+Phases in execution order (the layout in `.agents/PLANNING.md`): the plan reads top to
+bottom as the critical path, priority per item. Front-load user questions so answers arrive
+before the dependent phase; settle a proposed order with the user in the session, never
+leave it standing; a checkpoint at every item boundary (`WORKFLOW.md`).
 
 ## Replanning and scope control
 
@@ -83,8 +85,8 @@ arrive before the dependent slice; a checkpoint at every item boundary (`WORKFLO
 
 ## Plan review
 
-Self-review every plan: each requirement maps to an item; each item has criteria and a
-check; ids, names and dependencies are consistent; nothing decides nothing; the length is in
+Self-review every plan: each requirement maps to an item; each open item has criteria and a
+check; the document order is the execution order; ids, names and dependencies are consistent; nothing decides nothing; the length is in
 proportion. Substantial or risky plans also get an independent review: brief and checklist
 in `references/plan-review.md`.
 

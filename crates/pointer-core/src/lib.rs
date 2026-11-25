@@ -134,7 +134,7 @@ pub fn map_absolute(
 
 /// The offset with which [`map_raw_scaled`] maps `p` exactly onto `at`: its inverse in the
 /// offset, `img_center − p + (at − desk_center) / scale`. A gain change re-anchors the mapping
-/// with it so the cursor stays put (v0.4.1 F1): keeping the offset moved the cursor to
+/// with it so the cursor stays put (v0.4.1): keeping the offset moved the cursor to
 /// `center + distance · new / old`, and a speed slider dragged by the head fed that jump back
 /// into its own value. An axis whose scale is not positive keeps `offset`.
 pub fn offset_mapping_to(

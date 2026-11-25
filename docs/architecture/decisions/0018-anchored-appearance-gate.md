@@ -77,7 +77,7 @@ losses are the lag check at the deepest point of a turn, not the floor.
 
 ## Amendment 2026-11-24 (v0.4.1 slice 1) — a short hold for borderline drops
 
-Decision D4 (user): keep tracking through borderline appearance drops, but still declare a
+User decision (2026-11-24, v0.4.1): keep tracking through borderline appearance drops, but still declare a
 loss when things clearly go wrong, so re-detection runs.
 
 Evidence (macOS `OCM_PERF`, diagnosis only, not committed): every loss was

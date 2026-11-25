@@ -94,7 +94,7 @@ decisions, acceptance criteria, short findings and verification evidence, not ra
 Use the runtime's real utilisation figure when one is visible (e.g. a status line, or the
 user's `/context` output); otherwise judge conservatively and never invent a percentage.
 
-Stop at a checkpoint when: a work item, roadmap slice or spike is done; the context is
+Stop at a checkpoint when: a work item, roadmap phase or spike is done; the context is
 getting full; a product/architecture decision blocks; repeated attempts fail; or continuing
 would widen scope. Never start the next major work item by yourself.
 

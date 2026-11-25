@@ -203,7 +203,7 @@ fn a_violent_slip_is_lost_at_once_never_held_and_recovered() {
     assert!(m.final_epe.is_some_and(|e| e < 0.5), "{m:?}");
 }
 
-/// D4 "don't overdo it": the selection floor (0.3) is unchanged. A turn so far that the
+/// The user's v0.4.1 "don't overdo it": the selection floor (0.3) is unchanged. A turn so far that the
 /// patch no longer resembles the selection is lost, even though each step looked like the
 /// last one, so re-detection takes over (how it recovers: the slice 3 test below).
 #[test]

@@ -21,15 +21,20 @@ Legend: `[ ]` open · `[~]` in progress · `[?]` blocked · `[i]` implemented, v
 ## Decisions
 | # | Question | Blocks | Answer |
 |---|---|---|---|
-| D1 | May a dwell click on the preview re-select the target? | 1-F2 | |
+| Q1 | May a dwell click on the preview re-select the target? (a) never (b) not under camera control. Rec.: (b) | A3 | |
 
-## Slice 1 — Clicking under camera control (P0)
-- [x] **1-F1 A gain change keeps the cursor where it is** …
-- [?] **1-F2 No re-select from a camera-driven click** — D1
-- [i] **1-F3 Dwell never fires during a physical-button drag** — owed: macOS device, physical button
+## Phase A — Clicking under camera control
+- [i] **A1 A gain change keeps the cursor where it is** (P0) — owed: A3
+- [ ] **A2 Dwell never fires during a physical-button drag** (P0) …
+- [ ] **A3 macOS user run** (P0): physical press-drag on both speed sliders (A1); hold a
+      button still mid-drag (A2). Accept: … Verify: user, macOS, physical button and dwell
+- [?] **A4 No re-select from a camera-driven click** (P0) — Q1
 
-## Slice 2 — Windows packaging (P2)
-- [ ] **2.1 No console window in release builds** …
+## Phase B — Windows packaging
+- [ ] **B1 No console window in release builds** (P2) …
+
+## Done
+- [x] **A dwell click sets a slider** — kittest `a_same_pass_click_sets_the_slider`
 
 ## Leftovers
 (entries as below)
@@ -38,7 +43,7 @@ Legend: `[ ]` open · `[~]` in progress · `[?]` blocked · `[i]` implemented, v
 ## Non-trivial work item
 
 ```markdown
-- [~] **1-F1 A gain change keeps the cursor where it is** (S1, likely S4)
+- [~] **A1 A gain change keeps the cursor where it is** (P0; S1, likely S4)
       Needs: —. Evidence: `map_raw_scaled` scales offset around the desktop centre; traced,
       not yet a failing test.
       Accept: changing gain_x/gain_y under camera control moves the cursor by < 1 px; dragging
@@ -52,7 +57,7 @@ Legend: `[ ]` open · `[~]` in progress · `[?]` blocked · `[i]` implemented, v
 ## Leftovers entry
 
 ```markdown
-- [>] **2-F6 Windows camera moves are invisible to raw-input apps** (from slice 2, P2)
+- [>] **Windows camera moves are invisible to raw-input apps** (was B3, from Phase B, P2)
       Reason: needs a Windows device and a CAD app; none available (user, 2026-12-03).
       Done: cause traced (`SetCursorPos` makes no raw-input motion); unit test of the
       `SendInput` event builder. Remaining: switch the adapter, device check.
@@ -65,13 +70,13 @@ Legend: `[ ]` open · `[~]` in progress · `[?]` blocked · `[i]` implemented, v
 ```markdown
 | Item | State | Proposal | Why |
 |---|---|---|---|
-| 1-F3 | `[i]` owed macOS device | complete now | 5-min user check; P0 |
-| 2.1 | `[ ]` | reactivate as blocker | console window on every Windows launch |
-| 2-F6 | Leftovers | transfer → ROADMAP App 1 | no device; not a regression |
-| 3.2 | `[?] device: Linux` | accept as known limitation | README "untested on Linux" |
-| 3.4 | `[ ]` | drop as obsolete | superseded by 1-F1 |
-Needs your decision: 2.1 (blocker?), 3.2 (limitation wording).
-Before deletion: D1 → ADR-0006 amendment; 1-F1 evidence lives in its test.
+| A2 | `[i]` owed macOS device | complete now | 5-min user check; P0 |
+| B1 | `[ ]` | reactivate as blocker | console window on every Windows launch |
+| raw moves | Leftovers | transfer → ROADMAP App 1 | no device; not a regression |
+| C2 | `[?] device: Linux` | accept as known limitation | README "untested on Linux" |
+| C4 | `[ ]` | drop as obsolete | superseded by A1 |
+Needs your decision: B1 (blocker?), C2 (limitation wording).
+Before deletion: Q1 → ADR-0006 amendment; A1 evidence lives in its test.
 ```
 
 ## Compact handoff
@@ -81,19 +86,19 @@ Before deletion: D1 → ADR-0006 amendment; 1-F1 evidence lives in its test.
 Plan and statuses: [`V0.4.2_ROADMAP.md`](V0.4.2_ROADMAP.md). Rewrite at every checkpoint.
 
 ## Resume here
-- Mode: standard orchestration. Active item: 1-F3.
+- Mode: standard orchestration. Active item: A2.
 - Next: write the kittest drag test (fails today), then the fix.
-- Waiting on the user: D1 (blocks 1-F2); macOS device run for 1-F1.
+- Waiting on the user: Q1 (blocks A4); macOS device run for A1.
 - Working tree: clean at `abc1234`, pushed.
 
 ## Recent findings (not yet in an item)
-- egui batches a redraw's events into one pass (relevant to 1-F5).
+- egui batches a redraw's events into one pass (relevant to A5).
 
 ## Verification
 - Last gates (session 4): fmt, clippy clean; tests app-core, pointer-core passed. CI green.
 - Owed: device runs per item (`[i]` in the roadmap). Not run: Windows, Linux (CI only).
 
 ## Last session (4, 2026-12-04)
-1-F1 fixed with the rig test (failed before); 1-F2 blocked on D1. Models: main Opus,
+A1 fixed with the rig test (failed before); A4 blocked on Q1. Models: main Opus,
 test engineer sonnet, review opus.
 ```

@@ -41,3 +41,18 @@ bureaucracy.
 - One more file to read when planning (`PLANNING.md`, loaded for planning and tracking only).
 - Existing v0.4.1 files move to the new format at the next `h`; scope and priorities only
   change with the user's OK.
+
+## Amendment 2026-11-25 (user): document order is execution order
+
+The v0.4.1 roadmap kept the protocol's fields but read out of order: topic slices
+(0 → 0b → 1 → 2 → 3 → 4a → 4 → 5 → 6) with a separate, never-approved "Proposed order" that
+jumped across five of them, P0 items scheduled after P1, done items at full length, and open
+items without criteria. Now: the roadmap's plan is **phases in execution order** with the
+priority on each item; done and dropped items collapse to one line in a Done section; every
+open item has `Accept` and `Verify`; a multi-item user device run is an item of its own; a
+proposed order is settled with the user in the session, and open scope proposals are
+decision rows. A rearranged plan is renumbered in plan order (`A1`, `A2`, `B1`…; user,
+2026-11-25), old → new listed once in the handoff; code, tests and permanent docs never cite
+roadmap ids. Touches: `.agents/PLANNING.md`, the `engineering-planning` skill,
+`docs/COMMANDS.md` (`rhmo` takes the next item in plan order).
+

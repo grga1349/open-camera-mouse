@@ -13,7 +13,7 @@ If there are none, the command says so and stops; it never creates them.
 
 | Command | Does |
 |---|---|
-| `rhmo` | Read the active handoff, then its roadmap, and do the step under "Resume here": one item, by the normal workflow, in the mode the handoff records (standard orchestration unless it says main context or spike). If that step waits on the user (a decision, a device check), say so and take the next open item whose dependencies are met, in priority order. Never take a blocked, deferred or dropped item, a Leftovers entry or a `docs/ROADMAP.md` item (`.agents/PLANNING.md`). If none is unblocked, ask. |
+| `rhmo` | Read the active handoff, then its roadmap, and do the step under "Resume here": one item, by the normal workflow, in the mode the handoff records (standard orchestration unless it says main context or spike). If that step waits on the user (a decision, a device check), say so and take the next open item in plan order whose dependencies are met. Never take a blocked, deferred or dropped item, a Leftovers entry or a `docs/ROADMAP.md` item (`.agents/PLANNING.md`). If none is unblocked, ask. |
 | `h` | Rewrite the active handoff per `.agents/PLANNING.md` "Handoff" (fold older notes away after moving unique evidence into the roadmap or permanent docs) and sync roadmap statuses. No commit. |
 | `hcp` | `h`, then `cp`. |
 | `cp` | Commit and push the current task's changes. The command is the user's yes for this one commit and push (nothing else: no merge, tag, release or force-push). |
@@ -32,6 +32,6 @@ for `v`, but the main agent reads their output and reports it.
    files that must never be committed (recordings, local paths, secrets), stop and ask.
 2. If the gates haven't passed since the last edit, run `v` first; on a failure, stop.
 3. Stage the task's files by name, commit with a subject in the repo's style (`git log`;
-   e.g. `v0.4.1 slice 4: …`) and the attribution trailer, push the current branch. On the
+   e.g. `v0.4.1 A2: …`) and the attribution trailer, push the current branch. On the
    default branch, ask first.
 4. Report the commit hash and the push result.

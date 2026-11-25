@@ -838,7 +838,7 @@ fn turn_after_rest(t: usize, k: f64, n: usize) -> Pose {
 pub fn loss_groups() -> Vec<Scene> {
     vec![
         // Group 1: the lag check dips just under its threshold for a few frames while LK
-        // stays on the point. Must keep tracking (D4).
+        // stays on the point. Must keep tracking (user, v0.4.1).
         base(
             "turn_borderline",
             "quick turn at 2.5× strength over 28 frames after 20 still: lag ZNCC just under 0.7",
@@ -869,7 +869,7 @@ pub fn loss_groups() -> Vec<Scene> {
             },
         ),
         // Group 3: a far, smooth turn. Each step looks like the last one, but the patch
-        // drifts below the selection floor (0.3). Lost by design (floor unchanged, D4).
+        // drifts below the selection floor (0.3). Lost by design (floor unchanged, user v0.4.1).
         base(
             "turn_far",
             "head-turn stand-in at 4× strength (shrink 48 %, roll 24°, warp 16, gradient 0.012)",

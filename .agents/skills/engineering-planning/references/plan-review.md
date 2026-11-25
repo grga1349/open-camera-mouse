@@ -29,7 +29,7 @@ If nothing important is left, say so.
 - **Verification:** a failing-first test per fix at the right layer; mandatory levels named
   (CI per OS, device per OS, physical vs synthetic input, camera); no "verified" a device run
   hasn't earned.
-- **Decisions:** product questions are `D`-rows with recommendations; architecture changes
+- **Decisions:** product questions are `Q`-rows with recommendations; architecture changes
   have an ADR before code; no default, hotkey or visual change hidden in an item.
 - **Failure modes:** inputs or states the requirements imply but no test exercises.
 - **Proportion:** the plan is shorter than the code it describes.

@@ -1269,7 +1269,7 @@ fn dwell_does_not_click_when_pointer_permission_is_denied() {
     assert!(clicks(&r.hold(2_000_000, 0.0, SCENE)).is_empty());
 }
 
-// ---- gain change under camera control (v0.4.1 F1) ----
+// ---- gain change under camera control (v0.4.1) ----
 
 /// Settings for the gain tests: no smoothing, so the cursor settles quickly and exactly.
 fn gain_rig(gain: f32) -> Rig {
@@ -1305,7 +1305,7 @@ fn settle_at(r: &mut Rig, dx: f32, dy: f32) -> Point2 {
 }
 
 /// A gain change must not move the cursor: the offset is re-based so the point under the
-/// cursor stays put, at any head position (F1: the cursor jumped to `centre + distance × new / old`).
+/// cursor stays put, at any head position (v0.4.1: the cursor jumped to `centre + distance × new / old`).
 #[test]
 fn a_gain_change_keeps_the_cursor_where_it_is() {
     // (name, old gain, new gain_x, new gain_y, linked). Head at (4, 5) camera px: 240 px
@@ -1352,7 +1352,7 @@ fn a_gain_change_keeps_the_cursor_where_it_is() {
 
 /// The same with the default smoothing and steady zone, right after head motion: the cursor
 /// rests up to the zone's radius behind the mapped point, and the radius scales with the
-/// gain, so keeping only the mapped point still pulled the cursor on a decrease (review of F1).
+/// gain, so keeping only the mapped point still pulled the cursor on a decrease (v0.4.1 review).
 #[test]
 fn a_gain_change_keeps_the_cursor_with_the_default_smoothing_and_steady_zone() {
     for (old, new) in [(20.0f32, 1.0f32), (20.0, 10.0), (60.0, 1.0), (20.0, 60.0)] {
