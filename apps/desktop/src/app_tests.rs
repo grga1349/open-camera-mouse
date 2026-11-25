@@ -1009,34 +1009,63 @@ fn the_embedded_app_icon_decodes_to_a_square_opaque_centre() {
     assert_eq!(icon.rgba[c + 3], 255, "icon centre must be opaque");
 }
 
+fn click_speed_slider_rail(h: &mut Harness<'_, Shell>, same_pass: bool) {
+    let rect = h.get_by_label("Horizontal speed").rect();
+    let at = egui::pos2(rect.min.x + rect.width() * 0.25, rect.center().y);
+    h.event(egui::Event::PointerMoved(at));
+    h.run_steps(2);
+    let button = |pressed| egui::Event::PointerButton {
+        pos: at,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    if same_pass {
+        // Harness::event runs a separate pass per event. Batch both in the next RawInput.
+        h.input_mut().events.extend([button(true), button(false)]);
+        h.step();
+    } else {
+        h.event(button(true));
+        h.step();
+        h.event(button(false));
+        h.step();
+    }
+}
+
 /// A dwell click posts the press and release together. Both events can reach egui in one pass.
 #[test]
 fn a_click_on_a_slider_rail_sets_the_value_there_in_one_pass_or_two() {
     for same_pass in [false, true] {
         let mut h = options_window(stopped());
         h.run_steps(2);
-        let rect = h.get_by_label("Horizontal speed").rect();
-        let at = egui::pos2(rect.min.x + rect.width() * 0.25, rect.center().y);
         assert_eq!(settings(&h).gain_x, 20.0);
-        h.event(egui::Event::PointerMoved(at));
-        h.run_steps(2);
-        let button = |pressed| egui::Event::PointerButton {
-            pos: at,
-            button: egui::PointerButton::Primary,
-            pressed,
-            modifiers: egui::Modifiers::NONE,
-        };
-        if same_pass {
-            // Harness::event runs a separate pass per event. Batch both in the next RawInput.
-            h.input_mut().events.extend([button(true), button(false)]);
-            h.step();
-        } else {
-            h.event(button(true));
-            h.step();
-            h.event(button(false));
-            h.step();
-        }
+        click_speed_slider_rail(&mut h, same_pass);
         assert_eq!(settings(&h).gain_x, 15.0, "same pass: {same_pass}");
+    }
+}
+
+#[test]
+fn a_rail_click_preserves_a_focused_sliders_keyboard_control() {
+    for same_pass in [false, true] {
+        let mut h = options_window(stopped());
+        h.get_by_label("Horizontal speed").focus();
+        h.run_steps(2);
+        assert!(h.get_by_label("Horizontal speed").is_focused());
+
+        click_speed_slider_rail(&mut h, same_pass);
+        assert!(
+            h.get_by_label("Horizontal speed").is_focused(),
+            "same pass: {same_pass}"
+        );
+
+        let gain_after_click = settings(&h).gain_x;
+        h.key_press(egui::Key::ArrowRight);
+        h.run_steps(2);
+        assert_eq!(
+            settings(&h).gain_x,
+            gain_after_click + 1.0,
+            "same pass: {same_pass}"
+        );
     }
 }
 
@@ -1063,4 +1092,83 @@ fn a_slider_drag_reaches_the_final_position_when_move_and_release_share_a_pass()
         .extend([egui::Event::PointerMoved(end), button(end, false)]);
     h.step();
     assert_eq!(settings(&h).gain_x, 15.0);
+}
+
+#[test]
+fn escape_cancels_a_slider_drag_until_the_pointer_is_released() {
+    let mut h = options_window(stopped());
+    let start = h.get_by_label("Horizontal speed").rect().center();
+    // Movement within egui's click distance can still leave a pending click on the rail.
+    let click_distance = h.ctx.options(|o| o.input_options.max_click_dist);
+    let end = start + egui::vec2(click_distance * 0.9, 0.0);
+
+    h.hover_at(start);
+    h.step();
+    h.drag_at(start);
+    h.step();
+    let gain_after_press = settings(&h).gain_x;
+    assert_eq!(gain_after_press, 31.0);
+
+    h.key_press(egui::Key::Escape);
+    h.step();
+    h.hover_at(end);
+    h.step();
+    assert_eq!(settings(&h).gain_x, gain_after_press, "move after Escape");
+
+    h.drop_at(end);
+    h.step();
+    assert_eq!(
+        settings(&h).gain_x,
+        gain_after_press,
+        "release after Escape"
+    );
+}
+
+#[test]
+fn a_touch_can_drag_a_slider_after_a_long_press() {
+    let mut h = options_window(stopped());
+    let rect = h.get_by_label("Horizontal speed").rect();
+    let start = rect.center();
+    let end = egui::pos2(rect.min.x + rect.width() * 0.25, start.y);
+    let touch = |phase, pos| egui::Event::Touch {
+        device_id: egui::TouchDeviceId(1),
+        id: egui::TouchId(1),
+        phase,
+        pos,
+        force: None,
+    };
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+
+    // Mirror the touch and emulated pointer events sent by egui-winit.
+    h.input_mut().events.extend([
+        touch(egui::TouchPhase::Start, start),
+        egui::Event::PointerMoved(start),
+        button(start, true),
+    ]);
+    h.step();
+
+    let max_click_duration = h.ctx.options(|o| o.input_options.max_click_duration);
+    let press_time = h.ctx.input(|i| i.time);
+    h.input_mut().time = Some(press_time + max_click_duration + 0.01);
+    h.step();
+
+    h.input_mut().events.extend([
+        touch(egui::TouchPhase::Move, end),
+        egui::Event::PointerMoved(end),
+    ]);
+    h.step();
+    assert_eq!(settings(&h).gain_x, 15.0, "drag after the hold");
+
+    h.input_mut().events.extend([
+        touch(egui::TouchPhase::End, end),
+        button(end, false),
+        egui::Event::PointerGone,
+    ]);
+    h.step();
+    assert_eq!(settings(&h).gain_x, 15.0, "release after the drag");
 }
