@@ -1009,12 +1009,10 @@ fn the_embedded_app_icon_decodes_to_a_square_opaque_centre() {
     assert_eq!(icon.rgba[c + 3], 255, "icon centre must be opaque");
 }
 
-/// A dwell click is a press and a release posted together, so egui usually sees both in one
-/// pass; a slider must still jump to where it lands (the click itself is fine; on the device
-/// dwell clicks missed because they landed on the dwell anchor, not the cursor).
+/// A dwell click posts the press and release together. Both events can reach egui in one pass.
 #[test]
 fn a_click_on_a_slider_rail_sets_the_value_there_in_one_pass_or_two() {
-    for same_pass in [true, false] {
+    for same_pass in [false, true] {
         let mut h = options_window(stopped());
         h.run_steps(2);
         let rect = h.get_by_label("Horizontal speed").rect();
@@ -1028,12 +1026,41 @@ fn a_click_on_a_slider_rail_sets_the_value_there_in_one_pass_or_two() {
             pressed,
             modifiers: egui::Modifiers::NONE,
         };
-        h.event(button(true));
-        if !same_pass {
-            h.run_steps(1);
+        if same_pass {
+            // Harness::event runs a separate pass per event. Batch both in the next RawInput.
+            h.input_mut().events.extend([button(true), button(false)]);
+            h.step();
+        } else {
+            h.event(button(true));
+            h.step();
+            h.event(button(false));
+            h.step();
         }
-        h.event(button(false));
-        h.run_steps(3);
         assert_eq!(settings(&h).gain_x, 15.0, "same pass: {same_pass}");
     }
+}
+
+#[test]
+fn a_slider_drag_reaches_the_final_position_when_move_and_release_share_a_pass() {
+    let mut h = options_window(stopped());
+    let rect = h.get_by_label("Horizontal speed").rect();
+    let start = rect.center();
+    let end = egui::pos2(rect.min.x + rect.width() * 0.25, start.y);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+
+    h.event(egui::Event::PointerMoved(start));
+    h.step();
+    h.event(button(start, true));
+    h.step();
+
+    h.input_mut()
+        .events
+        .extend([egui::Event::PointerMoved(end), button(end, false)]);
+    h.step();
+    assert_eq!(settings(&h).gain_x, 15.0);
 }
